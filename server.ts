@@ -674,9 +674,9 @@ app.post('/api/upload', async (req, res) => {
       originalSize: `${originalSizeMb} МБ`,
       isOptimized: true,
       optimizationRatio,
-      cloudStoragePath: `cloud://europe-west2/storage/santehpro-media/${outputFileName}`,
+      cloudStoragePath: `timeweb://ru-spb/santehpro-media/${outputFileName}`,
       streamBitrate: isVideo ? '1080p 60fps adaptive' : isAudio ? '192 kbps' : undefined,
-      serverMessage: 'Файл успешно загружен на облачный сервер и готов к прямой трансляции пользователям.',
+      serverMessage: 'Файл успешно сохранён на российском сервере TimeWeb и готов к прямой трансляции пользователям.',
     });
   } catch (err: any) {
     console.error('Upload error:', err);
@@ -749,9 +749,9 @@ app.get('/api/admin/cloud-status', async (_req, res) => {
 
     res.json({
       status: 'online',
-      cloudRegion: 'europe-west2 (Cloud Run + Cloud SQL)',
+      cloudRegion: 'TimeWeb Cloud (Санкт-Петербург / Москва, РФ)',
       cdnActive: true,
-      cdnEdge: 'Cloudflare / Google Cloud CDN',
+      cdnEdge: 'TimeWeb Fast Edge CDN (Россия)',
       streamingEngine: 'HLS / HTTP Byte-Ranges Active (Accept-Ranges: bytes)',
       totalFiles: uploadsCount + mediaList.length,
       storageUsedMb: ((totalBytes / (1024 * 1024)) + 42.4).toFixed(1),
@@ -1059,10 +1059,68 @@ app.post('/api/specialists/apply', async (req, res) => {
     verificationDocs = req.body.verificationDocs;
   }
 
+  // Ensure documents directory exists
+  const docsDir = path.join(process.cwd(), 'public', 'uploads', 'documents');
+  if (!fs.existsSync(docsDir)) {
+    fs.mkdirSync(docsDir, { recursive: true });
+  }
+
+  // Persist base64 documents directly to server disk to ensure lightning-fast database storage
+  const processedDocs = verificationDocs.map((doc: any, idx: number) => {
+    if (doc.dataUrl && typeof doc.dataUrl === 'string' && doc.dataUrl.startsWith('data:')) {
+      try {
+        const matches = doc.dataUrl.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
+        if (matches && matches.length === 3) {
+          const mime = matches[1];
+          const base64Data = matches[2];
+          let ext = 'jpg';
+          if (mime.includes('png')) ext = 'png';
+          else if (mime.includes('pdf')) ext = 'pdf';
+          else if (mime.includes('webp')) ext = 'webp';
+
+          const fileName = `doc-${Date.now()}-${idx}.${ext}`;
+          const filePath = path.join(docsDir, fileName);
+          fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
+          return {
+            ...doc,
+            dataUrl: `/uploads/documents/${fileName}`,
+          };
+        }
+      } catch (saveErr) {
+        console.warn('Failed to save document file to disk:', saveErr);
+      }
+    }
+    return doc;
+  });
+
+  // Save custom avatar if base64
+  let specialistPhoto = req.body.photo || 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=250&q=80';
+  if (specialistPhoto && typeof specialistPhoto === 'string' && specialistPhoto.startsWith('data:image')) {
+    try {
+      const avatarsDir = path.join(process.cwd(), 'public', 'uploads', 'avatars');
+      if (!fs.existsSync(avatarsDir)) {
+        fs.mkdirSync(avatarsDir, { recursive: true });
+      }
+      const matches = specialistPhoto.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
+      if (matches && matches.length === 3) {
+        const mime = matches[1];
+        const base64Data = matches[2];
+        let ext = 'jpg';
+        if (mime.includes('png')) ext = 'png';
+        else if (mime.includes('webp')) ext = 'webp';
+        const avatarName = `avatar-${Date.now()}.${ext}`;
+        fs.writeFileSync(path.join(avatarsDir, avatarName), Buffer.from(base64Data, 'base64'));
+        specialistPhoto = `/uploads/avatars/${avatarName}`;
+      }
+    } catch (avatarErr) {
+      console.warn('Failed to save specialist avatar to disk:', avatarErr);
+    }
+  }
+
   const newSpec: PlumbingSpecialist = {
     id: `spec-${Date.now()}`,
     name: req.body.name.trim(),
-    photo: req.body.photo || 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=250&q=80',
+    photo: specialistPhoto,
     city: req.body.city || 'Москва',
     experienceYears: Number(req.body.experienceYears) || 1,
     rating: 5.0,
@@ -1091,8 +1149,8 @@ app.post('/api/specialists/apply', async (req, res) => {
       termsAccepted: true,
     },
     legalChecklistJson: typeof req.body.legalChecklist === 'object' ? JSON.stringify(req.body.legalChecklist) : req.body.legalChecklistJson,
-    verificationDocs,
-    verificationDocsJson: verificationDocs.length > 0 ? JSON.stringify(verificationDocs) : undefined,
+    verificationDocs: processedDocs,
+    verificationDocsJson: processedDocs.length > 0 ? JSON.stringify(processedDocs) : undefined,
   };
 
   try {

@@ -21,7 +21,9 @@ import {
   CheckSquare,
   Square,
   Sparkles,
+  Loader2,
 } from 'lucide-react';
+import { compressImageFile } from '../utils/imageCompressor';
 import { RUSSIAN_CITIES } from '../data/initialData';
 import { SpecialistVerificationDoc } from '../types';
 import { LegalTermsModal } from './LegalTermsModal';
@@ -65,9 +67,10 @@ export const ApplySpecialistModal: React.FC<ApplySpecialistModalProps> = ({ onCl
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [compressing, setCompressing] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     const file = files[0];
@@ -75,17 +78,29 @@ export const ApplySpecialistModal: React.FC<ApplySpecialistModalProps> = ({ onCl
       setError('Главная фотография должна быть изображением (JPG, PNG, WebP).');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setFormData((prev) => ({ ...prev, photo: reader.result as string }));
-        setCustomPhotoSelected(true);
-      }
-    };
-    reader.readAsDataURL(file);
+
+    try {
+      setCompressing(true);
+      const result = await compressImageFile(file, 400, 0.85);
+      setFormData((prev) => ({ ...prev, photo: result.base64 }));
+      setCustomPhotoSelected(true);
+      setError(null);
+    } catch (err) {
+      console.warn('Canvas photo compression failed, using fallback:', err);
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          setFormData((prev) => ({ ...prev, photo: reader.result as string }));
+          setCustomPhotoSelected(true);
+        }
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setCompressing(false);
+    }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
@@ -95,25 +110,47 @@ export const ApplySpecialistModal: React.FC<ApplySpecialistModalProps> = ({ onCl
     }
 
     const file = files[0];
-    const reader = new FileReader();
+    setCompressing(true);
+    setError(null);
 
-    reader.onload = () => {
+    try {
+      let dataUrl: string;
+      let formattedSize: string;
+
+      if (file.type.startsWith('image/')) {
+        // High-clarity compression: max 1600px, quality 0.82 (reduces 10MB to ~150-250KB for fast 4G upload)
+        const compressed = await compressImageFile(file, 1600, 0.82);
+        dataUrl = compressed.base64;
+        formattedSize = compressed.compressedSizeFormatted;
+      } else {
+        // PDF or other documents
+        dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        formattedSize = `${(file.size / 1024).toFixed(1)} КБ`;
+      }
+
       const newDoc: SpecialistVerificationDoc = {
         id: `doc-${Date.now()}`,
         name: file.name,
         type: docTypeToUpload as any,
-        size: `${(file.size / 1024).toFixed(1)} КБ`,
+        size: formattedSize,
         uploadedAt: new Date().toLocaleDateString('ru-RU'),
         status: 'pending',
-        dataUrl: typeof reader.result === 'string' ? reader.result : undefined,
+        dataUrl,
       };
 
       setVerificationDocs((prev) => [...prev, newDoc].slice(0, 3));
-      setError(null);
+    } catch (err) {
+      console.error('Document process error:', err);
+      setError('Не удалось обработать файл. Пожалуйста, выберите файл в формате JPG, PNG или PDF.');
+    } finally {
+      setCompressing(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
-    };
-
-    reader.readAsDataURL(file);
+    }
   };
 
   const handleRemoveDoc = (id: string) => {
@@ -147,49 +184,69 @@ export const ApplySpecialistModal: React.FC<ApplySpecialistModalProps> = ({ onCl
 
       const nowTimestamp = new Date().toISOString();
 
-      const res = await fetch('/api/specialists/apply', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          email: currentUser?.email,
-          userUid: currentUser?.uid,
-          services: servicesArray,
-          dataConsent: true,
-          consentTimestamp: nowTimestamp,
-          legalConsent: true,
-          legalConsentTimestamp: nowTimestamp,
-          legalChecklist: {
-            dataConsentAccepted: true,
-            termsAccepted: true,
-            independentContractor: true,
-            siteLiability: true,
-            platformIndemnity: true,
-            authenticDocuments: true,
-            version: '2.1-LEGAL-AUDIT',
-          },
-          verificationDocs: verificationDocs.map((doc) => ({
-            id: doc.id,
-            name: doc.name,
-            type: doc.type,
-            size: doc.size,
-            uploadedAt: doc.uploadedAt,
-            status: doc.status,
-            dataUrl: doc.dataUrl,
-          })),
-        }),
-      });
+      const payload = {
+        ...formData,
+        email: currentUser?.email,
+        userUid: currentUser?.uid,
+        services: servicesArray,
+        dataConsent: true,
+        consentTimestamp: nowTimestamp,
+        legalConsent: true,
+        legalConsentTimestamp: nowTimestamp,
+        legalChecklist: {
+          dataConsentAccepted: true,
+          termsAccepted: true,
+          independentContractor: true,
+          siteLiability: true,
+          platformIndemnity: true,
+          authenticDocuments: true,
+          version: '2.1-LEGAL-AUDIT',
+        },
+        verificationDocs: verificationDocs.map((doc) => ({
+          id: doc.id,
+          name: doc.name,
+          type: doc.type,
+          size: doc.size,
+          uploadedAt: doc.uploadedAt,
+          status: doc.status,
+          dataUrl: doc.dataUrl,
+        })),
+      };
 
-      const data = await res.json();
+      // Resilient upload with automatic retry for mobile connections in Russia
+      let res: Response | null = null;
+      let lastNetworkErr: any = null;
+
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          res = await fetch('/api/specialists/apply', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          if (res) break;
+        } catch (fetchErr) {
+          lastNetworkErr = fetchErr;
+          if (attempt === 0) {
+            await new Promise((r) => setTimeout(r, 1000));
+          }
+        }
+      }
+
+      if (!res) {
+        throw lastNetworkErr || new Error('Network timeout');
+      }
+
+      const data = await res.json().catch(() => ({}));
 
       if (res.ok) {
         setSubmitted(true);
       } else {
-        setError(data.error || 'Ошибка при отправке заявки.');
+        setError(data.error || 'Ошибка при отправке заявки. Пожалуйста, повторите попытку.');
       }
-    } catch (err) {
-      console.error(err);
-      setError('Ошибка соединения с сервером. Пожалуйста, попробуйте позже.');
+    } catch (err: any) {
+      console.error('Specialist application submit error:', err);
+      setError('Ошибка соединения с сервером. Пожалуйста, проверьте подключение к интернету и повторите отправку.');
     } finally {
       setLoading(false);
     }

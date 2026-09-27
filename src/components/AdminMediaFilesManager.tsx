@@ -426,7 +426,7 @@ export const AdminMediaFilesManager: React.FC<AdminMediaFilesManagerProps> = ({
         isOptimized: formIsOptimized,
         optimizationRatio: formOptimizationRatio,
         cloudStoragePath: formFileUrl.startsWith('/uploads/')
-          ? `cloud://europe-west2/storage/santehpro-media/${formFileUrl.replace('/uploads/', '')}`
+          ? `timeweb://ru-spb/santehpro-media/${formFileUrl.replace('/uploads/', '')}`
           : undefined,
         streamBitrate: formFileType === 'video' ? '1080p 60fps adaptive' : formFileType === 'audio' ? '192 kbps' : undefined,
       };

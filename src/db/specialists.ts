@@ -3,13 +3,44 @@ import { specialists, deletedSpecialists } from './schema.ts';
 import { eq, desc, ne } from 'drizzle-orm';
 import { PlumbingSpecialist, DeletedSpecialistRecord } from '../types.ts';
 import { INITIAL_SPECIALISTS } from '../data/initialData.ts';
+import fs from 'fs';
+import path from 'path';
 
-// In-memory cache & fallback store initialized with default specialist catalog
-let inMemorySpecialists: PlumbingSpecialist[] = INITIAL_SPECIALISTS.map((s) => ({
-  ...s,
-  dataConsent: true,
-  consentTimestamp: '2026-01-01T00:00:00.000Z',
-}));
+const DATA_DIR = path.resolve(process.cwd(), '.data');
+const SPECIALISTS_STORE_FILE = path.join(DATA_DIR, 'specialists_store.json');
+
+export function getCachedSpecialists(): PlumbingSpecialist[] {
+  try {
+    if (fs.existsSync(SPECIALISTS_STORE_FILE)) {
+      const data = fs.readFileSync(SPECIALISTS_STORE_FILE, 'utf-8');
+      const parsed = JSON.parse(data);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to read cached specialists from disk:', err);
+  }
+  return INITIAL_SPECIALISTS.map((s) => ({
+    ...s,
+    dataConsent: true,
+    consentTimestamp: '2026-01-01T00:00:00.000Z',
+  }));
+}
+
+export function saveCachedSpecialists(list: PlumbingSpecialist[]): void {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    fs.writeFileSync(SPECIALISTS_STORE_FILE, JSON.stringify(list, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Failed to save cached specialists to disk:', err);
+  }
+}
+
+// In-memory cache & fallback store initialized with persistent disk specialist catalog
+let inMemorySpecialists: PlumbingSpecialist[] = getCachedSpecialists();
 
 // In-memory store for permanently deleted specialists (audit trail)
 let inMemoryDeletedSpecialists: DeletedSpecialistRecord[] = [];
@@ -170,6 +201,7 @@ export async function createDbSpecialist(spec: PlumbingSpecialist): Promise<Plum
     console.error('DB error in createDbSpecialist:', error);
   }
 
+  saveCachedSpecialists(inMemorySpecialists);
   return specWithConsent;
 }
 
@@ -303,6 +335,7 @@ export async function updateDbSpecialist(id: string, updates: Partial<PlumbingSp
     console.error('DB update error in updateDbSpecialist:', error);
   }
 
+  saveCachedSpecialists(inMemorySpecialists);
   return updated;
 }
 
@@ -364,6 +397,7 @@ export async function deleteDbSpecialist(id: string): Promise<DeletedSpecialistR
   // 3. Add to deleted archive store
   inMemoryDeletedSpecialists = inMemoryDeletedSpecialists.filter((d) => d.masterId !== id);
   inMemoryDeletedSpecialists.unshift(auditRecord);
+  saveCachedSpecialists(inMemorySpecialists);
 
   // 4. Persist to Cloud SQL:
   // In the database, the specialist is deleted permanently, and ONLY audit info (when registered and when deleted) remains

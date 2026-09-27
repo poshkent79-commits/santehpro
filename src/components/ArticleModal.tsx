@@ -27,19 +27,11 @@ import {
   Crown,
   Lock,
   Sparkles,
-  Download,
-  FileDown,
   Heart,
 } from 'lucide-react';
 import { Article, ArticleStep } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { resolveDualPlatformVideos } from '../utils/videoUtils';
-import {
-  isArticleSavedForOffline,
-  saveArticleForOffline,
-  removeArticleFromOffline,
-  exportArticleAsHtml,
-} from '../utils/offlineArticles';
 
 interface ArticleModalProps {
   article: Article;
@@ -64,8 +56,6 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
   const { currentUser, isFavorite, toggleFavorite, openAuthModal } = useAuth();
   const isBookmarked = isFavorite(article.id);
   const [favoriteToast, setFavoriteToast] = useState<string | null>(null);
-  const [isSavedOffline, setIsSavedOffline] = useState<boolean>(() => isArticleSavedForOffline(article.id));
-  const [offlineToast, setOfflineToast] = useState<string | null>(null);
   const [completedSteps, setCompletedSteps] = useState<Record<number, boolean>>({});
   const [checkedTools, setCheckedTools] = useState<Record<string, boolean>>({});
   const [liked, setLiked] = useState(false);
@@ -78,35 +68,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
 
   React.useEffect(() => {
     setSelectedVideoPlatform(dualVideo.defaultPlatform);
-    setIsSavedOffline(isArticleSavedForOffline(article.id));
-
-    const handleOfflineUpdate = () => {
-      setIsSavedOffline(isArticleSavedForOffline(article.id));
-    };
-    window.addEventListener('santehpro_offline_articles_updated', handleOfflineUpdate);
-    return () => {
-      window.removeEventListener('santehpro_offline_articles_updated', handleOfflineUpdate);
-    };
   }, [article.id, dualVideo.defaultPlatform]);
-
-  const handleToggleOffline = () => {
-    if (isSavedOffline) {
-      removeArticleFromOffline(article.id);
-      setIsSavedOffline(false);
-      setOfflineToast('Инструкция удалена из памяти устройства');
-    } else {
-      saveArticleForOffline(article);
-      setIsSavedOffline(true);
-      setOfflineToast('✓ Инструкция сохранена на устройстве и доступна офлайн!');
-    }
-    setTimeout(() => setOfflineToast(null), 3500);
-  };
-
-  const handleExportHtml = () => {
-    exportArticleAsHtml(article);
-    setOfflineToast('✓ Пошаговая инструкция успешно скачана в виде файла!');
-    setTimeout(() => setOfflineToast(null), 3500);
-  };
 
   const toggleStep = (stepNum: number) => {
     setCompletedSteps((prev) => ({ ...prev, [stepNum]: !prev[stepNum] }));
@@ -252,33 +214,6 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
               </span>
             </button>
 
-            {/* Offline save to device button (guaranteed persistence across app updates) */}
-            <button
-              type="button"
-              onClick={handleToggleOffline}
-              title={isSavedOffline ? 'Материал сохранен на вашем устройстве (доступен офлайн)' : 'Скачать инструкцию на устройство (офлайн доступ)'}
-              className={`px-2.5 py-1.5 rounded-xl transition flex items-center space-x-1.5 cursor-pointer text-xs font-semibold ${
-                isSavedOffline
-                  ? 'text-emerald-400 bg-emerald-500/20 border border-emerald-500/40 shadow-sm'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
-              }`}
-            >
-              <Download className={`w-4 h-4 ${isSavedOffline ? 'text-emerald-400' : ''}`} />
-              <span className="hidden sm:inline">
-                {isSavedOffline ? 'На устройстве' : 'Офлайн'}
-              </span>
-            </button>
-
-            {/* Export instruction to HTML file button */}
-            <button
-              type="button"
-              onClick={handleExportHtml}
-              title="Скачать пошаговую инструкцию в файл (HTML)"
-              className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800 transition cursor-pointer"
-            >
-              <FileDown className="w-4 h-4" />
-            </button>
-
             <button
               onClick={onClose}
               className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
@@ -289,32 +224,14 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
         </div>
 
         {/* Floating Toast Notification */}
-        {(offlineToast || favoriteToast) && (
+        {favoriteToast && (
           <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-slate-900/95 border border-cyan-500/40 text-cyan-300 text-xs font-bold shadow-2xl backdrop-blur-md animate-fade-in flex items-center space-x-2">
-            <span>{offlineToast || favoriteToast}</span>
+            <span>{favoriteToast}</span>
           </div>
         )}
 
         {/* Modal Scrollable Content */}
         <div className="p-6 overflow-y-auto space-y-6">
-          {/* Offline Saved Banner */}
-          {isSavedOffline && (
-            <div className="p-3.5 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 flex items-center justify-between text-xs text-emerald-300 shadow-sm">
-              <div className="flex items-center space-x-2.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>
-                  <strong>Сохранено на устройстве:</strong> этот обучающий материал доступен даже без интернета и не удаляется при обновлении приложения.
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={handleExportHtml}
-                className="text-emerald-400 hover:text-emerald-200 font-bold underline ml-2 shrink-0 text-[11px] cursor-pointer"
-              >
-                Скачать файл
-              </button>
-            </div>
-          )}
           {/* Cover / Dual Video Player (RuTube & YouTube) & Header */}
           {hasVideo ? (
             <div className="space-y-3">

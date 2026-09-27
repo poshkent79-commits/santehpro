@@ -95,69 +95,6 @@
           <div style="position:absolute;top:0;left:0;height:100%;width:40%;background:linear-gradient(90deg,#0284c7,#38bdf8);border-radius:999px;animation:loadingBar 1.2s infinite ease-in-out;"></div>
         </div>
 
-        <!-- Fail-safe diagnostic panel if loading takes > 4.5s or if opened on blocked run.app in Russia -->
-        <div id="splash-delayed-help" style="display:none;margin-top:24px;max-width:320px;text-align:center;padding:14px;border-radius:16px;background:rgba(30,41,59,0.9);border:1px solid rgba(56,189,248,0.3);box-shadow:0 10px 25px rgba(0,0,0,0.5);">
-          <p id="splash-help-text" style="font-size:12px;color:#cbd5e1;line-height:1.5;margin:0 0 10px 0;">
-            Загрузка занимает больше времени, чем обычно...
-          </p>
-          <div id="splash-runapp-warning" style="display:none;margin-bottom:12px;font-size:11px;color:#fca5a5;background:rgba(239,68,68,0.15);padding:8px 10px;border-radius:8px;border:1px solid rgba(239,68,68,0.3);line-height:1.4;">
-            ⚠️ Вы открыли техническую ссылку <b>*.run.app</b>, которая блокируется в РФ. Откройте официальный сайт:
-          </div>
-          <a id="splash-official-link" href="https://santehpro.info" style="display:none;margin:0 auto 10px auto;background:#0284c7;color:#fff;font-weight:700;font-size:12px;padding:9px 16px;border-radius:10px;text-decoration:none;display:none;">
-            Перейти на santehpro.info
-          </a>
-          <div style="display:flex;gap:8px;justify-content:center;margin-top:8px;">
-            <button type="button" onclick="window.location.reload(true)" style="background:#334155;color:#fff;border:none;padding:7px 12px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;">
-              🔄 Обновить
-            </button>
-            <button type="button" onclick="clearPwaAndReload()" style="background:rgba(239,68,68,0.2);color:#fca5a5;border:1px solid rgba(239,68,68,0.4);padding:7px 12px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;">
-              🗑️ Очистить кэш
-            </button>
-          </div>
-        </div>
-
-        <script>
-          function clearPwaAndReload() {
-            if ('serviceWorker' in navigator) {
-              navigator.serviceWorker.getRegistrations().then(function(regs) {
-                for (var i = 0; i < regs.length; i++) regs[i].unregister();
-              });
-            }
-            if ('caches' in window) {
-              caches.keys().then(function(keys) {
-                for (var i = 0; i < keys.length; i++) caches.delete(keys[i]);
-              });
-            }
-            setTimeout(function() { window.location.reload(true); }, 300);
-          }
-
-          (function() {
-            var isRunApp = window.location.hostname.indexOf('run.app') !== -1;
-            var timer = setTimeout(function() {
-              var splash = document.getElementById('initial-splash');
-              if (splash) {
-                var help = document.getElementById('splash-delayed-help');
-                if (help) help.style.display = 'block';
-                if (isRunApp) {
-                  var warn = document.getElementById('splash-runapp-warning');
-                  var link = document.getElementById('splash-official-link');
-                  if (warn) warn.style.display = 'block';
-                  if (link) link.style.display = 'inline-block';
-                }
-              }
-            }, isRunApp ? 2500 : 4500);
-
-            window.addEventListener('error', function(e) {
-              var splash = document.getElementById('initial-splash');
-              if (splash) {
-                var help = document.getElementById('splash-delayed-help');
-                var text = document.getElementById('splash-help-text');
-                if (help) help.style.display = 'block';
-                if (text) text.innerText = 'Ошибка инициализации: ' + (e && e.message ? e.message : 'Сбой сети');
-              }
-            });
-          })();
-        </script>
         <style>
           @keyframes loadingBar {
             0% { left: -40%; width: 30%; }

@@ -37,14 +37,13 @@ import {
   ChevronDown,
   X,
   Loader2,
-  Download,
   Heart,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Article, UserPurchase, UserFavorite, ServiceCallRequest, PlumbingSpecialist } from '../types';
 import { RUSSIAN_CITIES } from '../data/initialData';
 import { detectUserCityFromIP } from '../utils/geoCity';
-import { getOfflineArticles, isArticleSavedForOffline } from '../utils/offlineArticles';
+import { getOfflineArticles } from '../utils/offlineArticles';
 import { ServiceRequestRatingCard } from './ServiceRequestRatingCard';
 import { MasterCabinetSection } from './MasterCabinetSection';
 import { SpecialistCabinetView } from './SpecialistCabinetView';
@@ -898,14 +897,12 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {favorites.map((fav) => {
-                const isSaved = isArticleSavedForOffline(fav.articleId);
-                return (
-                  <div
-                    key={fav.id}
-                    onClick={() => handleOpenFavorite(fav)}
-                    className="p-4 rounded-2xl bg-slate-900 border border-slate-800 hover:border-cyan-500/50 transition cursor-pointer flex flex-col justify-between space-y-3 group relative shadow-md"
-                  >
+              {favorites.map((fav) => (
+                <div
+                  key={fav.id}
+                  onClick={() => handleOpenFavorite(fav)}
+                  className="p-4 rounded-2xl bg-slate-900 border border-slate-800 hover:border-cyan-500/50 transition cursor-pointer flex flex-col justify-between space-y-3 group relative shadow-md"
+                >
                     <div className="space-y-2">
                       {fav.coverImage && (
                         <div className="h-32 rounded-xl overflow-hidden bg-slate-950 relative">
@@ -914,12 +911,6 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
                             alt={fav.articleTitle}
                             className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                           />
-                          {isSaved && (
-                            <span className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-emerald-950/90 border border-emerald-500/50 text-emerald-300 text-[10px] font-bold flex items-center space-x-1 shadow-md">
-                              <Download className="w-3 h-3 text-emerald-400" />
-                              <span>Офлайн</span>
-                            </span>
-                          )}
                         </div>
                       )}
                       <h3 className="text-xs font-bold text-white group-hover:text-cyan-400 transition line-clamp-2">
@@ -941,8 +932,7 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
                       </button>
                     </div>
                   </div>
-                );
-              })}
+                ))}
             </div>
           )}
         </div>

@@ -2,6 +2,11 @@ import { db, withDbRetry } from './index.ts';
 import { mediaFiles } from './schema.ts';
 import { eq, desc, and } from 'drizzle-orm';
 import { MediaFile, MediaFileType } from '../types.ts';
+import fs from 'fs';
+import path from 'path';
+
+const DATA_DIR = path.resolve(process.cwd(), '.data');
+const MEDIA_FILES_STORE_FILE = path.join(DATA_DIR, 'media_files_store.json');
 
 export const INITIAL_MEDIA_FILES: MediaFile[] = [
   // 1. МАТЕРИАЛЫ (Техкарты, спецификации, чертежи, PDF-регламенты)
@@ -200,6 +205,34 @@ export const INITIAL_MEDIA_FILES: MediaFile[] = [
   },
 ];
 
+export function getCachedMediaFiles(): MediaFile[] {
+  try {
+    if (fs.existsSync(MEDIA_FILES_STORE_FILE)) {
+      const data = fs.readFileSync(MEDIA_FILES_STORE_FILE, 'utf-8');
+      const parsed = JSON.parse(data);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to read cached media files from disk:', err);
+  }
+  return Array.isArray(INITIAL_MEDIA_FILES) ? [...INITIAL_MEDIA_FILES] : [];
+}
+
+export function saveCachedMediaFiles(list: MediaFile[]): void {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    fs.writeFileSync(MEDIA_FILES_STORE_FILE, JSON.stringify(list, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Failed to save cached media files to disk:', err);
+  }
+}
+
+let inMemoryMediaFiles: MediaFile[] = getCachedMediaFiles();
+
 export async function getDbMediaFiles(options?: {
   fileType?: MediaFileType;
   category?: string;
@@ -212,7 +245,7 @@ export async function getDbMediaFiles(options?: {
 
       // Seed initial media files if database table is completely empty
       if (rows.length === 0) {
-        console.log('Seeding initial media files into Cloud SQL...');
+        console.log('Seeding initial media files into Russian server database...');
         for (const item of INITIAL_MEDIA_FILES) {
           await db.insert(mediaFiles).values({
             id: item.id,
@@ -234,16 +267,21 @@ export async function getDbMediaFiles(options?: {
           }).onConflictDoNothing();
         }
 
-        // Re-fetch after seeding
         const seededRows = await db.select().from(mediaFiles).orderBy(desc(mediaFiles.createdAt));
-        return filterRows(seededRows, options);
+        const filtered = filterRows(seededRows, options);
+        inMemoryMediaFiles = filterRows(seededRows);
+        saveCachedMediaFiles(inMemoryMediaFiles);
+        return filtered;
       }
 
-      return filterRows(rows, options);
+      const filtered = filterRows(rows, options);
+      inMemoryMediaFiles = filterRows(rows);
+      saveCachedMediaFiles(inMemoryMediaFiles);
+      return filtered;
     });
   } catch (error) {
-    console.error('Database query note in getDbMediaFiles, using fallback:', error);
-    return filterRows(INITIAL_MEDIA_FILES, options);
+    console.warn('Database note in getDbMediaFiles, using local Russian server store:', error);
+    return filterRows(inMemoryMediaFiles, options);
   }
 }
 
@@ -274,12 +312,12 @@ function filterRows(rows: any[], options?: { fileType?: MediaFileType; category?
       articleId: r.articleId || undefined,
       articleTitle: r.articleTitle || undefined,
       uploadedBy: r.uploadedBy || undefined,
-      createdAt: r.createdAt ? r.createdAt.toISOString() : new Date().toISOString(),
-      updatedAt: r.updatedAt ? r.updatedAt.toISOString() : undefined,
+      createdAt: r.createdAt ? (r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt)) : new Date().toISOString(),
+      updatedAt: r.updatedAt ? (r.updatedAt instanceof Date ? r.updatedAt.toISOString() : String(r.updatedAt)) : undefined,
       isPublished: !isDraft,
       isOptimized: isOptimized,
       optimizationRatio: ratio,
-      cloudStoragePath: r.fileUrl.startsWith('/uploads/') ? `cloud://europe-west2/storage/santehpro-media/${r.fileUrl.replace('/uploads/', '')}` : undefined,
+      cloudStoragePath: r.fileUrl && r.fileUrl.startsWith('/uploads/') ? `timeweb://ru-spb/santehpro-media/${r.fileUrl.replace('/uploads/', '')}` : undefined,
       streamBitrate: r.fileType === 'video' ? '1080p 60fps adaptive' : r.fileType === 'audio' ? '192 kbps' : undefined,
     };
   });
@@ -304,6 +342,9 @@ function filterRows(rows: any[], options?: { fileType?: MediaFileType; category?
 }
 
 export async function getDbMediaFileById(id: string): Promise<MediaFile | null> {
+  const inMem = inMemoryMediaFiles.find(m => m.id === id);
+  if (inMem) return inMem;
+
   try {
     return await withDbRetry(async () => {
       const rows = await db.select().from(mediaFiles).where(eq(mediaFiles.id, id)).limit(1);
@@ -334,56 +375,80 @@ export async function getDbMediaFileById(id: string): Promise<MediaFile | null> 
         articleId: r.articleId || undefined,
         articleTitle: r.articleTitle || undefined,
         uploadedBy: r.uploadedBy || undefined,
-        createdAt: r.createdAt ? r.createdAt.toISOString() : new Date().toISOString(),
-        updatedAt: r.updatedAt ? r.updatedAt.toISOString() : undefined,
+        createdAt: r.createdAt ? (r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt)) : new Date().toISOString(),
+        updatedAt: r.updatedAt ? (r.updatedAt instanceof Date ? r.updatedAt.toISOString() : String(r.updatedAt)) : undefined,
         isPublished: !isDraft,
         isOptimized: isOptimized,
         optimizationRatio: ratio,
-        cloudStoragePath: r.fileUrl.startsWith('/uploads/') ? `cloud://europe-west2/storage/santehpro-media/${r.fileUrl.replace('/uploads/', '')}` : undefined,
+        cloudStoragePath: r.fileUrl.startsWith('/uploads/') ? `timeweb://ru-spb/santehpro-media/${r.fileUrl.replace('/uploads/', '')}` : undefined,
         streamBitrate: r.fileType === 'video' ? '1080p 60fps adaptive' : r.fileType === 'audio' ? '192 kbps' : undefined,
       };
     });
   } catch (error) {
-    console.error('Database query note in getDbMediaFileById:', error);
-    const fallback = INITIAL_MEDIA_FILES.find(m => m.id === id);
+    console.warn('Database note in getDbMediaFileById:', error);
+    const fallback = inMemoryMediaFiles.find(m => m.id === id) || INITIAL_MEDIA_FILES.find(m => m.id === id);
     return fallback || null;
   }
 }
 
 export async function createDbMediaFile(file: MediaFile): Promise<MediaFile> {
+  let tags = file.tags || '';
+  if (file.isPublished === false) {
+    if (!tags.includes('#draft')) tags = (tags + ' #draft').trim();
+  }
+  const fileToSave: MediaFile = {
+    ...file,
+    tags,
+    createdAt: file.createdAt || new Date().toISOString(),
+    cloudStoragePath: file.fileUrl && file.fileUrl.startsWith('/uploads/') 
+      ? `timeweb://ru-spb/santehpro-media/${file.fileUrl.replace('/uploads/', '')}` 
+      : file.cloudStoragePath,
+  };
+
+  // Immediate persistent write to Russian server disk (.data/media_files_store.json)
+  inMemoryMediaFiles = inMemoryMediaFiles.filter(m => m.id !== fileToSave.id);
+  inMemoryMediaFiles.unshift(fileToSave);
+  saveCachedMediaFiles(inMemoryMediaFiles);
+
   try {
-    return await withDbRetry(async () => {
-      let tags = file.tags || '';
-      if (file.isPublished === false) {
-        if (!tags.includes('#draft')) tags = (tags + ' #draft').trim();
-      }
+    await withDbRetry(async () => {
       await db.insert(mediaFiles).values({
-        id: file.id,
-        title: file.title,
-        fileType: file.fileType,
-        category: file.category || 'water',
-        fileUrl: file.fileUrl,
-        thumbnailUrl: file.thumbnailUrl || null,
-        description: file.description || '',
-        format: file.format || 'file',
-        fileSize: file.fileSize || '',
-        duration: file.duration || null,
-        tags: tags,
-        articleId: file.articleId || null,
-        articleTitle: file.articleTitle || null,
-        uploadedBy: file.uploadedBy || 'Администратор',
-        createdAt: new Date(),
+        id: fileToSave.id,
+        title: fileToSave.title,
+        fileType: fileToSave.fileType,
+        category: fileToSave.category || 'water',
+        fileUrl: fileToSave.fileUrl,
+        thumbnailUrl: fileToSave.thumbnailUrl || null,
+        description: fileToSave.description || '',
+        format: fileToSave.format || 'file',
+        fileSize: fileToSave.fileSize || '',
+        duration: fileToSave.duration || null,
+        tags: fileToSave.tags || '',
+        articleId: fileToSave.articleId || null,
+        articleTitle: fileToSave.articleTitle || null,
+        uploadedBy: fileToSave.uploadedBy || 'Администратор',
+        createdAt: new Date(fileToSave.createdAt),
         updatedAt: new Date(),
-      });
-      return file;
+      }).onConflictDoNothing();
     });
   } catch (error) {
-    console.error('Database query failed in createDbMediaFile:', error);
-    throw new Error('Database query failed. Please try again later.', { cause: error });
+    console.warn('Database note in createDbMediaFile (persisted to Russian disk):', error);
   }
+
+  return fileToSave;
 }
 
 export async function updateDbMediaFile(id: string, updates: Partial<MediaFile>): Promise<void> {
+  const index = inMemoryMediaFiles.findIndex(m => m.id === id);
+  if (index >= 0) {
+    inMemoryMediaFiles[index] = {
+      ...inMemoryMediaFiles[index],
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+    saveCachedMediaFiles(inMemoryMediaFiles);
+  }
+
   try {
     await withDbRetry(async () => {
       const values: Record<string, any> = {
@@ -403,7 +468,7 @@ export async function updateDbMediaFile(id: string, updates: Partial<MediaFile>)
       if (updates.articleTitle !== undefined) values.articleTitle = updates.articleTitle || null;
 
       if (updates.isPublished !== undefined) {
-        const existing = await getDbMediaFileById(id);
+        const existing = inMemoryMediaFiles.find(m => m.id === id);
         let currentTags = updates.tags !== undefined ? updates.tags : (existing?.tags || '');
         if (updates.isPublished === false) {
           if (!currentTags.includes('#draft')) currentTags = (currentTags + ' #draft').trim();
@@ -416,18 +481,19 @@ export async function updateDbMediaFile(id: string, updates: Partial<MediaFile>)
       await db.update(mediaFiles).set(values).where(eq(mediaFiles.id, id));
     });
   } catch (error) {
-    console.error('Database query failed in updateDbMediaFile:', error);
-    throw new Error('Database query failed. Please try again later.', { cause: error });
+    console.warn('Database note in updateDbMediaFile (persisted to Russian disk):', error);
   }
 }
 
 export async function deleteDbMediaFile(id: string): Promise<void> {
+  inMemoryMediaFiles = inMemoryMediaFiles.filter(m => m.id !== id);
+  saveCachedMediaFiles(inMemoryMediaFiles);
+
   try {
     await withDbRetry(async () => {
       await db.delete(mediaFiles).where(eq(mediaFiles.id, id));
     });
   } catch (error) {
-    console.error('Database query failed in deleteDbMediaFile:', error);
-    throw new Error('Database query failed. Please try again later.', { cause: error });
+    console.warn('Database note in deleteDbMediaFile (removed from Russian disk):', error);
   }
 }
