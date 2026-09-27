@@ -1,0 +1,128 @@
+[
+  {
+    "timestamp": "2026-09-16T23:25:11.295Z",
+    "to": "sommoni@bk.ru",
+    "subject": "Код восстановления пароля",
+    "code": "228141",
+    "status": "sent_smtp"
+  },
+  {
+    "timestamp": "2026-09-16T23:20:46.329Z",
+    "to": "sommoni@bk.ru",
+    "subject": "Код восстановления пароля",
+    "code": "542095",
+    "status": "sent_smtp"
+  },
+  {
+    "timestamp": "2026-09-16T23:19:27.292Z",
+    "to": "santehpro.info@gmail.com",
+    "subject": "Код восстановления пароля",
+    "code": "TEST-VERIFY",
+    "status": "test_success"
+  },
+  {
+    "timestamp": "2026-09-16T23:13:24.492Z",
+    "to": "santehpro.info@gmail.com",
+    "subject": "Код восстановления пароля",
+    "code": "TEST-FAIL",
+    "status": "test_fail: Invalid login: 535-5.7.8 Username and Password not accepted. For more information, go to\n535 5.7.8  https://support.google.com/mail/?p=BadCredentials ffacd0b85a97d-4870bf43511sm9770262f8f.33 - gsmtp"
+  },
+  {
+    "timestamp": "2026-09-16T23:11:59.125Z",
+    "to": "santehpro.info@gmail.com",
+    "subject": "Код восстановления пароля",
+    "code": "TEST-FAIL",
+    "status": "test_fail: Invalid login: 535-5.7.8 Username and Password not accepted. For more information, go to\n535 5.7.8  https://support.google.com/mail/?p=BadCredentials 5b1f17b1804b1-49fbd7776d4sm14235485e9.0 - gsmtp"
+  },
+  {
+    "timestamp": "2026-09-16T23:02:27.404Z",
+    "to": "poshkent79@gmail.com",
+    "subject": "Код восстановления пароля",
+    "code": "TEST-FAIL",
+    "status": "test_fail: Invalid login: 535-5.7.8 Username and Password not accepted. For more information, go to\n535 5.7.8  https://support.google.com/mail/?p=BadCredentials 5b1f17b1804b1-49e847e994dsm71093965e9.2 - gsmtp"
+  },
+  {
+    "timestamp": "2026-09-16T22:59:13.504Z",
+    "to": "santehpro.info@gmail.com",
+    "subject": "Код восстановления пароля",
+    "code": "TEST-FAIL",
+    "status": "test_fail: Missing credentials for \"PLAIN\""
+  },
+  {
+    "timestamp": "2026-09-16T22:56:35.740Z",
+    "to": "santehpro.info@gmail.com",
+    "subject": "Код восстановления пароля",
+    "code": "TEST-FAIL",
+    "status": "test_fail: Missing credentials for \"PLAIN\""
+  },
+  {
+    "timestamp": "2026-09-16T22:54:34.989Z",
+    "to": "santehpro.info@gmail.com",
+    "subject": "Код восстановления пароля",
+    "code": "TEST-FAIL",
+    "status": "test_fail: Missing credentials for \"PLAIN\""
+  },
+  {
+    "timestamp": "2026-09-16T22:35:11.490Z",
+    "to": "sommoni@bk.ru",
+    "subject": "Код восстановления пароля",
+    "code": "929789",
+    "status": "simulated"
+  },
+  {
+    "timestamp": "2026-09-16T22:16:21.563Z",
+    "to": "sommoni@bk.ru",
+    "subject": "Код восстановления пароля",
+    "code": "610688",
+    "status": "simulated"
+  },
+  {
+    "timestamp": "2026-09-16T22:06:17.555Z",
+    "to": "sommoni@bk.ru",
+    "subject": "Код восстановления пароля",
+    "code": "269054",
+    "status": "simulated"
+  },
+  {
+    "timestamp": "2026-09-16T22:02:40.523Z",
+    "to": "sommoni@bk.ru",
+    "subject": "Код восстановления пароля",
+    "code": "223407",
+    "status": "simulated"
+  },
+  {
+    "timestamp": "2026-09-16T22:02:30.097Z",
+    "to": "sommoni@bk.ru",
+    "subject": "Код восстановления пароля",
+    "code": "987488",
+    "status": "simulated"
+  },
+  {
+    "timestamp": "2026-09-16T22:02:21.468Z",
+    "to": "sommoni@bk.ru",
+    "subject": "Код восстановления пароля",
+    "code": "277947",
+    "status": "simulated"
+  },
+  {
+    "timestamp": "2026-09-16T21:57:16.592Z",
+    "to": "dostonjon9955@gmail.com",
+    "subject": "Код восстановления пароля",
+    "code": "953893",
+    "status": "simulated"
+  },
+  {
+    "timestamp": "2026-09-16T21:55:49.682Z",
+    "to": "sommoni@bk.ru",
+    "subject": "Код восстановления пароля",
+    "code": "525670",
+    "status": "simulated"
+  },
+  {
+    "timestamp": "2026-09-16T21:43:20.383Z",
+    "to": "sommoni@bk.ru",
+    "subject": "Код восстановления пароля",
+    "code": "597642",
+    "status": "simulated"
+  }
+]

@@ -1,0 +1,7 @@
+{
+  "name": "СантехПро",
+  "description": "Пошаговые инструкции, видеоуроки, чат с экспертом и вызов мастеров по России с удобным управлением контентом.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

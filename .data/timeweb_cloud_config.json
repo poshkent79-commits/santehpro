@@ -1,0 +1,18 @@
+{
+  "apiUrl": "https://api.timeweb.cloud/v1",
+  "apiToken": "",
+  "serverId": "twc-srv-santehpro-01",
+  "projectName": "СантехПро Production",
+  "syncMode": "realtime",
+  "syncIntervalSeconds": 10,
+  "conflictStrategy": "timestamp",
+  "autoBackup": true,
+  "backupRetentionDays": 14,
+  "environmentName": "TimeWeb Cloud VPS (Ubuntu 24.04 / Node.js 20+)",
+  "ipAddress": "185.178.47.122",
+  "sshPort": 22,
+  "databaseHost": "twc-pg-santehpro.timeweb.cloud:5432",
+  "status": "connected",
+  "lastSyncTime": "2026-09-27T11:31:32.917Z",
+  "lastPingMs": 85
+}

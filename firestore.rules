@@ -1,0 +1,43 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.email == 'admin@santehpro.ru' ||
+        request.auth.token.role == 'admin' ||
+        request.auth.token.admin == true
+      );
+    }
+
+    // Master works
+    match /masterWorks/{workId} {
+      allow read: if resource.data.status == 'approved' || isAuthenticated() || isAdmin();
+      allow create: if isAuthenticated() || true; // allow submissions for moderation
+      allow update, delete: if isAdmin() || isAuthenticated();
+    }
+
+    // Articles
+    match /articles/{articleId} {
+      allow read: if resource.data.isPublished == true || resource.data.moderationStatus == 'approved' || isAuthenticated() || isAdmin();
+      allow create: if isAuthenticated() || true; // allow master article submissions
+      allow update, delete: if isAdmin() || isAuthenticated();
+    }
+
+    // Specialists
+    match /specialists/{specialistId} {
+      allow read: if true;
+      allow create: if true; // allow application
+      allow update, delete: if isAdmin() || (isAuthenticated() && (resource.data.userUid == request.auth.uid || resource.data.email == request.auth.token.email));
+    }
+
+    // Default fallback
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+  }
+}

@@ -1,0 +1,231 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Light Theme Overrides */
+html.light,
+.light {
+  color-scheme: light;
+}
+
+html.light body,
+.light body {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* All dark slate card/modal backgrounds become pure white in light mode */
+.light .bg-slate-950,
+.light .bg-slate-900,
+.light .bg-slate-850,
+.light [class*="bg-slate-950"],
+.light [class*="bg-slate-900"],
+.light [class*="bg-slate-850"] {
+  background-color: #ffffff !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.03);
+}
+
+/* Secondary cards, badges or inner boxes become light slate-50/100 or white */
+.light .bg-slate-800,
+.light [class*="bg-slate-800"] {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* Remove dark gradient backgrounds in light theme */
+.light [class*="from-slate-950"],
+.light [class*="from-slate-900"],
+.light [class*="via-slate-900"],
+.light [class*="to-slate-900"],
+.light [class*="from-cyan-950"],
+.light [class*="from-emerald-950"],
+.light [class*="from-amber-950"] {
+  background-color: #ffffff !important;
+  background-image: none !important;
+}
+
+/* Modals backdrop overlay */
+.light .fixed.inset-0,
+.light .fixed[class*="bg-slate-950"] {
+  background-color: rgba(15, 23, 42, 0.6) !important;
+}
+
+/* Borders in light mode */
+.light .border-slate-800,
+.light .border-slate-800\/80,
+.light .border-slate-700,
+.light .border-slate-700\/80,
+.light [class*="border-slate-800"],
+.light [class*="border-slate-700"] {
+  border-color: #e2e8f0 !important;
+}
+
+/* Typography & Headings in light mode */
+.light h1,
+.light h2,
+.light h3,
+.light h4,
+.light h5,
+.light h6,
+.light .text-white,
+.light .text-slate-100,
+.light .text-slate-200,
+.light [class*="text-slate-100"],
+.light [class*="text-slate-200"] {
+  color: #0f172a !important;
+}
+
+.light .text-slate-300,
+.light .text-slate-400,
+.light [class*="text-slate-300"],
+.light [class*="text-slate-400"] {
+  color: #334155 !important;
+}
+
+.light .text-slate-500,
+.light [class*="text-slate-500"] {
+  color: #64748b !important;
+}
+
+/* Colored accent text readability in light mode */
+.light .text-rose-300,
+.light .text-rose-400 {
+  color: #be123c !important;
+}
+
+.light .text-amber-300,
+.light .text-amber-400 {
+  color: #b45309 !important;
+}
+
+.light .text-emerald-300,
+.light .text-emerald-400 {
+  color: #047857 !important;
+}
+
+.light .text-cyan-300,
+.light .text-cyan-400 {
+  color: #0e7490 !important;
+}
+
+/* Inputs & selects in light mode */
+.light input:not([type="checkbox"]),
+.light select,
+.light textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+.light input::placeholder,
+.light textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Header & Footer in light mode */
+.light header,
+.light footer {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+.light header .bg-slate-950 {
+  background-color: #ffffff !important;
+}
+
+/* Primary Accent Buttons - High contrast readable text */
+.light button[class*="bg-cyan-500"],
+.light a[class*="bg-cyan-500"] {
+  background-color: #06b6d4 !important;
+  color: #0f172a !important;
+}
+
+.light button[class*="bg-amber-500"],
+.light a[class*="bg-amber-500"] {
+  background-color: #f59e0b !important;
+  color: #0f172a !important;
+}
+
+.light button[class*="bg-emerald-500"],
+.light a[class*="bg-emerald-500"] {
+  background-color: #10b981 !important;
+  color: #0f172a !important;
+}
+
+.light button[class*="bg-rose-500"],
+.light button[class*="bg-rose-600"],
+.light a[class*="bg-rose-500"],
+.light a[class*="bg-rose-600"] {
+  background-color: #e11d48 !important;
+  color: #ffffff !important;
+}
+
+/* Google Sign-in Material Button */
+.gsi-material-button {
+  user-select: none;
+  -webkit-user-select: none;
+  background-color: #ffffff;
+  border: 1px solid #747775;
+  border-radius: 12px;
+  box-sizing: border-box;
+  color: #1f1f1f;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  height: 42px;
+  letter-spacing: 0.25px;
+  outline: none;
+  overflow: hidden;
+  padding: 0 16px;
+  position: relative;
+  text-align: center;
+  transition: background-color .2s, border-color .2s, box-shadow .2s;
+  vertical-align: middle;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+.gsi-material-button .gsi-material-button-icon {
+  height: 20px;
+  margin-right: 12px;
+  min-width: 20px;
+  width: 20px;
+}
+
+.gsi-material-button .gsi-material-button-content-wrapper {
+  align-items: center;
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+}
+
+.gsi-material-button .gsi-material-button-contents {
+  flex-grow: 1;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.gsi-material-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.gsi-material-button:not(:disabled):hover {
+  box-shadow: 0 1px 3px 0 rgba(60, 64, 67, .30), 0 2px 6px 2px rgba(60, 64, 67, .15);
+  background-color: #f8fafc;
+}
+

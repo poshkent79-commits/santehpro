@@ -1,0 +1,75 @@
+{
+  "entities": {
+    "MasterWork": {
+      "title": "MasterWork",
+      "description": "Портфолио выполненных работ сантехников и мастеров с фотографиями и описанием услуг",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "specialistId": { "type": "string" },
+        "specialistName": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "photos": { "type": "array", "items": { "type": "string" } },
+        "completedAt": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "moderationComment": { "type": "string" }
+      },
+      "required": ["id", "specialistId", "title", "description", "status"]
+    },
+    "Article": {
+      "title": "Article",
+      "description": "Статьи и обучающие руководства по сантехнике, в том числе авторские материалы от мастеров",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "type": { "type": "string", "enum": ["article", "video"] },
+        "description": { "type": "string" },
+        "coverImage": { "type": "string" },
+        "author": { "type": "string" },
+        "authorMasterId": { "type": "string" },
+        "moderationStatus": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "moderationComment": { "type": "string" },
+        "isPublished": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "title", "category", "description"]
+    },
+    "Specialist": {
+      "title": "Specialist",
+      "description": "Анкеты и профили специалистов-сантехников платформы",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "city": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "userUid": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "verified": { "type": "boolean" },
+        "rating": { "type": "number" },
+        "services": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["id", "name", "city", "phone", "status"]
+    }
+  },
+  "firestore": {
+    "/masterWorks/{workId}": {
+      "schema": { "$ref": "#/entities/MasterWork" },
+      "description": "Коллекция выполненных работ и портфолио мастеров для модерации и публикации"
+    },
+    "/articles/{articleId}": {
+      "schema": { "$ref": "#/entities/Article" },
+      "description": "Коллекция статей базы знаний, включая материалы от мастеров на модерации"
+    },
+    "/specialists/{specialistId}": {
+      "schema": { "$ref": "#/entities/Specialist" },
+      "description": "Коллекция специалистов и мастеров платформы"
+    }
+  }
+}
