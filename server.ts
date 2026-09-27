@@ -3444,12 +3444,13 @@ async function start() {
   app.use(express.static(path.join(process.cwd(), 'public')));
 
   const isDistBundle = typeof __filename !== 'undefined' && __filename.includes('dist');
-  const isProduction = process.env.NODE_ENV === 'production' || isDistBundle;
+  const hasDistFolder = fs.existsSync(path.join(process.cwd(), 'dist', 'index.html'));
+  const isProduction = process.env.NODE_ENV === 'production' || isDistBundle || hasDistFolder;
 
   if (!isProduction) {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { middlewareMode: true, allowedHosts: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);

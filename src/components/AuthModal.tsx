@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
   X,
-  ShieldCheck,
-  AlertCircle,
   Wrench,
   Loader2,
+  AlertCircle,
   ExternalLink,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -18,7 +17,6 @@ interface AuthModalProps {
 export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
   const {
     isAuthModalOpen,
-    authModalReason,
     closeAuthModal,
     loginWithYandex,
   } = useAuth();
@@ -91,63 +89,60 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200">
       <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-sm sm:max-w-md overflow-hidden shadow-2xl relative flex flex-col">
         {/* ================= 1. ШАПКА ================= */}
-        <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/80">
+        <div className="px-5 py-3.5 border-b border-slate-800/80 flex items-center justify-between bg-slate-950/60">
           <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-red-600 to-amber-500 flex items-center justify-center shadow-md shadow-red-600/20 text-white font-black text-sm">
-              <Wrench className="w-4 h-4" />
+            {/* Аккуратный синий логотип с гаечным ключом */}
+            <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center shadow-md shadow-blue-600/30 text-white shrink-0">
+              <Wrench className="w-4 h-4 text-white" />
             </div>
-            <div className="flex items-baseline space-x-1">
-              <span className="text-lg font-black tracking-tight text-white">
-                <span className="text-red-500">Сантех</span>
-                <span className="text-blue-500">Про</span>
-              </span>
-              <span className="text-[11px] text-slate-400 font-semibold">· Вход</span>
+            {/* Текст «Сантех» (красный), «Про» (синий) · Вход */}
+            <div className="text-sm sm:text-base font-black tracking-tight">
+              <span className="text-red-500">Сантех</span>
+              <span className="text-blue-500">Про</span>
+              <span className="text-slate-400 font-normal text-xs sm:text-sm"> · Вход</span>
             </div>
           </div>
 
+          {/* Маленькая иконка закрытия крестик «✕» */}
           <button
             type="button"
             id="auth-modal-close-btn"
             onClick={closeAuthModal}
             aria-label="Закрыть окно"
-            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/80 transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Reason notice if triggered by protected action */}
-        {authModalReason && (
-          <div className="mx-4 sm:mx-5 mt-3 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-start space-x-2.5">
-            <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-300 font-medium leading-relaxed">
-              {authModalReason}
-            </p>
-          </div>
-        )}
-
-        {/* ================= 2. ОСНОВНОЙ КОНТЕНТ ================= */}
-        <div className="p-5 sm:p-6 space-y-4">
-          {/* Hero Branding */}
-          <div className="text-center space-y-2">
-            <div className="w-16 h-16 rounded-3xl bg-red-600 text-white flex items-center justify-center shadow-xl shadow-red-600/30 font-black text-3xl mx-auto transform hover:scale-105 transition-transform duration-200">
+        {/* ================= 2. ЦЕНТРАЛЬНЫЙ БЛОК АВТОРИЗАЦИИ ================= */}
+        <div className="p-5 sm:p-6 space-y-5">
+          {/* По центру крупная скругленная красная иконка с белой буквой «Я» */}
+          <div className="text-center space-y-2.5 pt-1">
+            <div className="w-16 h-16 rounded-2xl bg-red-600 text-white flex items-center justify-center shadow-xl shadow-red-600/30 font-black text-3xl mx-auto transform hover:scale-105 transition-transform duration-200 select-none">
               <span>Я</span>
             </div>
 
+            {/* Четкий белый заголовок: «Вход в СантехПро» */}
             <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-              Вход через Яндекс ID
+              Вход в СантехПро
             </h2>
+
+            {/* Подзаголовок приглушенным светло-серым цветом: «Единый личный кабинет для клиентов и мастеров» */}
+            <p className="text-xs sm:text-sm text-slate-400 leading-snug">
+              Единый личный кабинет для клиентов и мастеров
+            </p>
           </div>
 
-          {/* Error Message */}
+          {/* Сообщение об ошибке (если есть) */}
           {error && (
-            <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-start space-x-2 animate-in fade-in duration-200">
+            <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-start space-x-2 animate-in fade-in duration-200">
               <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
               <div className="flex-1 leading-relaxed">{error}</div>
             </div>
           )}
 
-          {/* Popup Blocked Warning & Direct Link */}
+          {/* Предупреждение о блокировке popup (при необходимости) */}
           {popupBlockedUrl && (
             <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs space-y-2 animate-in fade-in duration-200">
               <div className="flex items-start space-x-2">
@@ -167,34 +162,36 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
             </div>
           )}
 
-          {/* Primary Action Button: Unified Yandex ID */}
-          <div className="space-y-3 pt-1">
+          {/* ================= 3. ОСНОВНАЯ КНОПКА ДЕЙСТВИЯ ================= */}
+          <div className="space-y-4 pt-1">
             <button
               type="button"
               id="auth-yandex-primary-btn"
               disabled={isYandexLoading}
               onClick={handleYandexAuth}
-              className="w-full py-3.5 px-4 rounded-2xl bg-white hover:bg-slate-100 text-slate-950 font-black text-sm flex items-center justify-center space-x-3 transition-all duration-200 shadow-xl shadow-red-600/10 hover:shadow-red-600/20 cursor-pointer border border-white active:scale-[0.99] disabled:opacity-60"
+              className="w-full py-3.5 px-4 rounded-2xl bg-white hover:bg-slate-100 text-slate-950 font-bold text-sm sm:text-base flex items-center justify-center space-x-3 transition-all duration-200 shadow-xl shadow-red-600/10 hover:shadow-red-600/20 cursor-pointer border border-white active:scale-[0.99] disabled:opacity-60"
             >
-              <div className="w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center font-black text-sm shrink-0 shadow-sm">
-                {isYandexLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <span>Я</span>}
+              {/* Круглая красная иконка «Я» */}
+              <div className="w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+                {isYandexLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin text-white" /> : <span>Я</span>}
               </div>
-              <span>
+              {/* Четкий черный текст «Войти с Яндекс ID» */}
+              <span className="text-slate-950 font-extrabold tracking-tight">
                 {isYandexLoading ? 'Подключение к Яндекс ID...' : 'Войти с Яндекс ID'}
               </span>
             </button>
 
-            {/* ================= ЧЕКБОКСЫ ПОД КНОПКОЙ ================= */}
-            {/* Ссылки не выделяются яркими цветами и открываются исключительно при клике на них */}
-            <div className="space-y-2.5 pt-1 text-[11px] text-slate-400">
+            {/* ================= 4. БЛОК СОГЛАСИЙ (ВНИЗУ) ================= */}
+            <div className="space-y-2 pt-1 text-xs text-slate-200">
+              {/* Отмеченный чекбокс: белый текст «Согласен на обработку персональных данных (152-ФЗ)», фраза выделена как синяя кликабельная ссылка */}
               <label className="flex items-start space-x-2.5 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={dataConsentAccepted}
                   onChange={(e) => setDataConsentAccepted(e.target.checked)}
-                  className="mt-0.5 rounded border-slate-700 text-blue-600 focus:ring-0 bg-slate-950 cursor-pointer shrink-0"
+                  className="mt-0.5 w-4 h-4 rounded border-slate-700 bg-slate-950 text-blue-500 accent-blue-600 cursor-pointer shrink-0"
                 />
-                <span className="leading-snug text-slate-400">
+                <span className="leading-snug text-slate-300">
                   Согласен на{' '}
                   <button
                     type="button"
@@ -204,21 +201,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
                       setLegalDocType('privacy');
                       setIsLegalModalOpen(true);
                     }}
-                    className="text-slate-400 hover:text-slate-200 underline decoration-slate-600/70 hover:decoration-slate-400 underline-offset-2 transition-colors cursor-pointer inline p-0 bg-transparent border-0 font-normal"
+                    className="text-blue-400 hover:text-blue-300 underline decoration-blue-400/50 hover:decoration-blue-300 underline-offset-2 transition-colors cursor-pointer inline p-0 bg-transparent border-0 font-medium text-xs"
                   >
-                    обработку персональных данных
+                    обработку персональных данных (152-ФЗ)
                   </button>
                 </span>
               </label>
 
+              {/* Отмеченный чекбокс: белый текст «Принимаю условия Пользовательского соглашения», фраза выделена как синяя кликабельная ссылка */}
               <label className="flex items-start space-x-2.5 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={termsAccepted}
                   onChange={(e) => setTermsAccepted(e.target.checked)}
-                  className="mt-0.5 rounded border-slate-700 text-blue-600 focus:ring-0 bg-slate-950 cursor-pointer shrink-0"
+                  className="mt-0.5 w-4 h-4 rounded border-slate-700 bg-slate-950 text-blue-500 accent-blue-600 cursor-pointer shrink-0"
                 />
-                <span className="leading-snug text-slate-400">
+                <span className="leading-snug text-slate-300">
                   Принимаю условия{' '}
                   <button
                     type="button"
@@ -228,18 +226,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
                       setLegalDocType('terms');
                       setIsLegalModalOpen(true);
                     }}
-                    className="text-slate-400 hover:text-slate-200 underline decoration-slate-600/70 hover:decoration-slate-400 underline-offset-2 transition-colors cursor-pointer inline p-0 bg-transparent border-0 font-normal"
+                    className="text-blue-400 hover:text-blue-300 underline decoration-blue-400/50 hover:decoration-blue-300 underline-offset-2 transition-colors cursor-pointer inline p-0 bg-transparent border-0 font-medium text-xs"
                   >
-                    пользовательского соглашения
+                    Пользовательского соглашения
                   </button>
                 </span>
               </label>
             </div>
           </div>
+
+          {/* ================= 5. ФУТЕР ================= */}
+          <div className="pt-2 border-t border-slate-800/60 text-center">
+            <a
+              href="mailto:support@santehpro.info?subject=Вопрос%20по%20входу%20в%20СантехПро"
+              className="text-[11px] text-slate-500 hover:text-slate-300 transition-colors inline-block py-1"
+            >
+              Возникли сложности? Написать в поддержку
+            </a>
+          </div>
         </div>
       </div>
 
-      {/* Legal terms modal dialog with complete full texts */}
+      {/* Юридическое модальное окно с полными текстами соглашений */}
       <LegalTermsModal
         isOpen={isLegalModalOpen}
         initialDoc={legalDocType}
