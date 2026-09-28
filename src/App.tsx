@@ -29,6 +29,7 @@ import { CitySelectModal } from './components/CitySelectModal';
 import { ClientEstimateModal } from './components/ClientEstimateModal';
 import { MasterPlumbingEstimate } from './types';
 import { DonationModal } from './components/DonationModal';
+import { triggerNativeShare } from './utils/shareApp';
 
 function AppContent() {
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
@@ -223,29 +224,13 @@ function AppContent() {
   const [isShareCopied, setIsShareCopied] = useState(false);
 
   const handleShareAppFromBanner = async () => {
-    const shareUrl = window.location.origin || window.location.href;
-    const shareData = {
-      title: 'СантехПро — Проверенные мастера и база знаний',
-      text: 'Держи полезный сервис по сантехнике: проверенные мастера в твоём городе, пошаговые видеоинструкции и прозрачные сметы без наценок 👇',
-      url: shareUrl,
-    };
-
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      try {
-        await navigator.share(shareData);
-      } catch (err: any) {
-        if (err?.name !== 'AbortError') {
-          console.error('Ошибка Web Share API:', err);
-        }
-      }
-    } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      try {
-        await navigator.clipboard.writeText(shareUrl);
-        setIsShareCopied(true);
-        setTimeout(() => setIsShareCopied(false), 2500);
-      } catch (err) {
-        console.error('Ошибка копирования ссылки:', err);
-      }
+    const res = await triggerNativeShare({
+      title: 'СантехПро',
+      text: 'Рекомендую полезный сервис по сантехнике: проверенные мастера, электронные сметы, калькулятор материалов и 100+ пошаговых видеоуроков 👇',
+    });
+    if (res === 'copied') {
+      setIsShareCopied(true);
+      setTimeout(() => setIsShareCopied(false), 2500);
     }
   };
 
@@ -445,9 +430,9 @@ function AppContent() {
       });
     } else {
       updatePageSeoMetadata({
-        title: `СантехПро — Справочник сантехника, видеоуроки и вызов мастеров в г. ${selectedCity}`,
-        description: `Пошаговые инструкции по сантехнике, видеоуроки, интерактивная диагностика и база проверенных мастеров в г. ${selectedCity} и городах СНГ.`,
-        canonicalUrl: `/?city=${encodeURIComponent(selectedCity)}`,
+        title: 'СантехПро',
+        description: 'Поиск проверенных мастеров, электронные сметы, калькулятор материалов, 100+ пошаговых инструкций, видеообучение и диагностика поломок сантехники',
+        canonicalUrl: '/',
       });
     }
   }, [activeTab, selectedCity, selectedArticle, specialists]);

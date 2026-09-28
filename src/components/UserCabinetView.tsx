@@ -54,7 +54,7 @@ import { getOfflineArticles } from '../utils/offlineArticles';
 import { ServiceRequestRatingCard } from './ServiceRequestRatingCard';
 import { MasterCabinetSection } from './MasterCabinetSection';
 import { SpecialistCabinetView } from './SpecialistCabinetView';
-import { ShareAppModal } from './ShareAppModal';
+import { triggerNativeShare } from '../utils/shareApp';
 
 interface UserCabinetViewProps {
   articles: Article[];
@@ -175,7 +175,19 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
 
   const [requestFilter, setRequestFilter] = useState<'all' | 'needs_review' | 'completed' | 'in_progress'>('all');
   const [isCreatingTestRequest, setIsCreatingTestRequest] = useState(false);
-  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [shareFeedbackToast, setShareFeedbackToast] = useState<string | null>(null);
+
+  const handleShareClick = async () => {
+    const res = await triggerNativeShare({
+      title: 'СантехПро',
+      text: 'СантехПро — отличный сервис по сантехнике: пошаговые инструкции, обучающие курсы, расчёт материалов и база проверенных мастеров по всей России и СНГ! Рекомендую 👍',
+      url: window.location.origin || 'https://santehpro.info',
+    });
+    if (res === 'copied') {
+      setShareFeedbackToast('Ссылка на сервис скопирована в буфер обмена!');
+      setTimeout(() => setShareFeedbackToast(null), 3000);
+    }
+  };
 
   // City selection state in cabinet
   const [isCityModalOpen, setIsCityModalOpen] = useState(false);
@@ -610,9 +622,9 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
 
             <button
               type="button"
-              onClick={() => setIsShareModalOpen(true)}
+              onClick={handleShareClick}
               className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-500/20 to-blue-500/20 hover:from-cyan-500/30 hover:to-blue-500/30 text-cyan-300 hover:text-cyan-200 text-xs font-bold transition border border-cyan-500/30 flex items-center space-x-1.5 shadow-sm cursor-pointer"
-              title="Поделиться приложением в мессенджерах (Telegram, WhatsApp, VK)"
+              title="Поделиться сервисом"
             >
               <Share2 className="w-3.5 h-3.5 text-cyan-400" />
               <span>Поделиться</span>
@@ -640,6 +652,13 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
           <div className="mt-4 p-2.5 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs flex items-center space-x-2 animate-in fade-in duration-200">
             <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
             <span>{cityToast}</span>
+          </div>
+        )}
+
+        {shareFeedbackToast && (
+          <div className="mt-4 p-2.5 rounded-xl bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 text-xs flex items-center space-x-2 animate-in fade-in duration-200">
+            <Check className="w-4 h-4 text-cyan-400 shrink-0" />
+            <span>{shareFeedbackToast}</span>
           </div>
         )}
       </div>
@@ -1631,12 +1650,6 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
           </div>
         </div>
       )}
-
-      {/* Share Modal in Messengers */}
-      <ShareAppModal
-        isOpen={isShareModalOpen}
-        onClose={() => setIsShareModalOpen(false)}
-      />
     </div>
   );
 };

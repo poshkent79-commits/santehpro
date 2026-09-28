@@ -3808,6 +3808,11 @@ ${publishedArticles
     }
   });
 
+  app.get('/google:code.html', (req, res) => {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(`google-site-verification: google${req.params.code}.html\n`);
+  });
+
   app.use(express.static(path.join(process.cwd(), 'public')));
 
   const isDistBundle = typeof __filename !== 'undefined' && __filename.includes('dist');
