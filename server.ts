@@ -3811,8 +3811,10 @@ ${publishedArticles
   app.use(express.static(path.join(process.cwd(), 'public')));
 
   const isDistBundle = typeof __filename !== 'undefined' && __filename.includes('dist');
-  const hasDistFolder = fs.existsSync(path.join(process.cwd(), 'dist', 'index.html'));
-  const isProduction = process.env.NODE_ENV === 'production' || isDistBundle || hasDistFolder;
+  const distPath = path.join(process.cwd(), 'dist');
+  const distIndex = path.join(distPath, 'index.html');
+  const hasDistFolder = fs.existsSync(distIndex);
+  const isProduction = (process.env.NODE_ENV === 'production' || isDistBundle) && hasDistFolder;
 
   if (!isProduction) {
     const { createServer: createViteServer } = await import('vite');
@@ -3822,7 +3824,6 @@ ${publishedArticles
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
     // Serve hashed static bundles with 1-year immutable cache so Cloudflare CDN edge servers in Russia cache them permanently
     app.use('/assets', express.static(path.join(distPath, 'assets'), {
       maxAge: '1y',
@@ -3842,7 +3843,11 @@ ${publishedArticles
     }));
     app.get('*', (_req, res) => {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      res.sendFile(path.join(distPath, 'index.html'));
+      if (fs.existsSync(distIndex)) {
+        res.sendFile(distIndex);
+      } else {
+        res.sendFile(path.join(process.cwd(), 'index.html'));
+      }
     });
   }
 
