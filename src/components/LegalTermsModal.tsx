@@ -1,18 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   ShieldCheck,
   Scale,
   FileCheck2,
   FileText,
+  BadgeCheck,
 } from 'lucide-react';
 import {
   PRIVACY_POLICY_SECTIONS,
   TERMS_OF_USE_SECTIONS,
   OFERTA_SECTIONS,
+  MASTER_MODERATION_AGREEMENT_SECTIONS,
 } from '../data/legalTerms';
 
-export type LegalDocType = 'privacy' | 'terms' | 'offer';
+export type LegalDocType = 'privacy' | 'terms' | 'offer' | 'master_moderation';
 
 interface LegalTermsModalProps {
   isOpen: boolean;
@@ -35,12 +38,14 @@ export const LegalTermsModal: React.FC<LegalTermsModalProps> = ({
   const effectiveDoc = docType || initialDoc || 'privacy';
   const [activeDoc, setActiveDoc] = useState<LegalDocType>(effectiveDoc);
 
-  React.useEffect(() => {
-    setActiveDoc(docType || initialDoc || 'privacy');
+  useEffect(() => {
+    if (isOpen) {
+      setActiveDoc(docType || initialDoc || 'privacy');
+    }
   }, [initialDoc, docType, isOpen]);
 
-  React.useEffect(() => {
-    if (initialSection) {
+  useEffect(() => {
+    if (isOpen && initialSection) {
       setTimeout(() => {
         const el = document.getElementById(initialSection);
         if (el) el.scrollIntoView({ behavior: 'smooth' });
@@ -51,43 +56,49 @@ export const LegalTermsModal: React.FC<LegalTermsModalProps> = ({
   if (!isOpen) return null;
 
   const currentSections =
-    activeDoc === 'privacy'
+    activeDoc === 'master_moderation'
+      ? MASTER_MODERATION_AGREEMENT_SECTIONS
+      : activeDoc === 'privacy'
       ? PRIVACY_POLICY_SECTIONS
       : activeDoc === 'offer'
       ? OFERTA_SECTIONS
       : TERMS_OF_USE_SECTIONS;
 
   const currentTitle =
-    activeDoc === 'privacy'
+    activeDoc === 'master_moderation'
+      ? 'Соглашение о модерации и верификации документов исполнителя'
+      : activeDoc === 'privacy'
       ? 'Политика конфиденциальности (152-ФЗ)'
       : activeDoc === 'offer'
       ? 'Публичная оферта о добровольном пожертвовании'
       : 'Пользовательское соглашение сервиса';
 
   const CurrentIcon =
-    activeDoc === 'privacy'
+    activeDoc === 'master_moderation'
+      ? BadgeCheck
+      : activeDoc === 'privacy'
       ? ShieldCheck
       : activeDoc === 'offer'
       ? FileText
       : Scale;
 
-  return (
+  const modalContent = (
     <div 
-      className="fixed inset-0 z-[70] flex items-center justify-center p-2 sm:p-5 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-2.5 sm:p-5 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
-        className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-3xl h-[92vh] max-h-[92vh] overflow-hidden shadow-2xl relative flex flex-col animate-in zoom-in-95"
+        className="bg-slate-900 border border-slate-750 rounded-3xl w-full max-w-3xl h-[90vh] max-h-[90vh] overflow-hidden shadow-2xl relative flex flex-col animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header with Title and Document Switcher Tabs */}
-        <div className="px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-800 bg-slate-950/90 shrink-0 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
+        <div className="px-4 py-3.5 sm:px-6 sm:py-4 border-b border-slate-800 bg-slate-950/95 shrink-0 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center space-x-3 min-w-0">
               <div className="w-9 h-9 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 flex items-center justify-center shrink-0">
                 <CurrentIcon className="w-5 h-5" />
               </div>
-              <h2 className="text-base sm:text-lg font-bold text-white leading-tight">
+              <h2 className="text-sm sm:text-base md:text-lg font-bold text-white leading-tight truncate">
                 {currentTitle}
               </h2>
             </div>
@@ -95,25 +106,25 @@ export const LegalTermsModal: React.FC<LegalTermsModalProps> = ({
             <button
               onClick={onClose}
               type="button"
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition cursor-pointer"
-              title="Закрыть"
+              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition cursor-pointer shrink-0"
+              title="Закрыть окно"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          {/* Quick tab switcher between all 3 legal documents */}
+          {/* Quick tab switcher between all legal documents */}
           <div className="flex items-center gap-1.5 p-1 bg-slate-900/90 rounded-xl border border-slate-800 text-xs overflow-x-auto no-scrollbar">
             <button
               type="button"
-              onClick={() => setActiveDoc('offer')}
-              className={`flex-1 min-w-[130px] px-3 py-1.5 rounded-lg font-medium transition cursor-pointer text-center whitespace-nowrap ${
-                activeDoc === 'offer'
+              onClick={() => setActiveDoc('master_moderation')}
+              className={`flex-1 min-w-[170px] px-3 py-1.5 rounded-lg font-medium transition cursor-pointer text-center whitespace-nowrap ${
+                activeDoc === 'master_moderation'
                   ? 'bg-cyan-500 text-slate-950 font-bold shadow-sm'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
             >
-              Публичная оферта (пожертвования)
+              Модерация исполнителей
             </button>
             <button
               type="button"
@@ -136,6 +147,17 @@ export const LegalTermsModal: React.FC<LegalTermsModalProps> = ({
               }`}
             >
               Политика конфиденциальности
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveDoc('offer')}
+              className={`flex-1 min-w-[130px] px-3 py-1.5 rounded-lg font-medium transition cursor-pointer text-center whitespace-nowrap ${
+                activeDoc === 'offer'
+                  ? 'bg-cyan-500 text-slate-950 font-bold shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              Публичная оферта
             </button>
           </div>
         </div>
@@ -164,7 +186,7 @@ export const LegalTermsModal: React.FC<LegalTermsModalProps> = ({
         {/* Clean Footer Bar */}
         <div className="p-3.5 sm:p-4 border-t border-slate-800 bg-slate-950/90 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
           <div className="text-xs text-slate-400 text-center sm:text-left">
-            <span>Редакция 3.0 от 26 сентября 2026 года • Самозанятый Туйчиев Д. Н. • E-mail для обращений:{' '}
+            <span>Редакция 3.0 от 26 сентября 2026 года • Самозанятый Туйчиев Д. Н. • E-mail:{' '}
               <a href="mailto:santehpro.info@gmail.com" className="text-cyan-400 hover:underline">
                 santehpro.info@gmail.com
               </a>
@@ -194,4 +216,6 @@ export const LegalTermsModal: React.FC<LegalTermsModalProps> = ({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent;
 };

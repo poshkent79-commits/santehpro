@@ -5,6 +5,43 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 
+// Super Admin emails & phones configuration with automatic admin privileges
+export const SUPER_ADMIN_EMAILS = [
+  'poshkent79@gmail.com',
+  'admin@santehpro.ru',
+  'admin@santehpro.info',
+];
+
+export const SUPER_ADMIN_PHONES = [
+  '+79247889900',
+  '79247889900',
+  '89247889900',
+  '+7 (924) 788-99-00',
+  '+7 (924) 788-9900',
+  '9247889900',
+];
+
+export function isSuperAdminEmail(email?: string | null): boolean {
+  if (!email) return false;
+  return SUPER_ADMIN_EMAILS.includes(email.trim().toLowerCase());
+}
+
+export function isSuperAdminPhone(phone?: string | null): boolean {
+  if (!phone) return false;
+  const digits = phone.replace(/\D/g, '');
+  return (
+    SUPER_ADMIN_PHONES.some((p) => p.replace(/\D/g, '') === digits) ||
+    digits === '79247889900' ||
+    digits === '89247889900' ||
+    digits.endsWith('9247889900')
+  );
+}
+
+export function isSuperAdmin(user?: { email?: string | null; phone?: string | null } | null): boolean {
+  if (!user) return false;
+  return isSuperAdminEmail(user.email) || isSuperAdminPhone(user.phone);
+}
+
 // Password hashing helper using Node.js built-in crypto (PBKDF2)
 export function hashPassword(password: string): string {
   const salt = crypto.randomBytes(16).toString('hex');
@@ -80,6 +117,22 @@ function loadInitialUsers(): CachedUser[] {
   const defaults: CachedUser[] = [
     {
       id: 1,
+      uid: 'usr-admin-poshkent',
+      email: 'poshkent79@gmail.com',
+      name: 'Главный Администратор',
+      phone: '+7 (999) 000-79-79',
+      city: 'Москва',
+      passwordHash: hashPassword('Sol20252026@'),
+      role: 'admin',
+      dataConsent: true,
+      consentTimestamp: new Date(),
+      legalConsent: true,
+      legalConsentTimestamp: new Date(),
+      legalChecklistJson: null,
+      createdAt: new Date(),
+    },
+    {
+      id: 2,
       uid: 'usr-admin-master',
       email: 'admin@santehpro.ru',
       name: 'Администратор СантехПро',
@@ -95,7 +148,7 @@ function loadInitialUsers(): CachedUser[] {
       createdAt: new Date(),
     },
     {
-      id: 2,
+      id: 3,
       uid: 'usr-demo-master',
       email: 'user@santehpro.ru',
       name: 'Мастер-Пользователь',
@@ -137,20 +190,31 @@ function persistUsersToDisk() {
   }
 }
 
+function sanitizeUserResult<T extends { email?: string | null; phone?: string | null; role?: string }>(user: T | null): T | null {
+  if (!user) return null;
+  if (isSuperAdmin(user)) {
+    user.role = 'admin';
+  }
+  return user;
+}
+
 export async function getUserByEmail(email: string) {
   const normalized = email.toLowerCase().trim();
   try {
     const results = await db.select().from(users).where(eq(users.email, normalized));
     if (results[0]) {
+      const sanitized = sanitizeUserResult(results[0] as any);
       const idx = inMemoryUsers.findIndex((u) => u.email === normalized);
-      if (idx >= 0) inMemoryUsers[idx] = results[0] as any;
-      else inMemoryUsers.push(results[0] as any);
+      if (idx >= 0) inMemoryUsers[idx] = sanitized as any;
+      else inMemoryUsers.push(sanitized as any);
       persistUsersToDisk();
-      return results[0];
+      return sanitized;
     }
-    return inMemoryUsers.find((u) => u.email.toLowerCase().trim() === normalized) || null;
+    const memUser = inMemoryUsers.find((u) => u.email.toLowerCase().trim() === normalized) || null;
+    return sanitizeUserResult(memUser);
   } catch (error) {
-    return inMemoryUsers.find((u) => u.email.toLowerCase().trim() === normalized) || null;
+    const memUser = inMemoryUsers.find((u) => u.email.toLowerCase().trim() === normalized) || null;
+    return sanitizeUserResult(memUser);
   }
 }
 
@@ -158,15 +222,18 @@ export async function getUserByUid(uid: string) {
   try {
     const results = await db.select().from(users).where(eq(users.uid, uid));
     if (results[0]) {
+      const sanitized = sanitizeUserResult(results[0] as any);
       const idx = inMemoryUsers.findIndex((u) => u.uid === uid);
-      if (idx >= 0) inMemoryUsers[idx] = results[0] as any;
-      else inMemoryUsers.push(results[0] as any);
+      if (idx >= 0) inMemoryUsers[idx] = sanitized as any;
+      else inMemoryUsers.push(sanitized as any);
       persistUsersToDisk();
-      return results[0];
+      return sanitized;
     }
-    return inMemoryUsers.find((u) => u.uid === uid) || null;
+    const memUser = inMemoryUsers.find((u) => u.uid === uid) || null;
+    return sanitizeUserResult(memUser);
   } catch (error) {
-    return inMemoryUsers.find((u) => u.uid === uid) || null;
+    const memUser = inMemoryUsers.find((u) => u.uid === uid) || null;
+    return sanitizeUserResult(memUser);
   }
 }
 

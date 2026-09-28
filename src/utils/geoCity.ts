@@ -1,5 +1,14 @@
 export { RUSSIAN_CITIES } from '../data/initialData';
 import { RUSSIAN_CITIES } from '../data/initialData';
+import {
+  TAJIKISTAN_CITIES,
+  KAZAKHSTAN_CITIES,
+  UZBEKISTAN_CITIES,
+  KYRGYZSTAN_CITIES,
+  getCountryByCity,
+  getCountryByCode,
+  COUNTRIES,
+} from '../data/regionsData';
 
 export interface CityCoord {
   name: string;
@@ -9,11 +18,13 @@ export interface CityCoord {
 }
 
 export interface DetectedCityResult {
-  detectedCityName: string; // e.g. "Москва", "Подольск", "London"
-  nearestCity: string; // A valid city from RUSSIAN_CITIES (excluding 'Все города')
+  detectedCityName: string; // e.g. "Москва", "Душанбе", "Алматы", "Ташкент"
+  nearestCity: string; // A valid city from supported regional lists
   distanceKm: number; // 0 if direct match or estimated distance in km
   isExactMatch: boolean;
-  country?: string;
+  country?: string; // 'RU' | 'TJ' | 'KZ' | 'UZ' | 'KG'
+  countryName?: string;
+  countryFlag?: string;
   latitude?: number;
   longitude?: number;
 }
@@ -765,6 +776,184 @@ export const CITY_COORDINATES: Record<string, CityCoord> = {
     lat: 69.3498,
     lon: 88.2010,
     aliases: ['норильск', 'norilsk', 'талнах', 'кайеркан', 'дудинка']
+  },
+  // Таджикистан (Tajikistan)
+  'Душанбе': {
+    name: 'Душанбе',
+    lat: 38.5598,
+    lon: 68.7870,
+    aliases: ['душанбе', 'dushanbe', 'вахдат', 'гиссар', 'варзоб']
+  },
+  'Худжанд': {
+    name: 'Худжанд',
+    lat: 40.2826,
+    lon: 69.6222,
+    aliases: ['худжанд', 'khujand', 'ленинабад', 'гафуров', 'бустон', 'чоркух']
+  },
+  'Бохтар': {
+    name: 'Бохтар',
+    lat: 37.8364,
+    lon: 68.7801,
+    aliases: ['бохтар', 'курган-тюбе', 'кургантюбе', 'bokhtar', 'qurghonteppa']
+  },
+  'Куляб': {
+    name: 'Куляб',
+    lat: 37.9089,
+    lon: 69.7828,
+    aliases: ['куляб', 'kulyab', 'kulob']
+  },
+  'Истаравшан': {
+    name: 'Истаравшан',
+    lat: 39.9142,
+    lon: 69.0036,
+    aliases: ['истаравшан', 'istaravshan', 'ура-тюбе']
+  },
+  'Исфара': {
+    name: 'Исфара',
+    lat: 40.1242,
+    lon: 70.6253,
+    aliases: ['исфара', 'isfara']
+  },
+  'Канибадам': {
+    name: 'Канибадам',
+    lat: 40.2886,
+    lon: 70.4286,
+    aliases: ['канибадам', 'kanibadam', 'конибодом']
+  },
+  'Пенджикент': {
+    name: 'Пенджикент',
+    lat: 39.4958,
+    lon: 67.6094,
+    aliases: ['пенджикент', 'penjikent', 'панчакент']
+  },
+  // Казахстан (Kazakhstan)
+  'Алматы': {
+    name: 'Алматы',
+    lat: 43.2389,
+    lon: 76.8897,
+    aliases: ['алматы', 'almaty', 'алма-ата', 'талгар', 'каскелен']
+  },
+  'Астана': {
+    name: 'Астана',
+    lat: 51.1694,
+    lon: 71.4491,
+    aliases: ['астана', 'astana', 'нур-султан', 'нурсултан', 'целиноград', 'акмолинск']
+  },
+  'Шымкент': {
+    name: 'Шымкент',
+    lat: 42.3417,
+    lon: 69.5901,
+    aliases: ['шымкент', 'shymkent', 'чимкент']
+  },
+  'Караганда': {
+    name: 'Караганда',
+    lat: 49.8047,
+    lon: 73.1094,
+    aliases: ['караганда', 'karaganda', 'темиртау', 'шахтинск', 'сарань']
+  },
+  'Актобе': {
+    name: 'Актобе',
+    lat: 50.2839,
+    lon: 57.1670,
+    aliases: ['актобе', 'aktobe', 'актюбинск']
+  },
+  'Тараз': {
+    name: 'Тараз',
+    lat: 42.9000,
+    lon: 71.3667,
+    aliases: ['тараз', 'taraz', 'джамбул']
+  },
+  'Павлодар': {
+    name: 'Павлодар',
+    lat: 52.2878,
+    lon: 76.9672,
+    aliases: ['павлодар', 'pavlodar', 'аксу', 'экибастуз']
+  },
+  'Усть-Каменогорск': {
+    name: 'Усть-Каменогорск',
+    lat: 49.9536,
+    lon: 82.6094,
+    aliases: ['усть-каменогорск', 'оскемен', 'oskemen']
+  },
+  'Семей': {
+    name: 'Семей',
+    lat: 50.4111,
+    lon: 80.2275,
+    aliases: ['семей', 'семипалатинск', 'semey']
+  },
+  'Атырау': {
+    name: 'Атырау',
+    lat: 47.1167,
+    lon: 51.8833,
+    aliases: ['атырау', 'atyrau', 'гурьев']
+  },
+  // Узбекистан (Uzbekistan)
+  'Ташкент': {
+    name: 'Ташкент',
+    lat: 41.2995,
+    lon: 69.2401,
+    aliases: ['ташкент', 'tashkent', 'тошкент', 'чирчик', 'янгиюль']
+  },
+  'Самарканд': {
+    name: 'Самарканд',
+    lat: 39.6542,
+    lon: 66.9597,
+    aliases: ['самарканд', 'samarkand', 'самарканд']
+  },
+  'Бухара': {
+    name: 'Бухара',
+    lat: 39.7747,
+    lon: 64.4286,
+    aliases: ['бухара', 'bukhara', 'бухоро', 'каган']
+  },
+  'Андижан': {
+    name: 'Андижан',
+    lat: 40.7821,
+    lon: 72.3442,
+    aliases: ['андижан', 'andijan', 'андижон', 'асака']
+  },
+  'Наманган': {
+    name: 'Наманган',
+    lat: 40.9983,
+    lon: 71.6726,
+    aliases: ['наманган', 'namangan', 'чуст']
+  },
+  'Фергана': {
+    name: 'Фергана',
+    lat: 40.3842,
+    lon: 71.7843,
+    aliases: ['фергана', 'fergana', 'маргилан', 'коканд', 'кувасай']
+  },
+  'Нукус': {
+    name: 'Нукус',
+    lat: 42.4602,
+    lon: 59.6166,
+    aliases: ['нукус', 'nukus', 'каракалпакстан']
+  },
+  // Кыргызстан (Kyrgyzstan)
+  'Бишкек': {
+    name: 'Бишкек',
+    lat: 42.8746,
+    lon: 74.5698,
+    aliases: ['бишкек', 'bishkek', 'фрунзе', 'кант', 'кара-балта', 'токмок']
+  },
+  'Ош': {
+    name: 'Ош',
+    lat: 40.5140,
+    lon: 72.8161,
+    aliases: ['ош', 'osh', 'кара-суу', 'ноокат', 'узген']
+  },
+  'Джалал-Абад': {
+    name: 'Джалал-Абад',
+    lat: 40.9333,
+    lon: 72.9833,
+    aliases: ['джалал-абад', 'жалал-абад', 'jalal-abad', 'кок-жаргак']
+  },
+  'Каракол': {
+    name: 'Каракол',
+    lat: 42.4907,
+    lon: 78.3936,
+    aliases: ['каракол', 'karakol', 'пржевальск', 'иссык-куль']
   }
 };
 
@@ -806,28 +995,40 @@ function normalizeCityName(str: string): string {
 export function findNearestCity(
   detectedName?: string,
   latitude?: number,
-  longitude?: number
-): { nearestCity: string; distanceKm: number; isExactMatch: boolean } {
-  const availableCities = RUSSIAN_CITIES.filter((c) => c !== 'Все города');
+  longitude?: number,
+  countryCode?: string
+): { nearestCity: string; distanceKm: number; isExactMatch: boolean; country?: string } {
+  const allSupportedCities = [
+    ...RUSSIAN_CITIES.filter((c) => c !== 'Все города'),
+    ...TAJIKISTAN_CITIES,
+    ...KAZAKHSTAN_CITIES,
+    ...UZBEKISTAN_CITIES,
+    ...KYRGYZSTAN_CITIES,
+  ];
+
+  const normCountry = (countryCode || '').toUpperCase();
 
   // 1. Direct name match or alias lookup
   if (detectedName) {
     const clean = normalizeCityName(detectedName);
 
     // Direct match with active city names
-    for (const city of availableCities) {
+    for (const city of allSupportedCities) {
       if (normalizeCityName(city) === clean) {
-        return { nearestCity: city, distanceKm: 0, isExactMatch: true };
+        const cInfo = getCountryByCity(city);
+        return { nearestCity: city, distanceKm: 0, isExactMatch: true, country: cInfo.code };
       }
     }
 
     // Alias / satellite lookup
     for (const [cityName, coord] of Object.entries(CITY_COORDINATES)) {
       if (coord.aliases.some((alias) => clean.includes(alias) || alias.includes(clean))) {
+        const cInfo = getCountryByCity(cityName);
         return {
           nearestCity: cityName,
           distanceKm: 0,
-          isExactMatch: true
+          isExactMatch: true,
+          country: cInfo.code,
         };
       }
     }
@@ -846,15 +1047,31 @@ export function findNearestCity(
       }
     }
 
+    const cInfo = getCountryByCity(bestCity);
     return {
       nearestCity: bestCity,
       distanceKm: minDistance,
-      isExactMatch: minDistance <= 35 // within 35 km is treated as an exact local match
+      isExactMatch: minDistance <= 35, // within 35 km is treated as an exact local match
+      country: cInfo.code,
     };
   }
 
-  // 3. Default fallback
-  return { nearestCity: 'Москва', distanceKm: 0, isExactMatch: false };
+  // 3. Fallback based on country code
+  if (normCountry === 'TJ') {
+    return { nearestCity: 'Душанбе', distanceKm: 0, isExactMatch: false, country: 'TJ' };
+  }
+  if (normCountry === 'KZ') {
+    return { nearestCity: 'Алматы', distanceKm: 0, isExactMatch: false, country: 'KZ' };
+  }
+  if (normCountry === 'UZ') {
+    return { nearestCity: 'Ташкент', distanceKm: 0, isExactMatch: false, country: 'UZ' };
+  }
+  if (normCountry === 'KG') {
+    return { nearestCity: 'Бишкек', distanceKm: 0, isExactMatch: false, country: 'KG' };
+  }
+
+  // Default fallback
+  return { nearestCity: 'Москва', distanceKm: 0, isExactMatch: false, country: 'RU' };
 }
 
 /**
@@ -878,15 +1095,18 @@ export async function detectUserCityFromIP(): Promise<DetectedCityResult | null>
         const rawCity = data.city || '';
         const lat = typeof data.latitude === 'number' ? data.latitude : undefined;
         const lon = typeof data.longitude === 'number' ? data.longitude : undefined;
-        const country = data.country || 'RU';
+        const country = (data.country || 'RU').toUpperCase();
 
-        const match = findNearestCity(rawCity, lat, lon);
+        const match = findNearestCity(rawCity, lat, lon, country);
+        const countryObj = getCountryByCode(match.country || country);
         return {
           detectedCityName: rawCity || match.nearestCity,
           nearestCity: match.nearestCity,
           distanceKm: match.distanceKm,
           isExactMatch: match.isExactMatch,
-          country,
+          country: countryObj.code,
+          countryName: countryObj.name,
+          countryFlag: countryObj.flag,
           latitude: lat,
           longitude: lon
         };
@@ -912,15 +1132,18 @@ export async function detectUserCityFromIP(): Promise<DetectedCityResult | null>
         const rawCity = data.city || '';
         const lat = typeof data.latitude === 'number' ? data.latitude : undefined;
         const lon = typeof data.longitude === 'number' ? data.longitude : undefined;
-        const country = data.country || data.country_code || '';
+        const country = (data.country_code || data.country || 'RU').toUpperCase();
 
-        const match = findNearestCity(rawCity, lat, lon);
+        const match = findNearestCity(rawCity, lat, lon, country);
+        const countryObj = getCountryByCode(match.country || country);
         return {
           detectedCityName: rawCity || match.nearestCity,
           nearestCity: match.nearestCity,
           distanceKm: match.distanceKm,
           isExactMatch: match.isExactMatch,
-          country,
+          country: countryObj.code,
+          countryName: countryObj.name,
+          countryFlag: countryObj.flag,
           latitude: lat,
           longitude: lon
         };
@@ -930,7 +1153,7 @@ export async function detectUserCityFromIP(): Promise<DetectedCityResult | null>
     // Primary failed, continue to fallback
   }
 
-  // 2. Fallback: ipapi.co/json/
+  // 3. Fallback: ipapi.co/json/
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 1500);
@@ -946,15 +1169,18 @@ export async function detectUserCityFromIP(): Promise<DetectedCityResult | null>
         const rawCity = data.city || '';
         const lat = typeof data.latitude === 'number' ? data.latitude : undefined;
         const lon = typeof data.longitude === 'number' ? data.longitude : undefined;
-        const country = data.country_name || data.country || '';
+        const country = (data.country_code || data.country || 'RU').toUpperCase();
 
-        const match = findNearestCity(rawCity, lat, lon);
+        const match = findNearestCity(rawCity, lat, lon, country);
+        const countryObj = getCountryByCode(match.country || country);
         return {
           detectedCityName: rawCity || match.nearestCity,
           nearestCity: match.nearestCity,
           distanceKm: match.distanceKm,
           isExactMatch: match.isExactMatch,
-          country,
+          country: countryObj.code,
+          countryName: countryObj.name,
+          countryFlag: countryObj.flag,
           latitude: lat,
           longitude: lon
         };
@@ -964,7 +1190,15 @@ export async function detectUserCityFromIP(): Promise<DetectedCityResult | null>
     // Both IP services failed
   }
 
-  return null;
+  return {
+    detectedCityName: 'Москва',
+    nearestCity: 'Москва',
+    distanceKm: 0,
+    isExactMatch: false,
+    country: 'RU',
+    countryName: 'Россия',
+    countryFlag: '🇷🇺',
+  };
 }
 
 /**

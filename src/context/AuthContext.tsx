@@ -56,12 +56,30 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AUTH_STORAGE_KEY = 'santehpro_auth_user';
 const GUEST_FAVORITES_KEY = 'santehpro_guest_favorites';
+const SUPER_ADMIN_EMAILS = ['poshkent79@gmail.com', 'admin@santehpro.ru', 'admin@santehpro.info'];
+const SUPER_ADMIN_PHONES = ['+79247889900', '79247889900', '89247889900', '9247889900'];
+
+const isSuperAdminUser = (user?: Partial<UserProfile> | null): boolean => {
+  if (!user) return false;
+  const email = user.email?.toLowerCase().trim();
+  if (email && SUPER_ADMIN_EMAILS.includes(email)) return true;
+  const phoneDigits = user.phone?.replace(/\D/g, '') || '';
+  if (phoneDigits === '79247889900' || phoneDigits === '89247889900' || phoneDigits.endsWith('9247889900')) return true;
+  return user.role === 'admin';
+};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
     try {
       const saved = localStorage.getItem(AUTH_STORAGE_KEY) || localStorage.getItem('santehpro_current_user');
-      return saved ? JSON.parse(saved) : null;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (isSuperAdminUser(parsed)) {
+          parsed.role = 'admin';
+        }
+        return parsed;
+      }
+      return null;
     } catch {
       return null;
     }
@@ -542,22 +560,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [currentUser]);
 
-  // Fetch purchases from Cloud SQL
+  // Fetch purchases from Cloud SQL with graceful offline caching
   const refreshPurchases = async () => {
     if (!currentUser?.uid) {
       setPurchases([]);
       return;
     }
+    const userPurchasesKey = `santehpro_purchases_${currentUser.uid}`;
     try {
-      const res = await fetch(`/api/user/purchases?uid=${encodeURIComponent(currentUser.uid)}`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+      const res = await fetch(`/api/user/purchases?uid=${encodeURIComponent(currentUser.uid)}`, {
+        signal: controller.signal,
+        headers: { Accept: 'application/json' }
+      });
+      clearTimeout(timeoutId);
+
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
           setPurchases(data);
+          try {
+            localStorage.setItem(userPurchasesKey, JSON.stringify(data));
+          } catch {}
         }
       }
-    } catch (err) {
-      console.error('Failed to load user purchases:', err);
+    } catch (_err) {
+      // Graceful offline fallback: read from local cache if present
+      try {
+        const cached = localStorage.getItem(userPurchasesKey);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed)) {
+            setPurchases(parsed);
+          }
+        }
+      } catch {}
     }
   };
 
@@ -570,19 +608,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch {}
       return;
     }
+    const userFavoritesKey = `santehpro_favorites_${currentUser.uid}`;
     try {
-      const res = await fetch(`/api/user/favorites?uid=${encodeURIComponent(currentUser.uid)}`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+      const res = await fetch(`/api/user/favorites?uid=${encodeURIComponent(currentUser.uid)}`, {
+        signal: controller.signal,
+        headers: { Accept: 'application/json' }
+      });
+      clearTimeout(timeoutId);
+
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
           setFavorites(data);
           try {
+            localStorage.setItem(userFavoritesKey, JSON.stringify(data));
             localStorage.setItem(GUEST_FAVORITES_KEY, JSON.stringify(data));
           } catch {}
         }
       }
-    } catch (err) {
-      console.error('Failed to load user favorites:', err);
+    } catch (_err) {
+      // Graceful offline fallback: read from local cache
+      try {
+        const cached = localStorage.getItem(userFavoritesKey) || localStorage.getItem(GUEST_FAVORITES_KEY);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed)) {
+            setFavorites(parsed);
+          }
+        }
+      } catch {}
     }
   };
 
@@ -592,14 +648,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       if (currentUser?.uid) {
         try {
-          // Verify profile from server
-          const profRes = await fetch(`/api/user/profile?uid=${encodeURIComponent(currentUser.uid)}`);
+          // Verify profile from server with safe timeout
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 3500);
+          const profRes = await fetch(`/api/user/profile?uid=${encodeURIComponent(currentUser.uid)}`, {
+            signal: controller.signal,
+            headers: { Accept: 'application/json' }
+          });
+          clearTimeout(timeoutId);
+
           if (profRes.ok) {
             const freshUser = await profRes.json();
-            setCurrentUser(freshUser);
+            if (freshUser && freshUser.uid) {
+              if (isSuperAdminUser(freshUser)) {
+                freshUser.role = 'admin';
+              }
+              setCurrentUser(freshUser);
+            }
           }
-        } catch (e) {
-          console.error('Profile refresh error:', e);
+        } catch (_e) {
+          // Offline or transient server boot - continue with cached local user profile
         }
         await Promise.all([refreshPurchases(), refreshFavorites()]);
       } else {

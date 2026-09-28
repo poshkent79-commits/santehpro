@@ -1,7 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { MapPin, Phone, MessageSquare, Star, ShieldCheck, UserPlus, Search, CheckCircle, ChevronDown, Wrench, Calendar, Trash2, AlertCircle, AlertTriangle, X, Sparkles, Crown, Camera, Image as ImageIcon, LocateFixed, Loader2, Navigation, RotateCw, Eye } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { MapPin, Phone, MessageSquare, Star, ShieldCheck, UserPlus, Search, CheckCircle, ChevronDown, Wrench, Calendar, Trash2, AlertCircle, AlertTriangle, X, Sparkles, Crown, Camera, Image as ImageIcon, LocateFixed, Loader2, Navigation, RotateCw, Eye, Globe } from 'lucide-react';
 import { PlumbingSpecialist, ServiceCallRequest, UserProfile, MasterWork } from '../types';
 import { RUSSIAN_CITIES } from '../data/initialData';
+import {
+  COUNTRIES,
+  CountryInfo,
+  getCountryByCity,
+  getCitiesByCountry,
+} from '../data/regionsData';
 import { DetectedCityResult, detectUserCityFromIP } from '../utils/geoCity';
 import { ApplySpecialistModal } from './ApplySpecialistModal';
 import { BookMasterModal } from './BookMasterModal';
@@ -75,6 +81,35 @@ export const SpecialistsView: React.FC<SpecialistsViewProps> = ({
   const activeCityInfo = detectedCityInfo !== undefined ? detectedCityInfo : internalCityInfo;
   const detecting = isDetectingCity || internalDetecting;
 
+  // Multi-country state
+  const initialCountry = useMemo(() => {
+    if (selectedCity && selectedCity !== 'Все города') {
+      return getCountryByCity(selectedCity).code;
+    }
+    try {
+      const stored = localStorage.getItem('santehpro_selected_country');
+      if (stored) return stored;
+    } catch {}
+    return 'RU';
+  }, [selectedCity]);
+
+  const [activeCountryCode, setActiveCountryCode] = useState<string>(initialCountry);
+
+  useEffect(() => {
+    if (selectedCity && selectedCity !== 'Все города') {
+      const c = getCountryByCity(selectedCity);
+      setActiveCountryCode(c.code);
+    }
+  }, [selectedCity]);
+
+  const activeCountryObj = useMemo(() => {
+    return COUNTRIES.find((c) => c.code === activeCountryCode) || COUNTRIES[0];
+  }, [activeCountryCode]);
+
+  const countryCities = useMemo(() => {
+    return getCitiesByCountry(activeCountryCode, RUSSIAN_CITIES);
+  }, [activeCountryCode]);
+
   const handleSelectCity = async (cityName: string) => {
     setSelectedCity(cityName);
     onCityChange?.(cityName);
@@ -104,6 +139,9 @@ export const SpecialistsView: React.FC<SpecialistsViewProps> = ({
       const res = await detectUserCityFromIP();
       if (res) {
         setInternalCityInfo(res);
+        if (res.country) {
+          setActiveCountryCode(res.country);
+        }
         await handleSelectCity(res.nearestCity);
       }
     } finally {
@@ -157,10 +195,13 @@ export const SpecialistsView: React.FC<SpecialistsViewProps> = ({
     const normalizeCity = (cityName: string) =>
       cityName.replace(/^г\.\s*/i, '').trim().toLowerCase();
 
+    const specCountry = getCountryByCity(s.city).code;
+
     const matchesCity =
-      selectedCity === 'Все города' ||
-      normalizeCity(s.city) === normalizeCity(selectedCity) ||
-      s.city.toLowerCase() === selectedCity.toLowerCase();
+      selectedCity === 'Все города'
+        ? specCountry === activeCountryCode
+        : (normalizeCity(s.city) === normalizeCity(selectedCity) || s.city.toLowerCase() === selectedCity.toLowerCase());
+
     const matchesSearch =
       searchQuery.trim() === '' ||
       s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -205,12 +246,44 @@ export const SpecialistsView: React.FC<SpecialistsViewProps> = ({
 
       {/* Filter Bar */}
       <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl space-y-4 shadow-md">
+        {/* Country Selector Tabs */}
+        <div className="flex items-center space-x-1.5 overflow-x-auto pb-2 scrollbar-none border-b border-slate-800/80">
+          <div className="flex items-center space-x-1 text-xs font-semibold text-slate-400 mr-1 shrink-0">
+            <Globe className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="hidden sm:inline">Страна:</span>
+          </div>
+          {COUNTRIES.map((co) => {
+            const isActive = activeCountryCode === co.code;
+            return (
+              <button
+                key={co.code}
+                type="button"
+                onClick={() => {
+                  setActiveCountryCode(co.code);
+                  try {
+                    localStorage.setItem('santehpro_selected_country', co.code);
+                  } catch {}
+                  handleSelectCity('Все города');
+                }}
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer shrink-0 ${
+                  isActive
+                    ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
+                    : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/60'
+                }`}
+              >
+                <span>{co.flag}</span>
+                <span>{co.name}</span>
+              </button>
+            );
+          })}
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {/* City Dropdown Selector */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-slate-300 flex items-center space-x-1.5">
               <MapPin className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Выбор города</span>
+              <span>Город ({activeCountryObj.name})</span>
             </label>
 
             <div className="relative">
@@ -219,7 +292,8 @@ export const SpecialistsView: React.FC<SpecialistsViewProps> = ({
                 onChange={(e) => handleSelectCity(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-700/80 rounded-xl pl-3.5 pr-8 py-2.5 text-xs font-bold text-white focus:outline-none focus:border-cyan-500 cursor-pointer shadow-inner appearance-none"
               >
-                {RUSSIAN_CITIES.map((city) => (
+                <option value="Все города">Все города ({activeCountryObj.name})</option>
+                {countryCities.map((city) => (
                   <option key={city} value={city}>
                     {city}
                   </option>

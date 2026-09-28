@@ -23,6 +23,9 @@ interface SpecialistReviewsModalProps {
   onClose: () => void;
   onRefresh: () => void;
   onOpenAuthModal?: (mode: 'login' | 'register', reason?: string) => void;
+  initialOpenForm?: boolean;
+  prefilledClientName?: string;
+  prefilledRequestId?: string;
 }
 
 const RATING_DESCRIPTIONS: Record<number, { title: string; subtitle: string; color: string }> = {
@@ -69,19 +72,22 @@ export const SpecialistReviewsModal: React.FC<SpecialistReviewsModalProps> = ({
   onClose,
   onRefresh,
   onOpenAuthModal,
+  initialOpenForm = false,
+  prefilledClientName,
+  prefilledRequestId,
 }) => {
   const [reviews, setReviews] = useState<SpecialistReview[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [activeStarFilter, setActiveStarFilter] = useState<number | 'all'>('all');
 
   // New review form states
-  const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
+  const [isFormOpen, setIsFormOpen] = useState<boolean>(() => Boolean(initialOpenForm));
   const [rating, setRating] = useState<number>(5);
   const [hoverRating, setHoverRating] = useState<number | null>(null);
   const [comment, setComment] = useState<string>('');
-  const [clientName, setClientName] = useState<string>(currentUser?.name || '');
+  const [clientName, setClientName] = useState<string>(() => prefilledClientName || currentUser?.name || '');
   const [clientCity, setClientCity] = useState<string>(currentUser?.city || specialist.city || 'Москва');
-  const [selectedRequestId, setSelectedRequestId] = useState<string>('');
+  const [selectedRequestId, setSelectedRequestId] = useState<string>(() => prefilledRequestId || '');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);

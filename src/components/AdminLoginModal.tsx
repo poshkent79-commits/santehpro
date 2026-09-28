@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Lock, Eye, EyeOff, X, KeyRound, AlertCircle } from 'lucide-react';
+import { ShieldCheck, Lock, Eye, EyeOff, X, KeyRound, AlertCircle, Loader2 } from 'lucide-react';
 
 interface AdminLoginModalProps {
   isOpen: boolean;
@@ -15,30 +15,56 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const ADMIN_PASSWORD = 'Sol20252026@';
-    
-    if (password === ADMIN_PASSWORD) {
-      setError('');
-      setPassword('');
-      onLoginSuccess();
-      onClose();
-    } else {
-      setError('Неверный пароль администратора!');
+    if (!password.trim()) return;
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ password: password.trim() }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.success) {
+        if (data.token) {
+          try {
+            localStorage.setItem('santehpro_admin_token', data.token);
+          } catch {}
+        }
+        setError('');
+        setPassword('');
+        onLoginSuccess();
+        onClose();
+      } else {
+        setError(data.error || 'Неверный пароль администратора!');
+      }
+    } catch (_err) {
+      setError('Ошибка безопасного соединения с сервером');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl relative text-slate-100 animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl relative text-slate-100 animate-in zoom-in-95 duration-200">
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition"
+          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
@@ -63,18 +89,19 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
                 type={showPassword ? 'text' : 'password'}
                 required
                 autoFocus
+                disabled={isLoading}
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
                   if (error) setError('');
                 }}
                 placeholder="Введите пароль администратора..."
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-10 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-10 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition disabled:opacity-50"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-slate-300"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-slate-300 cursor-pointer"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -91,17 +118,27 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
           <div className="pt-2">
             <button
               type="submit"
-              className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm transition shadow-lg shadow-amber-500/20 flex items-center justify-center space-x-2"
+              disabled={isLoading}
+              className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] text-slate-950 font-bold text-sm transition shadow-lg shadow-amber-500/20 flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50"
             >
-              <KeyRound className="w-4 h-4" />
-              <span>Подтвердить вход</span>
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Проверка безопасности...</span>
+                </>
+              ) : (
+                <>
+                  <KeyRound className="w-4 h-4" />
+                  <span>Подтвердить вход</span>
+                </>
+              )}
             </button>
           </div>
         </form>
 
         <div className="mt-6 pt-4 border-t border-slate-800/80 text-center">
           <p className="text-[11px] text-slate-500">
-            🔒 Защищенная система управления материалами, курсами и видеоуроками.
+            🔒 Серверная защита от перебора и несанкционированного доступа.
           </p>
         </div>
       </div>

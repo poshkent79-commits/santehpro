@@ -19,11 +19,13 @@ import {
 } from 'lucide-react';
 import { DIAGNOSTIC_FLOW } from '../data/initialData';
 import { Article, DiagnosticSolution, DiagnosticOption } from '../types';
+import { RepairMasterRecommendation } from './RepairMasterRecommendation';
 
 interface DiagnosticWizardProps {
   articles: Article[];
   onSelectArticle: (article: Article) => void;
   onOpenSpecialists?: () => void;
+  selectedCity?: string;
 }
 
 interface ActiveSolutionState {
@@ -36,6 +38,7 @@ export const DiagnosticWizard: React.FC<DiagnosticWizardProps> = ({
   articles,
   onSelectArticle,
   onOpenSpecialists,
+  selectedCity = 'Москва',
 }) => {
   const [currentStepId, setCurrentStepId] = useState<string>('start');
   const [history, setHistory] = useState<string[]>([]);
@@ -491,6 +494,25 @@ export const DiagnosticWizard: React.FC<DiagnosticWizardProps> = ({
                 );
               })}
             </div>
+          </div>
+
+          {/* Contextual Master Recommendation in Diagnostic Solution */}
+          <div className="pt-2">
+            <RepairMasterRecommendation
+              repairTitle={activeSolution.solution.title}
+              selectedCity={selectedCity}
+              onFindMaster={() => {
+                if (onOpenSpecialists) {
+                  onOpenSpecialists();
+                }
+              }}
+              onRequestCall={() => {
+                if (onOpenSpecialists) {
+                  onOpenSpecialists();
+                }
+              }}
+              compact
+            />
           </div>
 
           {/* Action Buttons */}

@@ -32,6 +32,8 @@ import {
 import { Article, ArticleStep } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { resolveDualPlatformVideos } from '../utils/videoUtils';
+import { RepairMasterRecommendation } from './RepairMasterRecommendation';
+import { updatePageSeoMetadata, generateHowToSchema } from '../utils/seoManager';
 
 interface ArticleModalProps {
   article: Article;
@@ -42,6 +44,9 @@ interface ArticleModalProps {
   onOpenPurchase?: (article: Article) => void;
   onOpenCabinet?: () => void;
   onOpenDonation?: () => void;
+  selectedCity?: string;
+  specialistsCountInCity?: number;
+  onCallMasterForArticle?: (article: Article) => void;
 }
 
 export const ArticleModal: React.FC<ArticleModalProps> = ({
@@ -52,6 +57,9 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
   onEditArticle,
   onOpenCabinet,
   onOpenDonation,
+  selectedCity = 'Москва',
+  specialistsCountInCity = 4,
+  onCallMasterForArticle,
 }) => {
   const { currentUser, isFavorite, toggleFavorite, openAuthModal } = useAuth();
   const isBookmarked = isFavorite(article.id);
@@ -61,6 +69,18 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(article.likes);
   const [activeComparisonTab, setActiveComparisonTab] = useState<'turns' | 'joints' | 'sealing'>('turns');
+
+  // Dynamic SEO indexing and Schema.org HowTo rich snippet injection
+  React.useEffect(() => {
+    updatePageSeoMetadata({
+      title: `${article.title} — Пошаговая инструкция и видеоурок | СантехПро`,
+      description: `Пошаговое руководство: ${article.title}. Необходимые инструменты, схемы, видеоуроки, советы экспертов. Вызов проверенных мастеров в г. ${selectedCity}.`,
+      canonicalUrl: `/?article=${encodeURIComponent(article.id)}`,
+      ogType: 'article',
+      ogImage: article.imageUrl,
+      structuredData: generateHowToSchema(article),
+    });
+  }, [article, selectedCity]);
 
   const dualVideo = resolveDualPlatformVideos(article);
   const hasVideo = Boolean(article.type === 'video' || article.videoEmbed || article.videoUrl || article.rutubeUrl || article.youtubeUrl);
@@ -868,8 +888,27 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
             </div>
           </div>
 
+          {/* Contextual Master Recommendation for Repair Guide (SEO Conversion Bridge) */}
+          <div className="mt-8">
+            <RepairMasterRecommendation
+              repairTitle={article.title}
+              selectedCity={selectedCity}
+              specialistsCount={specialistsCountInCity}
+              onFindMaster={() => {
+                if (onCallMasterForArticle) {
+                  onCallMasterForArticle(article);
+                }
+              }}
+              onRequestCall={() => {
+                if (onCallMasterForArticle) {
+                  onCallMasterForArticle(article);
+                }
+              }}
+            />
+          </div>
+
           {/* Voluntary Support / Donation Banner */}
-          <div className="mt-8 p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900 to-rose-950/30 border border-rose-500/30 shadow-lg space-y-3">
+          <div className="mt-6 p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900 to-rose-950/30 border border-rose-500/30 shadow-lg space-y-3">
             <div className="flex items-start sm:items-center space-x-3.5">
               <div className="w-10 h-10 rounded-2xl bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center justify-center shrink-0">
                 <Heart className="w-5 h-5 fill-rose-400 text-rose-400" />

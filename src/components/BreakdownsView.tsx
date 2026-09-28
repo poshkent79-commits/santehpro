@@ -9,12 +9,14 @@ interface BreakdownsViewProps {
   initialSubTab?: 'chat' | 'diagnostic';
   initialPrompt?: string;
   onNavigateToCabinet?: (tab?: string) => void;
+  selectedCity?: string;
 }
 
 export const BreakdownsView: React.FC<BreakdownsViewProps> = ({
   articles,
   onSelectArticle,
   onOpenSpecialists,
+  selectedCity,
 }) => {
   return (
     <div className="space-y-6 pb-12">
@@ -23,6 +25,7 @@ export const BreakdownsView: React.FC<BreakdownsViewProps> = ({
         articles={articles}
         onSelectArticle={onSelectArticle}
         onOpenSpecialists={onOpenSpecialists}
+        selectedCity={selectedCity}
       />
     </div>
   );

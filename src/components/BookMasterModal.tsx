@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { X, Phone, MapPin, AlertTriangle, Send, CheckCircle, Clock, Wrench, Calendar } from 'lucide-react';
 import { CategoryId, PlumbingSpecialist } from '../types';
 import { CATEGORIES, RUSSIAN_CITIES } from '../data/initialData';
+import { getCountryByCity, getCitiesByCountry } from '../data/regionsData';
 import { useAuth } from '../context/AuthContext';
 
 interface BookMasterModalProps {
@@ -183,7 +184,12 @@ export const BookMasterModal: React.FC<BookMasterModalProps> = ({
                     onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-amber-500 focus:outline-none cursor-pointer"
                   >
-                    {RUSSIAN_CITIES.filter((c) => c !== 'Все города').map((city) => (
+                    {specialist?.city && (
+                      <option value={specialist.city}>
+                        {specialist.city} (город мастера)
+                      </option>
+                    )}
+                    {getCitiesByCountry(getCountryByCity(formData.city).code, RUSSIAN_CITIES).map((city) => (
                       <option key={city} value={city}>
                         {city}
                       </option>

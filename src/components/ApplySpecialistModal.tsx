@@ -22,9 +22,17 @@ import {
   Square,
   Sparkles,
   Loader2,
+  Camera,
+  ImagePlus,
 } from 'lucide-react';
 import { compressImageFile } from '../utils/imageCompressor';
 import { RUSSIAN_CITIES } from '../data/initialData';
+import {
+  COUNTRIES,
+  CountryInfo,
+  getCountryByCity,
+  getCitiesByCountry,
+} from '../data/regionsData';
 import { SpecialistVerificationDoc } from '../types';
 import { LegalTermsModal } from './LegalTermsModal';
 import { PLATFORM_LEGAL_DETAILS } from '../data/legalTerms';
@@ -37,6 +45,9 @@ interface ApplySpecialistModalProps {
 
 export const ApplySpecialistModal: React.FC<ApplySpecialistModalProps> = ({ onClose, onSuccess }) => {
   const { currentUser } = useAuth();
+  const initialCountry = getCountryByCity(currentUser?.city || 'Москва').code;
+  const [selectedCountryCode, setSelectedCountryCode] = useState<string>(initialCountry);
+
   const [formData, setFormData] = useState({
     name: currentUser?.name || '',
     city: currentUser?.city || 'Москва',
@@ -48,7 +59,7 @@ export const ApplySpecialistModal: React.FC<ApplySpecialistModalProps> = ({ onCl
     emergency247: true,
     services: 'Замена смесителей, Устранение протечек, Пайка полипропилена',
     bio: '',
-    photo: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=250&q=80',
+    photo: '',
   });
 
   // Verification Documents (Up to 3 files)
@@ -60,10 +71,10 @@ export const ApplySpecialistModal: React.FC<ApplySpecialistModalProps> = ({ onCl
   // Main Photo State
   const [customPhotoSelected, setCustomPhotoSelected] = useState(false);
 
-  // Separate Legal Agreement states matching registration (152-FZ + Terms of Use)
+  // 2 Consolidated Legal Agreement states (152-FZ Personal Data & Document Verification + Terms of Use & Authenticity Guarantee)
   const [dataConsentAccepted, setDataConsentAccepted] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const [legalDocType, setLegalDocType] = useState<'privacy' | 'terms'>('privacy');
+  const [legalDocType, setLegalDocType] = useState<'privacy' | 'terms' | 'master_moderation' | 'offer'>('master_moderation');
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -169,7 +180,7 @@ export const ApplySpecialistModal: React.FC<ApplySpecialistModalProps> = ({ onCl
 
     if (!dataConsentAccepted || !termsAccepted) {
       setError(
-        'Для завершения подачи заявки необходимо подтвердить оба пункта: согласие на обработку персональных данных (152-ФЗ) и согласие с Пользовательским соглашением платформы.'
+        'Для завершения подачи заявки необходимо отметить оба пункта юридического соглашения (обработка персональных данных и принятие пользовательского соглашения).'
       );
       return;
     }
@@ -195,12 +206,18 @@ export const ApplySpecialistModal: React.FC<ApplySpecialistModalProps> = ({ onCl
         legalConsentTimestamp: nowTimestamp,
         legalChecklist: {
           dataConsentAccepted: true,
+          docVerificationConsentAccepted: true,
+          authenticityConfirmed: true,
           termsAccepted: true,
           independentContractor: true,
           siteLiability: true,
           platformIndemnity: true,
           authenticDocuments: true,
-          version: '2.1-LEGAL-AUDIT',
+          storageProvider: 'Timeweb Cloud Database (Russian Federation / St. Petersburg)',
+          foreignStorageExcluded: true,
+          version: '3.0-TIMEWEB-CLOUD-AUDIT',
+          acceptedAt: nowTimestamp,
+          clientUserAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
         },
         verificationDocs: verificationDocs.map((doc) => ({
           id: doc.id,
@@ -341,18 +358,32 @@ export const ApplySpecialistModal: React.FC<ApplySpecialistModalProps> = ({ onCl
                 </p>
 
                 <div className="flex items-center space-x-4 pt-1">
-                  <div className="relative group shrink-0">
-                    <img
-                      src={formData.photo}
-                      alt="Аватар мастера"
-                      className="w-20 h-20 rounded-2xl object-cover border-2 border-cyan-500/50 shadow-md bg-slate-900"
-                    />
-                    {customPhotoSelected && (
+                  {formData.photo ? (
+                    <div className="relative group shrink-0">
+                      <img
+                        src={formData.photo}
+                        alt="Аватар мастера"
+                        className="w-20 h-20 rounded-2xl object-cover border-2 border-cyan-500/50 shadow-md bg-slate-900"
+                      />
                       <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border border-slate-900 flex items-center justify-center text-[9px] text-slate-950 font-black">
                         ✓
                       </span>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => photoInputRef.current?.click()}
+                      className="w-20 h-20 rounded-2xl border-2 border-dashed border-cyan-500/40 hover:border-cyan-400 bg-slate-900/80 hover:bg-slate-900 flex flex-col items-center justify-center text-cyan-400 cursor-pointer transition-all duration-200 shadow-md group shrink-0"
+                      title="Нажмите, чтобы загрузить свою фотографию"
+                    >
+                      <div className="w-8 h-8 rounded-xl bg-cyan-500/10 group-hover:bg-cyan-500/20 text-cyan-400 flex items-center justify-center transition">
+                        <Camera className="w-5 h-5" />
+                      </div>
+                      <span className="text-[9px] text-slate-400 group-hover:text-cyan-300 font-medium mt-1">
+                        Ваше фото
+                      </span>
+                    </button>
+                  )}
 
                   <div className="flex-1 space-y-2">
                     <input
@@ -371,22 +402,22 @@ export const ApplySpecialistModal: React.FC<ApplySpecialistModalProps> = ({ onCl
                         className="px-3 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold flex items-center space-x-1.5 transition shadow-sm cursor-pointer"
                       >
                         <Upload className="w-3.5 h-3.5" />
-                        <span>{customPhotoSelected ? 'Изменить фото' : 'Загрузить своё фото'}</span>
+                        <span>{formData.photo ? 'Изменить фото' : 'Загрузить своё фото'}</span>
                       </button>
 
-                      {customPhotoSelected && (
+                      {formData.photo && (
                         <button
                           type="button"
                           onClick={() => {
                             setFormData((prev) => ({
                               ...prev,
-                              photo: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=250&q=80',
+                              photo: '',
                             }));
                             setCustomPhotoSelected(false);
                           }}
                           className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs transition cursor-pointer"
                         >
-                          Сбросить
+                          Удалить
                         </button>
                       )}
                     </div>
@@ -412,15 +443,20 @@ export const ApplySpecialistModal: React.FC<ApplySpecialistModalProps> = ({ onCl
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Город работы *</label>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">Страна работы *</label>
                   <select
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    value={selectedCountryCode}
+                    onChange={(e) => {
+                      const newCountry = e.target.value;
+                      setSelectedCountryCode(newCountry);
+                      const defaultCity = COUNTRIES.find((c) => c.code === newCountry)?.defaultCity || 'Москва';
+                      setFormData({ ...formData, city: defaultCity });
+                    }}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:border-cyan-500 focus:outline-none cursor-pointer"
                   >
-                    {RUSSIAN_CITIES.filter((c) => c !== 'Все города').map((city) => (
-                      <option key={city} value={city}>
-                        {city}
+                    {COUNTRIES.map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.flag} {c.name}
                       </option>
                     ))}
                   </select>
@@ -429,17 +465,46 @@ export const ApplySpecialistModal: React.FC<ApplySpecialistModalProps> = ({ onCl
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">
+                    Город работы ({COUNTRIES.find((c) => c.code === selectedCountryCode)?.name || 'Россия'}) *
+                  </label>
+                  <select
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:border-cyan-500 focus:outline-none cursor-pointer"
+                  >
+                    {getCitiesByCountry(selectedCountryCode, RUSSIAN_CITIES).map((city) => (
+                      <option key={city} value={city}>
+                        {city}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
                   <label className="block text-xs font-medium text-slate-300 mb-1">Телефон для клиентов *</label>
                   <input
                     type="tel"
                     required
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="+7 (999) 000-00-00"
+                    placeholder={
+                      selectedCountryCode === 'TJ'
+                        ? '+992 (90) 000-00-00'
+                        : selectedCountryCode === 'KZ'
+                        ? '+7 (701) 000-00-00'
+                        : selectedCountryCode === 'UZ'
+                        ? '+998 (90) 000-00-00'
+                        : selectedCountryCode === 'KG'
+                        ? '+996 (555) 00-00-00'
+                        : '+7 (999) 000-00-00'
+                    }
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:border-cyan-500 focus:outline-none"
                   />
                 </div>
+              </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-slate-300 mb-1">Telegram (необязательно)</label>
                   <input
@@ -624,10 +689,10 @@ export const ApplySpecialistModal: React.FC<ApplySpecialistModalProps> = ({ onCl
                 )}
               </div>
 
-              {/* Legal Checkboxes for Specialists (Data Consent & Terms of Use) */}
-              <div className="p-4 rounded-2xl bg-slate-950/85 border border-slate-800 space-y-3">
-                {/* Checkbox 1: Personal Data Consent */}
-                <label className="flex items-start gap-3 p-3 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-cyan-500/40 cursor-pointer select-none transition">
+              {/* Compact Legal Checkboxes for Specialists */}
+              <div className="space-y-2 select-none">
+                {/* Checkbox 1: Personal Data & Documents Verification */}
+                <label className="flex items-start gap-2.5 p-3 rounded-2xl bg-slate-950/80 border border-slate-800 cursor-pointer select-none">
                   <input
                     type="checkbox"
                     required
@@ -636,34 +701,43 @@ export const ApplySpecialistModal: React.FC<ApplySpecialistModalProps> = ({ onCl
                       setDataConsentAccepted(e.target.checked);
                       if (error) setError(null);
                     }}
-                    className="mt-0.5 w-4 h-4 rounded border-cyan-500/50 text-cyan-500 focus:ring-cyan-500/30 bg-slate-950 accent-cyan-500 cursor-pointer shrink-0"
+                    className="mt-0.5 w-4 h-4 rounded border-slate-700 text-cyan-500 bg-slate-950 accent-cyan-500 cursor-pointer shrink-0"
                   />
-                  <div className="text-xs leading-snug">
-                    <span className="font-semibold text-white">
-                      Я даю согласие на обработку моих персональных данных <span className="text-rose-400">*</span>
-                    </span>
-                    <p className="text-slate-300 mt-1">
-                      Ознакомлен(-а) с{' '}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setLegalDocType('privacy');
-                          setIsLegalModalOpen(true);
-                        }}
-                        className="text-cyan-400 hover:text-cyan-300 underline font-semibold inline-flex items-center gap-1 cursor-pointer transition"
-                        title="Нажмите, чтобы ознакомиться с Политикой конфиденциальности"
-                      >
-                        <span>Политикой конфиденциальности</span>
-                        <ExternalLink className="w-3 h-3 inline shrink-0" />
-                      </button>
-                    </p>
+                  <div className="text-xs text-slate-300 leading-snug">
+                    <span>Согласен(-на) на </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setLegalDocType('privacy');
+                        setIsLegalModalOpen(true);
+                      }}
+                      className="text-cyan-400 hover:text-cyan-300 font-medium underline underline-offset-2 transition-colors inline-flex items-center gap-0.5 cursor-pointer"
+                    >
+                      <span>обработку персональных данных</span>
+                      <ExternalLink className="w-2.5 h-2.5 inline shrink-0" />
+                    </button>
+                    <span> и </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setLegalDocType('master_moderation');
+                        setIsLegalModalOpen(true);
+                      }}
+                      className="text-cyan-400 hover:text-cyan-300 font-medium underline underline-offset-2 transition-colors inline-flex items-center gap-0.5 cursor-pointer"
+                    >
+                      <span>проверку документов</span>
+                      <ExternalLink className="w-2.5 h-2.5 inline shrink-0" />
+                    </button>
+                    <span className="text-rose-400 font-bold ml-0.5">*</span>
                   </div>
                 </label>
 
-                {/* Checkbox 2: Terms of Use */}
-                <label className="flex items-start gap-3 p-3 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-cyan-500/40 cursor-pointer select-none transition">
+                {/* Checkbox 2: Terms of Use & Authenticity */}
+                <label className="flex items-start gap-2.5 p-3 rounded-2xl bg-slate-950/80 border border-slate-800 cursor-pointer select-none">
                   <input
                     type="checkbox"
                     required
@@ -672,30 +746,25 @@ export const ApplySpecialistModal: React.FC<ApplySpecialistModalProps> = ({ onCl
                       setTermsAccepted(e.target.checked);
                       if (error) setError(null);
                     }}
-                    className="mt-0.5 w-4 h-4 rounded border-cyan-500/50 text-cyan-500 focus:ring-cyan-500/30 bg-slate-950 accent-cyan-500 cursor-pointer shrink-0"
+                    className="mt-0.5 w-4 h-4 rounded border-slate-700 text-cyan-500 bg-slate-950 accent-cyan-500 cursor-pointer shrink-0"
                   />
-                  <div className="text-xs leading-snug">
-                    <span className="font-semibold text-white">
-                      Я принимаю условия Пользовательского соглашения <span className="text-rose-400">*</span>
-                    </span>
-                    <p className="text-slate-300 mt-1">
-                      Ознакомлен(-а) с регламентом{' '}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setLegalDocType('terms');
-                          setIsLegalModalOpen(true);
-                        }}
-                        className="text-cyan-400 hover:text-cyan-300 underline font-semibold inline-flex items-center gap-1 cursor-pointer transition"
-                        title="Нажмите, чтобы ознакомиться с Пользовательским соглашением"
-                      >
-                        <span>Пользовательского соглашения сервиса</span>
-                        <ExternalLink className="w-3 h-3 inline shrink-0" />
-                      </button>
-                      : действую как независимый исполнитель, несу единоличную ответственность за качество работ, технику безопасности и гарантирую подлинность документов.
-                    </p>
+                  <div className="text-xs text-slate-300 leading-snug">
+                    <span>Принимаю условия </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setLegalDocType('terms');
+                        setIsLegalModalOpen(true);
+                      }}
+                      className="text-cyan-400 hover:text-cyan-300 font-medium underline underline-offset-2 transition-colors inline-flex items-center gap-0.5 cursor-pointer"
+                    >
+                      <span>Пользовательского соглашения</span>
+                      <ExternalLink className="w-2.5 h-2.5 inline shrink-0" />
+                    </button>
+                    <span> и подтверждаю подлинность документов</span>
+                    <span className="text-rose-400 font-bold ml-0.5">*</span>
                   </div>
                 </label>
               </div>

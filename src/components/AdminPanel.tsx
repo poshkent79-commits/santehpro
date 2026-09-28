@@ -2589,6 +2589,33 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         </div>
                       </div>
 
+                      {/* Legal Audit & TimeWeb Cloud Consent Details */}
+                      <div className="p-3 rounded-2xl bg-slate-900/80 border border-slate-800 text-xs space-y-1.5">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <span className="font-bold text-slate-200 flex items-center space-x-1.5">
+                            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                            <span>Протокол согласия мастера (152-ФЗ / 63-ФЗ):</span>
+                          </span>
+                          <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 text-[10px] font-mono">
+                            База Timeweb Cloud (РФ, СПб)
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-400 pt-1">
+                          <div>
+                            • Персональные данные и проверка документов: <strong className="text-emerald-400">Подтверждено мастером</strong>
+                          </div>
+                          <div>
+                            • Пользовательское соглашение и подлинность: <strong className="text-emerald-400">Принято (ст. 327 УК РФ)</strong>
+                          </div>
+                          <div>
+                            • Хранение в зарубежных базах: <strong className="text-rose-300">Исключено (100% РФ)</strong>
+                          </div>
+                          <div>
+                            • Дата и время фиксации: <span className="text-slate-300 font-mono">{spec.legalConsentTimestamp ? new Date(spec.legalConsentTimestamp).toLocaleString('ru-RU') : (spec.appliedAt || 'Зафиксировано')}</span>
+                          </div>
+                        </div>
+                      </div>
+
                       {/* Attached Verification Documents (Up to 3 files) */}
                       <div className="pt-3 border-t border-slate-900">
                         <div className="flex items-center justify-between mb-2">

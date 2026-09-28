@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   User,
   GraduationCap,
@@ -38,15 +38,23 @@ import {
   X,
   Loader2,
   Heart,
+  Share2,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Article, UserPurchase, UserFavorite, ServiceCallRequest, PlumbingSpecialist } from '../types';
 import { RUSSIAN_CITIES } from '../data/initialData';
+import {
+  COUNTRIES,
+  CountryInfo,
+  getCountryByCity,
+  getCitiesByCountry,
+} from '../data/regionsData';
 import { detectUserCityFromIP } from '../utils/geoCity';
 import { getOfflineArticles } from '../utils/offlineArticles';
 import { ServiceRequestRatingCard } from './ServiceRequestRatingCard';
 import { MasterCabinetSection } from './MasterCabinetSection';
 import { SpecialistCabinetView } from './SpecialistCabinetView';
+import { ShareAppModal } from './ShareAppModal';
 
 interface UserCabinetViewProps {
   articles: Article[];
@@ -167,12 +175,31 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
 
   const [requestFilter, setRequestFilter] = useState<'all' | 'needs_review' | 'completed' | 'in_progress'>('all');
   const [isCreatingTestRequest, setIsCreatingTestRequest] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   // City selection state in cabinet
   const [isCityModalOpen, setIsCityModalOpen] = useState(false);
   const [citySearchQuery, setCitySearchQuery] = useState('');
   const [cityToast, setCityToast] = useState<string | null>(null);
   const [isDetectingCityLocal, setIsDetectingCityLocal] = useState(false);
+  const [cabinetCountry, setCabinetCountry] = useState<string>(() => {
+    return getCountryByCity(currentUser?.city || selectedCity || 'Москва').code;
+  });
+
+  useEffect(() => {
+    if (isCityModalOpen) {
+      setCabinetCountry(getCountryByCity(currentUser?.city || selectedCity || 'Москва').code);
+      setCitySearchQuery('');
+    }
+  }, [isCityModalOpen, currentUser?.city, selectedCity]);
+
+  const activeCabinetCountryObj = useMemo(() => {
+    return COUNTRIES.find((c) => c.code === cabinetCountry) || COUNTRIES[0];
+  }, [cabinetCountry]);
+
+  const cabinetCountryCities = useMemo(() => {
+    return getCitiesByCountry(cabinetCountry, RUSSIAN_CITIES);
+  }, [cabinetCountry]);
 
   const handleSelectCity = async (newCity: string) => {
     try {
@@ -583,6 +610,16 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
 
             <button
               type="button"
+              onClick={() => setIsShareModalOpen(true)}
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-500/20 to-blue-500/20 hover:from-cyan-500/30 hover:to-blue-500/30 text-cyan-300 hover:text-cyan-200 text-xs font-bold transition border border-cyan-500/30 flex items-center space-x-1.5 shadow-sm cursor-pointer"
+              title="Поделиться приложением в мессенджерах (Telegram, WhatsApp, VK)"
+            >
+              <Share2 className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Поделиться</span>
+            </button>
+
+            <button
+              type="button"
               onClick={logout}
               className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition border border-slate-700 flex items-center space-x-1.5"
             >
@@ -718,11 +755,36 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
                 )}
               </button>
 
+              {/* Country Tabs */}
+              <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 scrollbar-none">
+                {COUNTRIES.map((co) => {
+                  const isActive = cabinetCountry === co.code;
+                  return (
+                    <button
+                      key={co.code}
+                      type="button"
+                      onClick={() => {
+                        setCabinetCountry(co.code);
+                        setCitySearchQuery('');
+                      }}
+                      className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition whitespace-nowrap cursor-pointer shrink-0 ${
+                        isActive
+                          ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                          : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60'
+                      }`}
+                    >
+                      <span>{co.flag}</span>
+                      <span>{co.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
               <div className="relative">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder="Поиск по названию города..."
+                  placeholder={`Поиск города в ${activeCabinetCountryObj.name}...`}
                   value={citySearchQuery}
                   onChange={(e) => setCitySearchQuery(e.target.value)}
                   className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-cyan-500 outline-none"
@@ -732,9 +794,9 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
 
               {/* Popular cities */}
               <div>
-                <span className="text-[11px] text-slate-400 font-medium">Популярные города:</span>
+                <span className="text-[11px] text-slate-400 font-medium">Крупные города ({activeCabinetCountryObj.name}):</span>
                 <div className="flex flex-wrap gap-1.5 mt-1.5">
-                  {['Москва', 'Санкт-Петербург', 'Владивосток', 'Находка', 'Екатеринбург', 'Новосибирск', 'Казань', 'Нижний Новгород', 'Краснодар', 'Самара', 'Уфа', 'Ростов-на-Дону'].map((popCity) => (
+                  {activeCabinetCountryObj.popularCities.map((popCity) => (
                     <button
                       key={popCity}
                       type="button"
@@ -754,7 +816,7 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
 
             {/* Scrollable list of cities */}
             <div className="overflow-y-auto flex-1 divide-y divide-slate-800/60 border border-slate-800 rounded-xl bg-slate-950/40 p-1">
-              {RUSSIAN_CITIES.filter((c) => c !== 'Все города' && c.toLowerCase().includes(citySearchQuery.trim().toLowerCase())).map((c) => {
+              {cabinetCountryCities.filter((c) => c !== 'Все города' && c.toLowerCase().includes(citySearchQuery.trim().toLowerCase())).map((c) => {
                 const isCurrent = (currentUser?.city || selectedCity) === c;
                 return (
                   <button
@@ -1569,6 +1631,12 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Share Modal in Messengers */}
+      <ShareAppModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+      />
     </div>
   );
 };

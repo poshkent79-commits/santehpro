@@ -20,6 +20,8 @@ import { Wrench, ShieldCheck, Scale, CheckCircle2, X, MapPin, Check, Search, Arr
 import { LegalTermsModal } from './components/LegalTermsModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { detectBestUserLocation, RUSSIAN_CITIES, DetectedCityResult } from './utils/geoCity';
+import { getCountryByCity } from './data/regionsData';
+import { updatePageSeoMetadata, generateCityPlumbersSchema } from './utils/seoManager';
 import { useRealtimeSync } from './services/realtimeClient';
 import { CityConfirmationBanner } from './components/CityConfirmationBanner';
 import { BetaDevelopmentBanner } from './components/BetaDevelopmentBanner';
@@ -106,6 +108,58 @@ function AppContent() {
   const [viewingEstimate, setViewingEstimate] = useState<MasterPlumbingEstimate | null>(null);
 
   const { currentUser, openAuthModal, authNotice, dismissAuthNotice, refreshPurchases, updateProfile } = useAuth();
+
+  // Automatic admin login upon authentication with confirmed super-admin email or phone (+79247889900)
+  useEffect(() => {
+    const superAdminEmails = ['poshkent79@gmail.com', 'admin@santehpro.ru', 'admin@santehpro.info'];
+    const email = currentUser?.email?.toLowerCase().trim();
+    const phoneDigits = currentUser?.phone?.replace(/\D/g, '') || '';
+    const isSuperAdminPhone =
+      phoneDigits === '79247889900' || phoneDigits === '89247889900' || phoneDigits.endsWith('9247889900');
+
+    if ((email && superAdminEmails.includes(email)) || isSuperAdminPhone || currentUser?.role === 'admin') {
+      setIsAdmin(true);
+    }
+  }, [currentUser]);
+
+  // Listen to auth success events to immediately activate and open admin panel for super admin
+  useEffect(() => {
+    const handleAuthSuccess = (e: any) => {
+      const profile = e.detail;
+      const superAdminEmails = ['poshkent79@gmail.com', 'admin@santehpro.ru', 'admin@santehpro.info'];
+      const email = profile?.email?.toLowerCase().trim();
+      const phoneDigits = profile?.phone?.replace(/\D/g, '') || '';
+      const isSuperAdminPhone =
+        phoneDigits === '79247889900' || phoneDigits === '89247889900' || phoneDigits.endsWith('9247889900');
+
+      if ((email && superAdminEmails.includes(email)) || isSuperAdminPhone || profile?.role === 'admin') {
+        setIsAdmin(true);
+        setActiveTab('admin');
+      }
+    };
+
+    window.addEventListener('santehpro_auth_success', handleAuthSuccess);
+    return () => window.removeEventListener('santehpro_auth_success', handleAuthSuccess);
+  }, []);
+
+  // Check saved admin session token on startup
+  useEffect(() => {
+    try {
+      const adminToken = localStorage.getItem('santehpro_admin_token');
+      if (adminToken) {
+        fetch(`/api/admin/verify-session?token=${encodeURIComponent(adminToken)}`)
+          .then((res) => res.json())
+          .then((data) => {
+            if (data?.valid) {
+              setIsAdmin(true);
+            } else {
+              localStorage.removeItem('santehpro_admin_token');
+            }
+          })
+          .catch(() => {});
+      }
+    } catch {}
+  }, []);
 
   // Detect if current logged-in user is an approved master
   const approvedMasterSpecialist = useMemo(() => {
@@ -319,6 +373,81 @@ function AppContent() {
         });
     }
   }, []);
+
+  // Handle deep-link URL query params (?tab=..., ?city=..., ?article=...) for SEO and sharing
+  useEffect(() => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get('tab');
+      const cityParam = urlParams.get('city');
+      const articleParam = urlParams.get('article');
+      const queryParam = urlParams.get('query') || urlParams.get('search');
+      const categoryParam = urlParams.get('category');
+
+      if (tabParam && ['handbook', 'courses', 'calculator', 'specialists', 'diagnostic', 'admin', 'cabinet'].includes(tabParam)) {
+        setActiveTab(tabParam as any);
+      }
+      if (cityParam) {
+        setSelectedCity(cityParam);
+        setIsCityConfirmed(true);
+      }
+      if (articleParam) {
+        const found = articles.find((a) => a.id === articleParam);
+        if (found) setSelectedArticle(found);
+      }
+      if (queryParam) {
+        setSearchQuery(queryParam);
+      }
+      if (categoryParam) {
+        setSelectedCategoryFilter(categoryParam);
+      }
+    } catch (e) {
+      console.warn('Failed to parse URL query params:', e);
+    }
+  }, [articles]);
+
+  // Realtime Search Engine Optimization (SEO) & Schema.org sync across tabs & cities
+  useEffect(() => {
+    if (selectedArticle) return; // Handled inside ArticleModal
+
+    const citySpecialists = specialists.filter(
+      (s) => (s.city === selectedCity || !s.city) && (s.verified || s.status === 'approved' || !s.status)
+    );
+    const country = getCountryByCity(selectedCity);
+
+    if (activeTab === 'specialists') {
+      updatePageSeoMetadata({
+        title: `Сантехники в г. ${selectedCity} — Каталог проверенных мастеров | СантехПро`,
+        description: `Срочный вызов проверенного сантехника в г. ${selectedCity} (${country.name}). Паспорта проверены, рейтинг 4.9★, реальные отзывы, прямой вызов без комиссии.`,
+        canonicalUrl: `/?tab=specialists&city=${encodeURIComponent(selectedCity)}`,
+        structuredData: generateCityPlumbersSchema(selectedCity, country.name, citySpecialists),
+      });
+    } else if (activeTab === 'diagnostic') {
+      updatePageSeoMetadata({
+        title: `Диагностика сантехники и устранение неисправностей онлайн | СантехПро`,
+        description: `Интерактивная диагностика поломок сантехники: протечки, шум в трубах, не греет батарея, слабый напор. Пошаговые решения и вызов мастера в г. ${selectedCity}.`,
+        canonicalUrl: `/?tab=diagnostic&city=${encodeURIComponent(selectedCity)}`,
+      });
+    } else if (activeTab === 'courses') {
+      updatePageSeoMetadata({
+        title: `Обучающие видеоуроки и курсы по сантехнике | СантехПро`,
+        description: `Видеоуроки по монтажу сантехники, пайке полипропилена, обжиму сшитого полиэтилена, установке санфаянса. Для новичков и профессионалов.`,
+        canonicalUrl: `/?tab=courses`,
+      });
+    } else if (activeTab === 'calculator') {
+      updatePageSeoMetadata({
+        title: `Калькулятор материалов для сантехники и отопления | СантехПро`,
+        description: `Точный онлайн калькулятор расчёта труб, фитингов, коллекторов, радиаторов и крепежа для квартиры или частного дома.`,
+        canonicalUrl: `/?tab=calculator`,
+      });
+    } else {
+      updatePageSeoMetadata({
+        title: `СантехПро — Справочник сантехника, видеоуроки и вызов мастеров в г. ${selectedCity}`,
+        description: `Пошаговые инструкции по сантехнике, видеоуроки, интерактивная диагностика и база проверенных мастеров в г. ${selectedCity} и городах СНГ.`,
+        canonicalUrl: `/?city=${encodeURIComponent(selectedCity)}`,
+      });
+    }
+  }, [activeTab, selectedCity, selectedArticle, specialists]);
 
   const handleOpenAuthForSection = (section: ProtectedSectionType, mode: 'register' | 'login' = 'register') => {
     const titles: Record<ProtectedSectionType, string> = {
@@ -774,6 +903,7 @@ function AppContent() {
             articles={articles}
             onSelectArticle={(art) => setSelectedArticle(art)}
             onOpenSpecialists={() => setActiveTab('specialists')}
+            selectedCity={selectedCity}
           />
         )}
 
@@ -805,6 +935,13 @@ function AppContent() {
           onEditArticle={handleEditArticle}
           onOpenPurchase={handleOpenPurchase}
           onOpenDonation={() => setIsDonationModalOpen(true)}
+          selectedCity={selectedCity}
+          specialistsCountInCity={specialists.filter(s => s.city === selectedCity || s.status === 'approved').length}
+          onCallMasterForArticle={(art) => {
+            setSelectedArticle(null);
+            setSearchQuery(art.title.split(' ')[0] || '');
+            setActiveTab('specialists');
+          }}
           onOpenCabinet={() => {
             setSelectedArticle(null);
             setActiveTab('cabinet');

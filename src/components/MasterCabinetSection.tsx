@@ -42,6 +42,7 @@ import { WorkGalleryModal } from './WorkGalleryModal';
 import { compressImageFile } from '../utils/imageCompressor';
 import { MasterEstimatesTab } from './MasterEstimatesTab';
 import { MasterEstimateBuilderModal } from './MasterEstimateBuilderModal';
+import { RequestReviewModal } from './RequestReviewModal';
 
 interface MasterCabinetSectionProps {
   specialist: PlumbingSpecialist;
@@ -85,6 +86,10 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
   // Estimate builder states from requests
   const [isEstimateBuilderOpen, setIsEstimateBuilderOpen] = useState(false);
   const [selectedRequestForEstimate, setSelectedRequestForEstimate] = useState<ServiceCallRequest | null>(null);
+
+  // Review request modal states
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [selectedRequestForReview, setSelectedRequestForReview] = useState<ServiceCallRequest | null>(null);
 
   useEffect(() => {
     if (specialist) {
@@ -680,6 +685,13 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
       if (res.ok) {
         setReplySuccessMsg(newStatus === 'completed' ? 'Заявка отмечена как выполненная!' : 'Заявка принята в работу!');
         loadMasterMessages(true);
+        if (newStatus === 'completed') {
+          const found = messages.find((m) => m.id === requestId);
+          if (found) {
+            setSelectedRequestForReview(found);
+            setIsReviewModalOpen(true);
+          }
+        }
         setTimeout(() => setReplySuccessMsg(''), 3000);
       }
     } catch (e) {
@@ -784,6 +796,18 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
                   <Star className="w-3.5 h-3.5 fill-current" />
                   {specialist.rating} ({specialist.reviewsCount} отзывов)
                 </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedRequestForReview(null);
+                    setIsReviewModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 hover:text-white border border-amber-500/40 text-xs font-bold transition shadow-sm cursor-pointer ml-1"
+                  title="Отправить персональный запрос на отзыв в WhatsApp, Telegram или SMS"
+                >
+                  <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                  <span>Запросить отзыв</span>
+                </button>
               </div>
             </div>
           </div>
@@ -1940,7 +1964,7 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
                         <span>Предложить смету</span>
                       </button>
 
-                      {msg.status !== 'completed' && (
+                      {msg.status !== 'completed' ? (
                         <button
                           type="button"
                           onClick={() => handleUpdateStatus(msg.id, 'completed')}
@@ -1948,6 +1972,19 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
                         >
                           <Check className="w-3.5 h-3.5 text-emerald-400" />
                           Завершить заказ
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedRequestForReview(msg);
+                            setIsReviewModalOpen(true);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-black transition shadow-sm cursor-pointer"
+                          title="Отправить заказчику персональный запрос на отзыв в WhatsApp, Telegram или SMS"
+                        >
+                          <Star className="w-3.5 h-3.5 fill-slate-950 text-slate-950" />
+                          <span>Запросить отзыв</span>
                         </button>
                       )}
                     </div>
@@ -2426,6 +2463,17 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
           </div>
         </div>
       )}
+
+      {/* Request Review Modal */}
+      <RequestReviewModal
+        isOpen={isReviewModalOpen}
+        onClose={() => {
+          setIsReviewModalOpen(false);
+          setSelectedRequestForReview(null);
+        }}
+        specialist={specialist}
+        request={selectedRequestForReview}
+      />
     </div>
   );
 };
