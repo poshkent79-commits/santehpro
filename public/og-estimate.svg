@@ -1,0 +1,152 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg-grad-est" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#090d16" />
+      <stop offset="50%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#064e3b" />
+    </linearGradient>
+    <linearGradient id="glow-emerald" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#34d399" stop-opacity="0" />
+    </linearGradient>
+    <linearGradient id="btn-emerald" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#059669" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
+    <filter id="shadow-est" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="10" stdDeviation="20" flood-color="#000000" flood-opacity="0.6" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg-grad-est)" />
+  <circle cx="1000" cy="180" r="300" fill="url(#glow-emerald)" filter="url(#shadow-est)" />
+
+  <!-- LEFT: Branding & Description -->
+  <g transform="translate(80, 80)">
+    <!-- Pill -->
+    <g>
+      <rect x="0" y="0" width="260" height="52" rx="26" fill="#1e293b" stroke="#334155" stroke-width="1.5" />
+      <text x="24" y="33" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="20" font-weight="900" fill="#ffffff">
+        Сантех<tspan fill="#38bdf8">Про</tspan>
+      </text>
+      <rect x="155" y="12" width="85" height="28" rx="8" fill="#065f46" />
+      <text x="165" y="30" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="800" fill="#34d399">СМЕТА</text>
+    </g>
+
+    <!-- Title -->
+    <text x="0" y="145" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="44" font-weight="900" fill="#ffffff" letter-spacing="-1">
+      Официальная смета
+    </text>
+    <text x="0" y="198" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="44" font-weight="900" fill="#34d399" letter-spacing="-1">
+      на сантехнические работы
+    </text>
+
+    <!-- Subtitle -->
+    <text x="0" y="250" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="20" font-weight="400" fill="#94a3b8">
+      Детальный расчёт работ и материалов с гарантией мастера
+    </text>
+
+    <!-- 3 Badges -->
+    <g transform="translate(0, 290)">
+      <g transform="translate(0, 0)">
+        <rect x="0" y="0" width="540" height="50" rx="14" fill="#1e293b" fill-opacity="0.8" stroke="#334155" stroke-width="1" />
+        <text x="20" y="31" font-family="Arial" font-size="16" fill="#34d399">✓</text>
+        <text x="48" y="31" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="15" font-weight="700" fill="#f8fafc">
+          Фиксация цен <tspan font-weight="400" fill="#94a3b8">— сумма не изменится в процессе ремонта</tspan>
+        </text>
+      </g>
+      <g transform="translate(0, 62)">
+        <rect x="0" y="0" width="540" height="50" rx="14" fill="#1e293b" fill-opacity="0.8" stroke="#334155" stroke-width="1" />
+        <text x="20" y="31" font-family="Arial" font-size="16" fill="#38bdf8">🛡️</text>
+        <text x="48" y="31" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="15" font-weight="700" fill="#f8fafc">
+          Официальная гарантия <tspan font-weight="400" fill="#94a3b8">— по акту приёмки от мастера</tspan>
+        </text>
+      </g>
+      <g transform="translate(0, 124)">
+        <rect x="0" y="0" width="540" height="50" rx="14" fill="#1e293b" fill-opacity="0.8" stroke="#334155" stroke-width="1" />
+        <text x="20" y="31" font-family="Arial" font-size="16" fill="#fbbf24">📋</text>
+        <text x="48" y="31" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="15" font-weight="700" fill="#f8fafc">
+          Полная спецификация <tspan font-weight="400" fill="#94a3b8">— работы, трубы, фитинги и расходники</tspan>
+        </text>
+      </g>
+    </g>
+  </g>
+
+  <!-- RIGHT: Estimate Document Card Mockup -->
+  <g transform="translate(710, 80)" filter="url(#shadow-est)">
+    <rect x="0" y="0" width="410" height="470" rx="24" fill="#111827" stroke="#334155" stroke-width="1.5" />
+    
+    <!-- Doc Header -->
+    <g transform="translate(24, 24)">
+      <rect x="0" y="0" width="362" height="54" rx="14" fill="#1e293b" />
+      <text x="18" y="33" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="800" fill="#ffffff">
+        📄 Смета № SP-2026-084
+      </text>
+      <text x="250" y="33" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="700" fill="#34d399">
+        СОГЛАСОВАНО
+      </text>
+    </g>
+
+    <!-- Estimate Line Items -->
+    <g transform="translate(24, 94)">
+      <!-- Item 1 -->
+      <g transform="translate(0, 0)">
+        <rect x="0" y="0" width="362" height="44" rx="10" fill="#0f172a" />
+        <text x="14" y="27" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="600" fill="#e2e8f0">1. Монтаж смесителя с душем</text>
+        <text x="290" y="27" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="800" fill="#38bdf8">1 800 ₽</text>
+      </g>
+      <!-- Item 2 -->
+      <g transform="translate(0, 52)">
+        <rect x="0" y="0" width="362" height="44" rx="10" fill="#0f172a" />
+        <text x="14" y="27" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="600" fill="#e2e8f0">2. Разводка труб водоснабжения</text>
+        <text x="290" y="27" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="800" fill="#38bdf8">4 500 ₽</text>
+      </g>
+      <!-- Item 3 -->
+      <g transform="translate(0, 104)">
+        <rect x="0" y="0" width="362" height="44" rx="10" fill="#0f172a" />
+        <text x="14" y="27" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="600" fill="#e2e8f0">3. Комплект труб и фитингов</text>
+        <text x="290" y="27" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="800" fill="#38bdf8">3 200 ₽</text>
+      </g>
+    </g>
+
+    <!-- Total Amount Box -->
+    <g transform="translate(24, 260)">
+      <rect x="0" y="0" width="362" height="74" rx="16" fill="#064e3b" fill-opacity="0.6" stroke="#059669" stroke-width="1.5" />
+      <text x="20" y="32" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="600" fill="#a7f3d0">
+        ИТОГО С МАТЕРИАЛАМИ
+      </text>
+      <text x="20" y="58" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="24" font-weight="900" fill="#ffffff">
+        9 500 ₽
+      </text>
+      <text x="230" y="48" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="700" fill="#34d399">
+        Гарантия 12 мес.
+      </text>
+    </g>
+
+    <!-- View Button -->
+    <g transform="translate(24, 350)">
+      <rect x="0" y="0" width="362" height="48" rx="14" fill="url(#btn-emerald)" />
+      <text x="88" y="30" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="800" fill="#090d16">
+        Открыть полную смету →
+      </text>
+    </g>
+
+    <!-- Master signature -->
+    <g transform="translate(24, 420)">
+      <text x="0" y="16" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="500" fill="#64748b">
+        СантехПро • Проверенный мастер сервиса
+      </text>
+    </g>
+  </g>
+
+  <!-- Bottom Brand -->
+  <g transform="translate(80, 565)">
+    <text x="0" y="18" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="15" font-weight="800" fill="#34d399" letter-spacing="1">
+      SANTEHPRO.INFO
+    </text>
+    <text x="180" y="18" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="500" fill="#64748b">
+      • Прозрачные электронные сметы для заказчиков
+    </text>
+  </g>
+</svg>

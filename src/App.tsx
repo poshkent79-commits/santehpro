@@ -225,8 +225,8 @@ function AppContent() {
   const handleShareAppFromBanner = async () => {
     const shareUrl = window.location.origin || window.location.href;
     const shareData = {
-      title: 'СантехПро — Сервис сантехников и каталог мастеров',
-      text: 'СантехПро — пошаговые инструкции, видеоуроки, вызов проверенных мастеров и личный кабинет сантехника.',
+      title: 'СантехПро — Проверенные мастера и база знаний',
+      text: 'Держи полезный сервис по сантехнике: проверенные мастера в твоём городе, пошаговые видеоинструкции и прозрачные сметы без наценок 👇',
       url: shareUrl,
     };
 
@@ -383,8 +383,11 @@ function AppContent() {
       const articleParam = urlParams.get('article');
       const queryParam = urlParams.get('query') || urlParams.get('search');
       const categoryParam = urlParams.get('category');
+      const masterParam = urlParams.get('master') || urlParams.get('specialist');
 
-      if (tabParam && ['handbook', 'courses', 'calculator', 'specialists', 'diagnostic', 'admin', 'cabinet'].includes(tabParam)) {
+      if (masterParam) {
+        setActiveTab('specialists');
+      } else if (tabParam && ['handbook', 'courses', 'calculator', 'specialists', 'diagnostic', 'admin', 'cabinet'].includes(tabParam)) {
         setActiveTab(tabParam as any);
       }
       if (cityParam) {
@@ -982,6 +985,34 @@ function AppContent() {
         currentCity={selectedCity}
         onSelectCity={handleSelectCityFromModal}
       />
+
+      {/* Client Shared Estimate Viewer Modal */}
+      {viewingEstimate && (
+        <ClientEstimateModal
+          estimate={viewingEstimate}
+          isOpen={Boolean(viewingEstimate)}
+          isMasterView={false}
+          onClose={() => {
+            setViewingEstimate(null);
+            try {
+              const url = new URL(window.location.href);
+              url.searchParams.delete('estimate');
+              window.history.replaceState({}, '', url.toString());
+            } catch (e) {}
+          }}
+          onOpenMasterProfile={(masterQuery) => {
+            setViewingEstimate(null);
+            setActiveTab('specialists');
+            try {
+              const url = new URL(window.location.href);
+              url.searchParams.delete('estimate');
+              url.searchParams.set('tab', 'specialists');
+              url.searchParams.set('master', masterQuery);
+              window.history.replaceState({}, '', url.toString());
+            } catch (e) {}
+          }}
+        />
+      )}
 
       {/* Footer */}
       <footer className="bg-slate-900 border-t border-slate-800 text-slate-400 text-xs py-6 px-4 mt-12">

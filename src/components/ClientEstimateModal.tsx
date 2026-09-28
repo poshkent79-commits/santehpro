@@ -36,6 +36,7 @@ interface ClientEstimateModalProps {
   onStatusChange?: (newStatus: MasterPlumbingEstimate['status']) => void;
   onEdit?: () => void;
   isMasterView?: boolean;
+  onOpenMasterProfile?: (specialistIdOrName: string) => void;
 }
 
 export const ClientEstimateModal: React.FC<ClientEstimateModalProps> = ({
@@ -45,6 +46,7 @@ export const ClientEstimateModal: React.FC<ClientEstimateModalProps> = ({
   onStatusChange,
   onEdit,
   isMasterView = true,
+  onOpenMasterProfile,
 }) => {
   const [copiedText, setCopiedText] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -53,6 +55,10 @@ export const ClientEstimateModal: React.FC<ClientEstimateModalProps> = ({
 
   const works = estimate.items.filter((i) => i.type === 'work');
   const materials = estimate.items.filter((i) => i.type === 'material');
+
+  // Master profile direct link
+  const masterQuery = estimate.specialistId || (estimate.specialistPhone ? estimate.specialistPhone.replace(/\D/g, '') : '') || estimate.specialistName;
+  const masterProfileUrl = masterQuery ? `${SANTEHPRO_OFFICIAL_DOMAIN}/?tab=specialists&master=${encodeURIComponent(masterQuery)}` : '';
 
   // Generate clean shareable text for messengers
   const generateMessengerText = () => {
@@ -97,6 +103,9 @@ export const ClientEstimateModal: React.FC<ClientEstimateModalProps> = ({
       text += `📝 *Примечания:* ${estimate.notes}\n`;
     }
     text += `\n🌐 *Официальная смета СантехПро:* ${getEstimateShareUrl(estimate.id)}\n`;
+    if (masterProfileUrl) {
+      text += `👤 *Профиль и отзывы мастера:* ${masterProfileUrl}\n`;
+    }
     text += `━━━━━━━━━━━━━━━━━━━━━`;
     return text;
   };
@@ -336,6 +345,23 @@ export const ClientEstimateModal: React.FC<ClientEstimateModalProps> = ({
                 <p className="text-xs text-slate-400 print:text-gray-600 mt-0.5 flex items-center gap-1">
                   <MapPin className="w-3 h-3" /> {estimate.specialistCity}
                 </p>
+              )}
+
+              {masterQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onOpenMasterProfile) {
+                      onOpenMasterProfile(masterQuery);
+                    } else {
+                      window.open(masterProfileUrl, '_blank');
+                    }
+                  }}
+                  className="mt-3 w-full py-1.5 px-2.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 hover:text-cyan-300 border border-cyan-500/30 text-[11px] font-bold flex items-center justify-center gap-1.5 transition cursor-pointer print:hidden shadow-sm"
+                >
+                  <Sparkles className="w-3 h-3 text-cyan-400" />
+                  <span>Профиль и отзывы мастера →</span>
+                </button>
               )}
             </div>
           </div>

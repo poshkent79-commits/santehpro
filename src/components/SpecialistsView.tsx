@@ -158,6 +158,35 @@ export const SpecialistsView: React.FC<SpecialistsViewProps> = ({
       .catch((err) => console.error('Failed to load master works for directory:', err));
   }, []);
 
+  // Handle direct navigation to a specialist profile via URL query (?master=... or ?specialist=...)
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const masterParam = params.get('master') || params.get('specialist');
+      if (masterParam && specialists.length > 0) {
+        const cleanParam = masterParam.trim().toLowerCase();
+        const paramDigits = masterParam.replace(/\D/g, '');
+
+        const found = specialists.find((s) => {
+          if (s.id.toLowerCase() === cleanParam) return true;
+          if (s.userId && s.userId.toLowerCase() === cleanParam) return true;
+          if (paramDigits && s.phone && s.phone.replace(/\D/g, '').includes(paramDigits)) return true;
+          if (s.name && s.name.toLowerCase() === cleanParam) return true;
+          return false;
+        });
+
+        if (found) {
+          setSelectedProfileSpecialist(found);
+          if (found.city && found.city !== selectedCity) {
+            setSelectedCity(found.city);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to parse master profile URL parameter:', e);
+    }
+  }, [specialists]);
+
   // Delete master state
   const [deleteTarget, setDeleteTarget] = useState<PlumbingSpecialist | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);

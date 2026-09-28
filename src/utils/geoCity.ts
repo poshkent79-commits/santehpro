@@ -1078,7 +1078,26 @@ export function findNearestCity(
  * Detects user city from free IP geolocation service
  * Tries ipwho.is first, then ipapi.co
  */
-export async function detectUserCityFromIP(): Promise<DetectedCityResult | null> {
+export async function detectUserCityFromIP(force = false): Promise<DetectedCityResult | null> {
+  // Check fast in-memory / session cache to avoid repeating external network requests
+  if (!force && typeof window !== 'undefined') {
+    try {
+      const cached = sessionStorage.getItem('santehpro_cached_geo_ip');
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch {}
+  }
+
+  const saveToCache = (result: DetectedCityResult) => {
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem('santehpro_cached_geo_ip', JSON.stringify(result));
+      } catch {}
+    }
+    return result;
+  };
+
   // 1. Primary: Internal endpoint (/api/geo/my-location) - fast, reliable, zero third-party blocks in Russia
   try {
     const controller = new AbortController();
@@ -1099,7 +1118,7 @@ export async function detectUserCityFromIP(): Promise<DetectedCityResult | null>
 
         const match = findNearestCity(rawCity, lat, lon, country);
         const countryObj = getCountryByCode(match.country || country);
-        return {
+        return saveToCache({
           detectedCityName: rawCity || match.nearestCity,
           nearestCity: match.nearestCity,
           distanceKm: match.distanceKm,
@@ -1109,7 +1128,7 @@ export async function detectUserCityFromIP(): Promise<DetectedCityResult | null>
           countryFlag: countryObj.flag,
           latitude: lat,
           longitude: lon
-        };
+        });
       }
     }
   } catch (_err) {
@@ -1136,7 +1155,7 @@ export async function detectUserCityFromIP(): Promise<DetectedCityResult | null>
 
         const match = findNearestCity(rawCity, lat, lon, country);
         const countryObj = getCountryByCode(match.country || country);
-        return {
+        return saveToCache({
           detectedCityName: rawCity || match.nearestCity,
           nearestCity: match.nearestCity,
           distanceKm: match.distanceKm,
@@ -1146,7 +1165,7 @@ export async function detectUserCityFromIP(): Promise<DetectedCityResult | null>
           countryFlag: countryObj.flag,
           latitude: lat,
           longitude: lon
-        };
+        });
       }
     }
   } catch (err) {
@@ -1173,7 +1192,7 @@ export async function detectUserCityFromIP(): Promise<DetectedCityResult | null>
 
         const match = findNearestCity(rawCity, lat, lon, country);
         const countryObj = getCountryByCode(match.country || country);
-        return {
+        return saveToCache({
           detectedCityName: rawCity || match.nearestCity,
           nearestCity: match.nearestCity,
           distanceKm: match.distanceKm,
@@ -1183,14 +1202,14 @@ export async function detectUserCityFromIP(): Promise<DetectedCityResult | null>
           countryFlag: countryObj.flag,
           latitude: lat,
           longitude: lon
-        };
+        });
       }
     }
   } catch (err) {
     // Both IP services failed
   }
 
-  return {
+  return saveToCache({
     detectedCityName: 'Москва',
     nearestCity: 'Москва',
     distanceKm: 0,
@@ -1198,7 +1217,7 @@ export async function detectUserCityFromIP(): Promise<DetectedCityResult | null>
     country: 'RU',
     countryName: 'Россия',
     countryFlag: '🇷🇺',
-  };
+  });
 }
 
 /**

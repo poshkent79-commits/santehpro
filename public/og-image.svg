@@ -1,0 +1,176 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <!-- Background Gradients -->
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#090d16" />
+      <stop offset="50%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#082f49" />
+    </linearGradient>
+    <linearGradient id="glow-blue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0" />
+    </linearGradient>
+    <linearGradient id="glow-cyan" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0" />
+    </linearGradient>
+    <linearGradient id="accent-cyan" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="100%" stop-color="#38bdf8" />
+    </linearGradient>
+    <linearGradient id="logo-drop" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#0284c7" />
+    </linearGradient>
+    <filter id="blur-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="80" />
+    </filter>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#000000" flood-opacity="0.5" />
+    </filter>
+  </defs>
+
+  <!-- Base Background -->
+  <rect width="1200" height="630" fill="url(#bg-grad)" />
+
+  <!-- Ambient Light Orbs -->
+  <circle cx="1050" cy="150" r="320" fill="url(#glow-blue)" filter="url(#blur-glow)" />
+  <circle cx="200" cy="550" r="280" fill="url(#glow-cyan)" filter="url(#blur-glow)" />
+
+  <!-- Subtle Blueprint Tech Grid on the right -->
+  <g opacity="0.08" stroke="#38bdf8" stroke-width="1">
+    <path d="M750,0 L750,630 M850,0 L850,630 M950,0 L950,630 M1050,0 L1050,630 M1150,0 L1150,630" />
+    <path d="M700,100 L1200,100 M700,200 L1200,200 M700,300 L1200,300 M700,400 L1200,400 M700,500 L1200,500" />
+  </g>
+
+  <!-- LEFT COLUMN: Branding & Core Value Proposition -->
+  <g transform="translate(80, 75)">
+    <!-- Brand Logo Pill -->
+    <g>
+      <rect x="0" y="0" width="240" height="56" rx="28" fill="#1e293b" stroke="#334155" stroke-width="1.5" />
+      <!-- Droplet Icon -->
+      <g transform="translate(14, 10)">
+        <path d="M18 2 C18 2 4 18 4 25 A14 14 0 0 0 32 25 C32 18 18 2 18 2 Z" fill="url(#logo-drop)" />
+        <path d="M14 18 L22 26 M14 26 L22 18" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" />
+      </g>
+      <text x="58" y="36" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="24" font-weight="900" fill="#ffffff" letter-spacing="-0.5">
+        Сантех<tspan fill="#38bdf8">Про</tspan>
+      </text>
+    </g>
+
+    <!-- Main Heading -->
+    <text x="0" y="140" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="44" font-weight="900" fill="#ffffff" letter-spacing="-1">
+      Проверенные мастера
+    </text>
+    <text x="0" y="195" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="44" font-weight="900" fill="url(#accent-cyan)" letter-spacing="-1">
+      и пошаговые инструкции
+    </text>
+
+    <!-- Subtitle -->
+    <text x="0" y="248" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="20" font-weight="400" fill="#94a3b8">
+      Срочный вызов сантехника без посредников и прозрачный расчёт смет
+    </text>
+
+    <!-- 3 Value Proposition Cards -->
+    <g transform="translate(0, 285)">
+      <!-- Card 1 -->
+      <g transform="translate(0, 0)">
+        <rect x="0" y="0" width="560" height="52" rx="16" fill="#1e293b" fill-opacity="0.8" stroke="#334155" stroke-width="1" />
+        <circle cx="28" cy="26" r="14" fill="#065f46" fill-opacity="0.5" />
+        <text x="22" y="31" font-family="Arial" font-size="14" fill="#34d399">✓</text>
+        <text x="52" y="32" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="700" fill="#f8fafc">
+          100% проверенные мастера <tspan font-weight="400" fill="#94a3b8">— паспорта, квалификация и отзывы</tspan>
+        </text>
+      </g>
+
+      <!-- Card 2 -->
+      <g transform="translate(0, 64)">
+        <rect x="0" y="0" width="560" height="52" rx="16" fill="#1e293b" fill-opacity="0.8" stroke="#334155" stroke-width="1" />
+        <circle cx="28" cy="26" r="14" fill="#0369a1" fill-opacity="0.5" />
+        <text x="20" y="31" font-family="Arial" font-size="14" fill="#38bdf8">⚡</text>
+        <text x="52" y="32" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="700" fill="#f8fafc">
+          Прямой контакт без комиссий <tspan font-weight="400" fill="#94a3b8">— честные цены напрямую от исполнителя</tspan>
+        </text>
+      </g>
+
+      <!-- Card 3 -->
+      <g transform="translate(0, 128)">
+        <rect x="0" y="0" width="560" height="52" rx="16" fill="#1e293b" fill-opacity="0.8" stroke="#334155" stroke-width="1" />
+        <circle cx="28" cy="26" r="14" fill="#4c1d95" fill-opacity="0.5" />
+        <text x="21" y="31" font-family="Arial" font-size="14" fill="#a78bfa">★</text>
+        <text x="52" y="32" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="700" fill="#f8fafc">
+          100+ видеоуроков и справочник <tspan font-weight="400" fill="#94a3b8">— по монтажу и ремонту сантехники</tspan>
+        </text>
+      </g>
+    </g>
+  </g>
+
+  <!-- RIGHT COLUMN: Visual UI Card Mockup -->
+  <g transform="translate(730, 90)" filter="url(#shadow)">
+    <!-- Floating Glassmorphism Phone Card -->
+    <rect x="0" y="0" width="390" height="450" rx="28" fill="#111827" fill-opacity="0.9" stroke="#1e293b" stroke-width="2" />
+    <rect x="0" y="0" width="390" height="450" rx="28" fill="none" stroke="#38bdf8" stroke-opacity="0.2" stroke-width="1.5" />
+
+    <!-- Card Header -->
+    <g transform="translate(24, 24)">
+      <rect x="0" y="0" width="342" height="60" rx="16" fill="#1e293b" />
+      <circle cx="30" cy="30" r="18" fill="#0284c7" />
+      <text x="23" y="36" font-family="Arial" font-size="16" fill="#ffffff">🔧</text>
+      <text x="60" y="28" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="800" fill="#ffffff">Вызов мастера</text>
+      <text x="60" y="46" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="500" fill="#38bdf8">г. Москва • 14 мастеров онлайн</text>
+    </g>
+
+    <!-- Master Preview Item 1 -->
+    <g transform="translate(24, 100)">
+      <rect x="0" y="0" width="342" height="84" rx="16" fill="#0f172a" stroke="#334155" stroke-width="1" />
+      <circle cx="36" cy="42" r="22" fill="#334155" />
+      <text x="27" y="48" font-family="Arial" font-size="18">👨‍🔧</text>
+      <text x="68" y="32" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="800" fill="#ffffff">Александр В.</text>
+      <text x="68" y="50" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="500" fill="#94a3b8">Опыт 12 лет • Пайка ППР, смесители</text>
+      <g transform="translate(68, 58)">
+        <rect x="0" y="0" width="68" height="18" rx="6" fill="#065f46" fill-opacity="0.5" />
+        <text x="6" y="13" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="700" fill="#34d399">★ 4.97 (84)</text>
+      </g>
+      <text x="255" y="46" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="800" fill="#38bdf8">от 1 200 ₽</text>
+    </g>
+
+    <!-- Master Preview Item 2 -->
+    <g transform="translate(24, 196)">
+      <rect x="0" y="0" width="342" height="84" rx="16" fill="#0f172a" stroke="#334155" stroke-width="1" />
+      <circle cx="36" cy="42" r="22" fill="#334155" />
+      <text x="27" y="48" font-family="Arial" font-size="18">🛠️</text>
+      <text x="68" y="32" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="800" fill="#ffffff">Михаил К.</text>
+      <text x="68" y="50" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="500" fill="#94a3b8">Срочный выезд • Засоры, инсталляции</text>
+      <g transform="translate(68, 58)">
+        <rect x="0" y="0" width="68" height="18" rx="6" fill="#065f46" fill-opacity="0.5" />
+        <text x="6" y="13" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="700" fill="#34d399">★ 5.0 (46)</text>
+      </g>
+      <text x="255" y="46" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="800" fill="#38bdf8">от 1 500 ₽</text>
+    </g>
+
+    <!-- Bottom CTA Button in Mockup -->
+    <g transform="translate(24, 296)">
+      <rect x="0" y="0" width="342" height="48" rx="14" fill="url(#accent-cyan)" />
+      <text x="80" y="30" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="800" fill="#090d16">
+        Найти мастера рядом →
+      </text>
+    </g>
+
+    <!-- Geo badge at bottom -->
+    <g transform="translate(24, 360)">
+      <text x="0" y="16" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#64748b">
+        🇷🇺 Россия • 🇰🇿 Казахстан • 🇹🇯 Таджикистан • 🇺🇿 Узбекистан
+      </text>
+    </g>
+  </g>
+
+  <!-- Bottom Brand Web Link Ribbon -->
+  <g transform="translate(80, 560)">
+    <text x="0" y="18" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="15" font-weight="800" fill="#38bdf8" letter-spacing="1">
+      SANTEHPRO.INFO
+    </text>
+    <text x="180" y="18" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="500" fill="#64748b">
+      • Ваш карманный помощник и сервис сантехники
+    </text>
+  </g>
+</svg>

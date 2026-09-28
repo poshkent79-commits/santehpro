@@ -35,7 +35,11 @@ import {
   EyeOff,
   PauseCircle,
   PlayCircle,
-  UserX
+  UserX,
+  Search,
+  Droplets,
+  Flame,
+  Bath
 } from 'lucide-react';
 import { PlumbingSpecialist, MasterWork, ServiceCallRequest, Article } from '../types';
 import { WorkGalleryModal } from './WorkGalleryModal';
@@ -43,6 +47,7 @@ import { compressImageFile } from '../utils/imageCompressor';
 import { MasterEstimatesTab } from './MasterEstimatesTab';
 import { MasterEstimateBuilderModal } from './MasterEstimateBuilderModal';
 import { RequestReviewModal } from './RequestReviewModal';
+import { ENGINEERING_SERVICE_GROUPS, ALL_ENGINEERING_SERVICES, EngineeringServiceItem } from '../data/engineeringServices';
 
 interface MasterCabinetSectionProps {
   specialist: PlumbingSpecialist;
@@ -77,6 +82,10 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
   const [servicesSuccessMsg, setServicesSuccessMsg] = useState('');
   const [servicesErrorMsg, setServicesErrorMsg] = useState('');
   const [isUploadingMasterPhoto, setIsUploadingMasterPhoto] = useState(false);
+
+  // Category filter and search for engineering presets in master cabinet
+  const [presetCategoryFilter, setPresetCategoryFilter] = useState<string>('all');
+  const [presetSearchQuery, setPresetSearchQuery] = useState<string>('');
 
   // Profile Suspension & Annulment states
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
@@ -1154,46 +1163,157 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
               </div>
             </div>
 
-            {/* Popular quick presets */}
-            <div className="pt-2">
-              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">
-                Быстрый выбор из популярных сантехнических услуг (нажмите для добавления):
-              </label>
-              <div className="flex flex-wrap gap-1.5">
-                {[
-                  'Монтаж инсталляции и унитаза',
-                  'Замена стояков ГВС и ХВС',
-                  'Разводка труб (Rehau / полипропилен)',
-                  'Установка смесителя и сифона',
-                  'Устранение засоров (гидродинамика)',
-                  'Монтаж водяного тёплого пола',
-                  'Замена радиаторов отопления',
-                  'Установка душевой кабины и ванны',
-                  'Монтаж системы обратного осмоса',
-                  'Замена и опломбировка счётчиков воды',
-                  'Подключение стиральной машины',
-                  'Монтаж бойлера / водонагревателя',
-                  'Защита от протечек (Аквасторож/Нептун)',
-                  'Аварийный выезд сантехника 24/7'
-                ].map((presetName) => {
-                  const isAlreadyAdded = servicesList.includes(presetName);
+            {/* Popular quick presets with categories & search */}
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-700/60 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200">
+                    Каталог инженерных и сантехнических услуг (выбор в 1 клик):
+                  </label>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Включая тепловые насосы «воздух-вода», котельные, коллекторы и чистовой монтаж.
+                  </p>
+                </div>
+
+                {/* Search input in presets */}
+                <div className="relative w-full sm:w-64">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={presetSearchQuery}
+                    onChange={(e) => setPresetSearchQuery(e.target.value)}
+                    placeholder="Быстрый поиск услуг..."
+                    className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                  {presetSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setPresetSearchQuery('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 text-xs"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Category Pills */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                <button
+                  type="button"
+                  onClick={() => setPresetCategoryFilter('all')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer shrink-0 ${
+                    presetCategoryFilter === 'all'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800'
+                  }`}
+                >
+                  Все категории ({ALL_ENGINEERING_SERVICES.length})
+                </button>
+
+                {ENGINEERING_SERVICE_GROUPS.map((grp) => {
+                  const isActive = presetCategoryFilter === grp.id;
+                  const isHeatPumpCategory = grp.id === 'heat_pumps_boilers';
                   return (
                     <button
-                      key={presetName}
+                      key={grp.id}
                       type="button"
-                      disabled={isAlreadyAdded}
-                      onClick={() => handleQuickAddService(presetName)}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${
-                        isAlreadyAdded
-                          ? 'bg-slate-100 dark:bg-slate-900 text-slate-400 dark:text-slate-600 border border-slate-200 dark:border-slate-800 cursor-not-allowed'
-                          : 'bg-slate-100 hover:bg-blue-50 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-500/40'
+                      onClick={() => setPresetCategoryFilter(grp.id)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                        isActive
+                          ? isHeatPumpCategory
+                            ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md shadow-cyan-500/20'
+                            : 'bg-blue-600 text-white shadow-sm'
+                          : isHeatPumpCategory
+                          ? 'bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                          : 'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800'
                       }`}
                     >
-                      {isAlreadyAdded ? <Check className="w-3 h-3 text-emerald-500" /> : <Plus className="w-3 h-3 text-blue-500" />}
-                      <span>{presetName}</span>
+                      {grp.id === 'heat_pumps_boilers' && <Zap className="w-3 h-3 text-amber-400" />}
+                      {grp.id === 'water_distribution' && <Droplets className="w-3 h-3 text-cyan-400" />}
+                      {grp.id === 'heating_floor' && <Flame className="w-3 h-3 text-orange-400" />}
+                      {grp.id === 'fixtures_sanitary' && <Bath className="w-3 h-3 text-purple-400" />}
+                      {grp.id === 'emergency_maintenance' && <Clock className="w-3 h-3 text-emerald-400" />}
+                      <span>{grp.name}</span>
+                      {grp.badge && (
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded font-black ${
+                          isActive ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-300'
+                        }`}>
+                          {grp.badge}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
+              </div>
+
+              {/* Filtered Services Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 pt-1">
+                {ALL_ENGINEERING_SERVICES
+                  .filter((item) => {
+                    const matchesCategory = presetCategoryFilter === 'all' || item.categoryId === presetCategoryFilter;
+                    const matchesSearch = !presetSearchQuery.trim() || 
+                      item.name.toLowerCase().includes(presetSearchQuery.toLowerCase()) ||
+                      (item.description && item.description.toLowerCase().includes(presetSearchQuery.toLowerCase()));
+                    return matchesCategory && matchesSearch;
+                  })
+                  .map((item, idx) => {
+                    const isAlreadyAdded = servicesList.includes(item.name);
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() => {
+                          if (isAlreadyAdded) {
+                            handleRemoveService(item.name);
+                          } else {
+                            handleQuickAddService(item.name);
+                          }
+                        }}
+                        className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex items-start justify-between gap-2.5 select-none ${
+                          isAlreadyAdded
+                            ? 'bg-blue-500/10 dark:bg-blue-500/15 border-blue-500/40 text-blue-900 dark:text-cyan-300 shadow-xs'
+                            : item.isHeatPump
+                            ? 'bg-cyan-500/5 hover:bg-cyan-500/10 dark:bg-cyan-950/20 dark:hover:bg-cyan-950/40 border-cyan-500/20 hover:border-cyan-500/40 text-slate-800 dark:text-slate-200'
+                            : 'bg-slate-50 hover:bg-slate-100 dark:bg-slate-900/60 dark:hover:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-800 dark:text-slate-200'
+                        }`}
+                      >
+                        <div className="space-y-0.5 flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {item.isHeatPump && (
+                              <span className="px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-400 text-[10px] font-black border border-cyan-500/30">
+                                ТН Воздух-Вода
+                              </span>
+                            )}
+                            <span className="text-xs font-semibold leading-tight block truncate" title={item.name}>
+                              {item.name}
+                            </span>
+                          </div>
+                          {item.description && (
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1">
+                              {item.description}
+                            </p>
+                          )}
+                          {item.defaultPrice && (
+                            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 block">
+                              Ориентир: от {item.defaultPrice.toLocaleString('ru-RU')} ₽
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="shrink-0 mt-0.5">
+                          {isAlreadyAdded ? (
+                            <div className="w-6 h-6 rounded-lg bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+                              <Check className="w-3.5 h-3.5 stroke-[3]" />
+                            </div>
+                          ) : (
+                            <div className="w-6 h-6 rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-blue-600 hover:text-white flex items-center justify-center transition">
+                              <Plus className="w-3.5 h-3.5" />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
             </div>
           </div>

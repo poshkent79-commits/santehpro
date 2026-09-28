@@ -25,7 +25,7 @@ import {
 
 export interface PlumbingItem {
   id: string;
-  category: 'electric_boilers' | 'solid_boilers' | 'collectors' | 'pipes' | 'fittings' | 'pumps_tanks' | 'insulation_supplies';
+  category: 'heat_pumps' | 'leak_and_filters' | 'installations_drains' | 'electric_boilers' | 'solid_boilers' | 'collectors' | 'pipes' | 'fittings' | 'pumps_tanks' | 'insulation_supplies';
   categoryLabel: string;
   name: string;
   brand?: string;
@@ -38,6 +38,243 @@ export interface PlumbingItem {
 }
 
 export const CATALOG_MATERIALS: PlumbingItem[] = [
+  // --- ТЕПЛОВЫЕ НАСОСЫ И БКН ---
+  {
+    id: 'hp_1',
+    category: 'heat_pumps',
+    categoryLabel: 'Тепловые насосы & БКН',
+    name: 'Тепловой насос «воздух-вода» сплит Cooper&Hunter 9 кВт',
+    brand: 'Cooper&Hunter',
+    spec: '9 кВт, наружный блок + гидромодуль, фреон R32, COP до 4.8',
+    unit: 'компл',
+    price: 385000,
+    description: 'Инверторный тепловой насос с функцией отопления, охлаждения и нагрева ГВС до +55°C.',
+  },
+  {
+    id: 'hp_2',
+    category: 'heat_pumps',
+    categoryLabel: 'Тепловые насосы & БКН',
+    name: 'Тепловой насос «воздух-вода» Midea M-Thermal Arctic 12 кВт',
+    brand: 'Midea',
+    spec: '12 кВт, работа до -25°C, встроенный циркуляционный насос Wilo',
+    unit: 'компл',
+    price: 460000,
+    description: 'Высокоэффективный тепловой насос для домов до 160 м² с сенсорным пультом и Wi-Fi.',
+  },
+  {
+    id: 'hp_3',
+    category: 'heat_pumps',
+    categoryLabel: 'Тепловые насосы & БКН',
+    name: 'Тепловой насос моноблок Haier Super Aqua 8 кВт',
+    brand: 'Haier',
+    spec: '8 кВт моноблок, вся гидравлика в одном корпусе на улице',
+    unit: 'шт',
+    price: 310000,
+    description: 'Удобный монтаж без работы с фреоном (в дом заходит теплоноситель с гликолем/водой).',
+  },
+  {
+    id: 'hp_4',
+    category: 'heat_pumps',
+    categoryLabel: 'Тепловые насосы & БКН',
+    name: 'Буферная ёмкость (теплоаккумулятор) Drazice NADO 200 л',
+    brand: 'Drazice',
+    spec: '200 л, стальной бак с полиуретановой изоляцией 50 мм, 4 патрубка 5/4"',
+    unit: 'шт',
+    price: 49500,
+    description: 'Обязательный гидравлический разделитель для стабильной работы компрессора ТН.',
+  },
+  {
+    id: 'hp_5',
+    category: 'heat_pumps',
+    categoryLabel: 'Тепловые насосы & БКН',
+    name: 'Буферная ёмкость Stout 100 л настенная',
+    brand: 'Stout',
+    spec: '100 л, компактный настенный монтаж, патрубки 1 1/2"',
+    unit: 'шт',
+    price: 29800,
+    description: 'Для небольших котельных с тепловыми насосами и гидромодулями.',
+  },
+  {
+    id: 'hp_6',
+    category: 'heat_pumps',
+    categoryLabel: 'Тепловые насосы & БКН',
+    name: 'Бойлер косвенного нагрева Hajdu STA 200 C2 для тепловых насосов',
+    brand: 'Hajdu',
+    spec: '200 л, увеличенный теплообменник 2.4 м² под низкотемпературный ТН',
+    unit: 'шт',
+    price: 68500,
+    description: 'Быстрый прогрев воды даже при температуре подачи теплоносителя +50°C.',
+  },
+  {
+    id: 'hp_7',
+    category: 'heat_pumps',
+    categoryLabel: 'Тепловые насосы & БКН',
+    name: 'Трехходовой переключающий клапан Stout 1" с электроприводом 230V',
+    brand: 'Stout',
+    spec: '1" ВР, Kvs 8.0, время поворота 15 сек, концевые выключатели',
+    unit: 'шт',
+    price: 8600,
+    description: 'Мгновенное переключение подачи тепла с отопления на бойлер косвенного нагрева.',
+  },
+  {
+    id: 'hp_8',
+    category: 'heat_pumps',
+    categoryLabel: 'Тепловые насосы & БКН',
+    name: 'Комплект виброопор и фундаментного кронштейна под наружный блок ТН',
+    brand: 'SantehPro',
+    spec: 'Резинометаллические виброгасители до 150 кг + усиленный кронштейн',
+    unit: 'компл',
+    price: 6200,
+    description: 'Полное гашение низкочастотной вибрации и шума компрессора.',
+  },
+
+  // --- УЗЛЫ ВВОДА, ФИЛЬТРАЦИЯ & ЗАЩИТА ОТ ПРОТЕЧЕК ---
+  {
+    id: 'lf_1',
+    category: 'leak_and_filters',
+    categoryLabel: 'Узлы ввода & Защита от протечек',
+    name: 'Система защиты от протечек Neptun Smart с кранами Bugatti 1/2" Pro',
+    brand: 'Neptun',
+    spec: 'Wi-Fi, 2 крана Bugatti латунь 1/2", 4 радиодатчика, резервное питание',
+    unit: 'компл',
+    price: 24500,
+    description: 'Автоматическое перекрытие воды за 5 сек при аварии + пуш-уведомление в смартфон.',
+  },
+  {
+    id: 'lf_2',
+    category: 'leak_and_filters',
+    categoryLabel: 'Узлы ввода & Защита от протечек',
+    name: 'Система защиты от протечек Neptun Aquacontrol 3/4"',
+    brand: 'Neptun',
+    spec: '2 крана 3/4" с электроприводом 220V + 2 проводных датчика',
+    unit: 'компл',
+    price: 18900,
+    description: 'Надежный базовый комплект для квартиры или коттеджа.',
+  },
+  {
+    id: 'lf_3',
+    category: 'leak_and_filters',
+    categoryLabel: 'Узлы ввода & Защита от протечек',
+    name: 'Самопромывной фильтр FAR 1/2" 100 мкм с манометром и штуцером слива',
+    brand: 'FAR',
+    spec: '1/2" ВР, сетка из нерж. стали AISI 316 100 мкм, манометр 0-10 бар',
+    unit: 'шт',
+    price: 5400,
+    description: 'Защищает редукторы давления и сантехнику от окалины, песка и ржавчины.',
+  },
+  {
+    id: 'lf_4',
+    category: 'leak_and_filters',
+    categoryLabel: 'Узлы ввода & Защита от протечек',
+    name: 'Самопромывной фильтр Honeywell Braukmann FK06 3/4"',
+    brand: 'Honeywell',
+    spec: '3/4" НР, прозрачная ударопрочная чаша, 100 мкм, поворотный спуск',
+    unit: 'шт',
+    price: 6800,
+    description: 'Премиальный промывной фильтр немецкого качества.',
+  },
+  {
+    id: 'lf_5',
+    category: 'leak_and_filters',
+    categoryLabel: 'Узлы ввода & Защита от протечек',
+    name: 'Мембранный редуктор давления Caleffi 1/2" со шкалой (1-6 бар)',
+    brand: 'Caleffi',
+    spec: '1/2" ВР, компенсация давления до 25 бар, гнездо под манометр 1/4"',
+    unit: 'шт',
+    price: 4600,
+    description: 'Мембранная конструкция не забивается грязью и держит точное давление 3.0 бар.',
+  },
+  {
+    id: 'lf_6',
+    category: 'leak_and_filters',
+    categoryLabel: 'Узлы ввода & Защита от протечек',
+    name: 'Мембранный компенсатор гидроударов Caleffi 1/2" (нержавеющая сталь)',
+    brand: 'Caleffi',
+    spec: '1/2" НР, гашение пиковых волн до 20 бар, мембрана EPDM',
+    unit: 'шт',
+    price: 2900,
+    description: 'Защищает гибкие подводки, бойлеры и смесители от разрушительных гидроударов.',
+  },
+  {
+    id: 'lf_7',
+    category: 'leak_and_filters',
+    categoryLabel: 'Узлы ввода & Защита от протечек',
+    name: 'Система обратного осмоса Гейзер Престиж с минерализатором и баком',
+    brand: 'Гейзер',
+    spec: '5 ступеней очистки, мембрана Vontron 50 GPD, отдельный кран люкс',
+    unit: 'компл',
+    price: 13200,
+    description: 'Идеально чистая питьевая вода ресторанного качества без накипи в чайнике.',
+  },
+  {
+    id: 'lf_8',
+    category: 'leak_and_filters',
+    categoryLabel: 'Узлы ввода & Защита от протечек',
+    name: 'Магистральная колба фильтрации Big Blue 10" (BB10) с кронштейном',
+    brand: 'Аквафор',
+    spec: '1" ВР, усиленный корпус до 8 бар, картридж 5 мкм вспененный полипропилен',
+    unit: 'шт',
+    price: 4300,
+    description: 'Глубокая очистка воды на всю квартиру или дом.',
+  },
+
+  // --- ИНСТАЛЛЯЦИИ, ТРАПЫ & СКРЫТЫЙ МОНТАЖ ---
+  {
+    id: 'in_1',
+    category: 'installations_drains',
+    categoryLabel: 'Инсталляции & Скрытый монтаж',
+    name: 'Монтажный элемент (инсталляция) Geberit Duofix Delta 112 см',
+    brand: 'Geberit',
+    spec: 'Самонесущая рама 400 кг, бачок с защитой от конденсата, клавиша Delta',
+    unit: 'компл',
+    price: 19800,
+    description: 'Швейцарская надёжность №1 в мире для любых подвесных унитазов.',
+  },
+  {
+    id: 'in_2',
+    category: 'installations_drains',
+    categoryLabel: 'Инсталляции & Скрытый монтаж',
+    name: 'Комплект инсталляции Tece Profil 4 в 1 с хромированной клавишей',
+    brand: 'Tece',
+    spec: 'Рама 112 см, крепежи к стене, звукоизоляционная прокладка, клавиша TECEnow',
+    unit: 'компл',
+    price: 23500,
+    description: 'Премиальный немецкий комплект инсталляции готовый к установке.',
+  },
+  {
+    id: 'in_3',
+    category: 'installations_drains',
+    categoryLabel: 'Инсталляции & Скрытый монтаж',
+    name: 'Душевой лоток (трап) Tece Linus 700 мм с сухим затвором и решеткой',
+    brand: 'Tece',
+    spec: 'Длина 700 мм, нержавеющая сталь, сифон с сухим мембранным затвором',
+    unit: 'компл',
+    price: 11800,
+    description: 'Защищает ванную комнату от запаха из канализации даже при сухом сифоне.',
+  },
+  {
+    id: 'in_4',
+    category: 'installations_drains',
+    categoryLabel: 'Инсталляции & Скрытый монтаж',
+    name: 'Душевой трап точечный Viega Advantix 100х100 мм с сухим клапаном',
+    brand: 'Viega',
+    spec: 'Решетка нерж. сталь 100х100 мм, сухой затвор, боковой слив DN50',
+    unit: 'компл',
+    price: 8900,
+    description: 'Компактный трап немецкой марки Viega для строительных душевых.',
+  },
+  {
+    id: 'in_5',
+    category: 'installations_drains',
+    categoryLabel: 'Инсталляции & Скрытый монтаж',
+    name: 'Универсальный блок скрытого монтажа смесителя Hansgrohe iBox Universal',
+    brand: 'Hansgrohe',
+    spec: '1/2" / 3/4", уплотнительный фланец, совместим со всеми внешними частями HG',
+    unit: 'шт',
+    price: 7900,
+    description: 'Скрытая часть для встраиваемых термостатов и смесителей в стену душа.',
+  },
+
   // --- ЭЛЕКТРОКОТЛЫ ---
   {
     id: 'eb_1',
@@ -808,16 +1045,60 @@ export const MaterialsSelectionModal: React.FC<MaterialsSelectionModalProps> = (
 
   if (!isOpen) return null;
 
+  // Ready-made Kits definition for 1-click loading
+  const QUICK_KITS = [
+    {
+      id: 'kit_heat_pump',
+      name: '⚡ Котельная с тепловым насосом 9–12 кВт',
+      badge: 'PRO',
+      items: { hp_1: 1, hp_4: 1, hp_6: 1, hp_7: 1, hp_8: 1, 'col_1': 1, 'pump_1': 1 },
+    },
+    {
+      id: 'kit_inlet_pro',
+      name: '💧 Узел ввода квартиры PRO (Neptun + FAR + Редуктор)',
+      badge: 'Хит',
+      items: { lf_1: 1, lf_3: 2, lf_5: 2, lf_6: 2, 'fit_val_1': 4, 'fit_val_4': 2 },
+    },
+    {
+      id: 'kit_floor_50',
+      name: '🔥 Тёплый пол на 50 м² (Stout + Насосный узел)',
+      badge: 'Отопление',
+      items: { 'p_pex_rt_16': 350, 'col_2': 1, 'col_mix_1': 1, 'ins_foil_1': 5, 'ins_mat_1': 50 },
+    },
+    {
+      id: 'kit_bathroom_pro',
+      name: '🚽 Санузел с инсталляцией Geberit и трапом Tece',
+      badge: 'Чистовой',
+      items: { in_1: 1, in_3: 1, in_5: 1, 'p_pex_16': 40, 'p_pipe_c_110': 3, 'p_pipe_c_50': 6 },
+    },
+  ];
+
+  const handleApplyQuickKit = (kitItems: Record<string, number>) => {
+    setSelectedQuantities((prev) => {
+      const next = { ...prev };
+      Object.entries(kitItems).forEach(([id, qty]) => {
+        // verify item exists
+        if (CATALOG_MATERIALS.some((m) => m.id === id)) {
+          next[id] = (next[id] || 0) + qty;
+        }
+      });
+      return next;
+    });
+  };
+
   const categoriesNav = [
     { id: 'all', label: 'Все материалы', icon: Grid, count: CATALOG_MATERIALS.length },
     { id: 'favorites', label: 'Избранное', icon: Star, count: favorites.length, highlight: true },
+    { id: 'heat_pumps', label: 'Тепловые насосы & БКН', icon: Zap, highlight: true },
+    { id: 'leak_and_filters', label: 'Узлы ввода & Защита от протечек', icon: PackageCheck, highlight: true },
+    { id: 'installations_drains', label: 'Инсталляции & Скрытый монтаж', icon: Wrench },
     { id: 'electric_boilers', label: 'Электрокотлы', icon: Zap },
     { id: 'solid_boilers', label: 'Твердотопливные котлы', icon: Flame },
     { id: 'collectors', label: 'Коллекторы & Тёплый пол', icon: SlidersHorizontal },
     { id: 'pipes', label: 'Трубы (Метраж)', icon: Ruler },
     { id: 'fittings', label: 'Фитинги & Арматура', icon: Wrench },
     { id: 'pumps_tanks', label: 'Насосы & Баки', icon: Gauge },
-    { id: 'insulation_supplies', label: 'Изоляция & Расходники', icon: PackageCheck },
+    { id: 'insulation_supplies', label: 'Изоляция & Расходники', icon: Boxes },
   ];
 
   return (
@@ -874,6 +1155,31 @@ export const MaterialsSelectionModal: React.FC<MaterialsSelectionModalProps> = (
                 Очистить
               </button>
             )}
+          </div>
+
+          {/* Quick 1-Click Complete Project Kits */}
+          <div className="space-y-1.5 pt-1">
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="font-bold text-slate-300 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                Готовые инженерные комплекты (добавление в 1 клик):
+              </span>
+            </div>
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+              {QUICK_KITS.map((kit) => (
+                <button
+                  key={kit.id}
+                  type="button"
+                  onClick={() => handleApplyQuickKit(kit.items)}
+                  className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 hover:border-amber-500/50 text-xs text-slate-200 hover:text-amber-300 transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0 shadow-xs"
+                >
+                  <span>{kit.name}</span>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+                    +{Object.keys(kit.items).length} поз.
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Category Tabs */}

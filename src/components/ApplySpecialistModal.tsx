@@ -37,6 +37,7 @@ import { SpecialistVerificationDoc } from '../types';
 import { LegalTermsModal } from './LegalTermsModal';
 import { PLATFORM_LEGAL_DETAILS } from '../data/legalTerms';
 import { useAuth } from '../context/AuthContext';
+import { ALL_ENGINEERING_SERVICES } from '../data/engineeringServices';
 
 interface ApplySpecialistModalProps {
   onClose: () => void;
@@ -548,8 +549,46 @@ export const ApplySpecialistModal: React.FC<ApplySpecialistModalProps> = ({ onCl
                   type="text"
                   value={formData.services}
                   onChange={(e) => setFormData({ ...formData, services: e.target.value })}
+                  placeholder="Монтаж тепловых насосов, разводка труб Rehau, инсталляции..."
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:border-cyan-500 focus:outline-none"
                 />
+
+                {/* Quick Preset Chips for Master Application */}
+                <div className="mt-2 space-y-1">
+                  <span className="text-[10px] text-slate-400 block">Быстрый выбор популярных специализаций (нажмите для добавления):</span>
+                  <div className="flex flex-wrap gap-1 max-h-28 overflow-y-auto pr-1">
+                    {ALL_ENGINEERING_SERVICES.slice(0, 14).map((serv, idx) => {
+                      const currentList = formData.services.split(',').map((s) => s.trim()).filter(Boolean);
+                      const isAdded = currentList.some((s) => s.toLowerCase() === serv.name.toLowerCase());
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            if (isAdded) {
+                              const filtered = currentList.filter((s) => s.toLowerCase() !== serv.name.toLowerCase());
+                              setFormData({ ...formData, services: filtered.join(', ') });
+                            } else {
+                              const updated = [...currentList, serv.name];
+                              setFormData({ ...formData, services: updated.join(', ') });
+                            }
+                          }}
+                          className={`px-2 py-0.5 rounded-lg text-[10px] font-medium transition cursor-pointer flex items-center gap-1 ${
+                            isAdded
+                              ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                              : serv.isHeatPump
+                              ? 'bg-cyan-950/40 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-900/40'
+                              : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800 hover:border-slate-700'
+                          }`}
+                        >
+                          {serv.isHeatPump && <span>⚡</span>}
+                          <span>{serv.name}</span>
+                          {isAdded ? <span>✓</span> : <span>+</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
 
               <div>
