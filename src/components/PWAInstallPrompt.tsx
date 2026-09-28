@@ -19,61 +19,20 @@ import {
   Wrench
 } from 'lucide-react';
 import { usePWAInstall } from '../hooks/usePWAInstall';
+import { BrandLogo3D } from './BrandLogo3D';
 
 /**
- * Small App Logo for installation prompts and badges:
- * Preserves the exact text and color scheme from the original banner:
- * «Сантех» on top (red) and «Про» shifted down and to the right (blue),
- * with the wrench emblem, fitting neatly within the compact icon bounds.
+ * 3D Metallic App Logo for installation prompts and badges:
+ * High-definition rendering of the 3D emblem with roof, wrench, and metallic finish.
  */
 const SmallAppLogo: React.FC<{ size?: 'sm' | 'md' | 'lg' }> = ({ size = 'md' }) => {
-  const isSm = size === 'sm';
-  const isLg = size === 'lg';
-
-  const containerClasses = isSm
-    ? 'w-10 h-10 rounded-xl p-1'
-    : isLg
-    ? 'w-14 h-14 rounded-2xl p-1.5'
-    : 'w-12 h-12 rounded-2xl p-1';
-
-  return (
-    <div
-      className={`${containerClasses} bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 border border-slate-700/80 shadow-lg shadow-black/50 shrink-0 relative overflow-hidden flex flex-col justify-between select-none group`}
-    >
-      {/* Soft ambient glows */}
-      <div className="absolute -top-3 -right-3 w-8 h-8 bg-blue-500/20 rounded-full blur-md pointer-events-none" />
-      <div className="absolute -bottom-3 -left-3 w-8 h-8 bg-red-500/20 rounded-full blur-md pointer-events-none" />
-
-      {/* Top row: Mini wrench badge + "Сантех" on top */}
-      <div className="flex items-center space-x-1 relative z-10">
-        <div
-          className={`${
-            isSm ? 'w-3.5 h-3.5 rounded-md' : 'w-4 h-4 rounded-md'
-          } bg-gradient-to-br from-red-500 to-blue-600 flex items-center justify-center text-white shrink-0 shadow-xs`}
-        >
-          <Wrench className={`${isSm ? 'w-2 h-2' : 'w-2.5 h-2.5'} text-white`} />
-        </div>
-        <span
-          className={`${
-            isSm ? 'text-[10px]' : isLg ? 'text-xs' : 'text-[11px]'
-          } font-black text-red-500 leading-none tracking-tight drop-shadow-sm`}
-        >
-          Сантех
-        </span>
-      </div>
-
-      {/* Bottom row: "Про" shifted down and a bit to the right */}
-      <div className="flex justify-end relative z-10 pr-0.5">
-        <span
-          className={`${
-            isSm ? 'text-[9px]' : isLg ? 'text-[11px]' : 'text-[10px]'
-          } font-black text-blue-500 leading-none tracking-wider uppercase drop-shadow-sm`}
-        >
-          Про
-        </span>
-      </div>
-    </div>
-  );
+  if (size === 'lg') {
+    return <BrandLogo3D size="sm" showSubtitle={false} className="shrink-0" />;
+  }
+  if (size === 'sm') {
+    return <BrandLogo3D size="xs" showSubtitle={false} className="shrink-0" />;
+  }
+  return <BrandLogo3D size="xs" showSubtitle={false} className="shrink-0" />;
 };
 
 export const PWAInstallPrompt: React.FC = () => {
@@ -275,6 +234,25 @@ export const PWAInstallPrompt: React.FC = () => {
 
             {/* Guide Body */}
             <div className="p-5 sm:p-6 space-y-4">
+              {/* 3D App Icon Preview Card */}
+              <div className="p-4 rounded-2xl bg-gradient-to-b from-slate-950 to-slate-900 border border-slate-800 flex items-center space-x-4 shadow-inner">
+                <BrandLogo3D size="sm" showSubtitle={false} className="shrink-0" />
+                <div className="space-y-1 min-w-0">
+                  <div className="flex items-center space-x-1.5">
+                    <span className="text-sm font-black tracking-tight">
+                      <span className="text-red-500">Сантех</span>
+                      <span className="text-blue-500">Про</span>
+                    </span>
+                    <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                      Официальное приложение
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-snug">
+                    Твой карманный помощник по сантехнике. Работает офлайн без интернета.
+                  </p>
+                </div>
+              </div>
+
               {/* Dynamic Status / Feedback Message */}
               {installStatusMessage && (
                 <div className="p-3.5 rounded-2xl bg-cyan-950/70 border border-cyan-500/40 text-xs text-cyan-200 shadow-md flex items-start space-x-2.5 animate-in fade-in slide-in-from-top-2 duration-300">

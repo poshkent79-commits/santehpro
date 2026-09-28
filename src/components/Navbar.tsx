@@ -43,17 +43,17 @@ export const Navbar: React.FC<NavbarProps> = ({
           onClick={() => setActiveTab('handbook')}
           className="flex items-center space-x-3 cursor-pointer group"
         >
-          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-md shadow-cyan-500/20 group-hover:scale-105 transition transform shrink-0">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-red-500 via-rose-500 to-blue-600 flex items-center justify-center text-white shadow-md shadow-red-500/25 group-hover:scale-105 transition transform shrink-0 border border-white/10">
             <Wrench className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
           </div>
           <div>
-            <div className="flex items-center space-x-1.5">
-              <span className="text-xl sm:text-2xl font-black tracking-tight">
+            <div className="flex items-center">
+              <span className="text-xl sm:text-2xl font-black tracking-tight leading-none">
                 <span className="text-red-500">Сантех</span>
                 <span className="text-blue-500">Про</span>
               </span>
             </div>
-            <p className="text-[11px] sm:text-xs text-slate-400 font-medium leading-tight">
+            <p className="text-[11px] sm:text-xs text-slate-400 font-medium leading-tight mt-0.5">
               Твой карманный помощник по сантехнике
             </p>
           </div>

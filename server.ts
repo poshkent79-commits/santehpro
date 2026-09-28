@@ -3808,11 +3808,6 @@ ${publishedArticles
     }
   });
 
-  app.get('/yandex_:code.html', (req, res) => {
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send(`<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head><body>Verification: ${req.params.code}</body></html>\n`);
-  });
-
   app.use(express.static(path.join(process.cwd(), 'public')));
 
   const isDistBundle = typeof __filename !== 'undefined' && __filename.includes('dist');
