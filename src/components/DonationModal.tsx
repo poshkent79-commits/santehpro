@@ -114,7 +114,7 @@ export const DonationModal: React.FC<DonationModalProps> = ({
                     Поддержать проект СантехПро
                   </h2>
                   <div className="text-[10px] text-rose-100 font-medium">
-                    100% бесплатно • Добровольный донат
+                    100% бесплатно • Добровольная поддержка
                   </div>
                 </div>
               )}

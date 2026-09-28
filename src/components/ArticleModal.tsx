@@ -928,7 +928,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
 
             <div className="pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="text-xs text-slate-400">
-                Добровольный донат на оплату серверов, хостинга и съёмку видео
+                Добровольная поддержка на оплату серверов, хостинга и съёмку видео
               </div>
 
               {onOpenDonation && (
@@ -938,7 +938,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                   className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-400 hover:to-amber-400 text-slate-950 font-bold text-xs transition shadow-md shadow-rose-950/50 flex items-center justify-center space-x-2 cursor-pointer shrink-0"
                 >
                   <Heart className="w-4 h-4 fill-slate-950 text-slate-950" />
-                  <span>Поддержать проект (Донат)</span>
+                  <span>Поддержать проект</span>
                 </button>
               )}
             </div>

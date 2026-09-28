@@ -300,10 +300,10 @@ export const HandbookView: React.FC<HandbookViewProps> = ({
               type="button"
               onClick={onOpenDonation}
               className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-rose-500/15 to-amber-500/15 hover:from-rose-500/25 hover:to-amber-500/25 border border-rose-500/30 hover:border-rose-400 text-rose-300 hover:text-white font-bold text-xs flex items-center space-x-1.5 transition cursor-pointer"
-              title="Поддержать развитие проекта добровольным донатом"
+              title="Поддержать развитие проекта"
             >
               <Heart className="w-3.5 h-3.5 fill-rose-400 text-rose-400" />
-              <span>Поддержать проект (Донат)</span>
+              <span>Поддержать проект</span>
             </button>
           )}
         </div>

@@ -139,7 +139,7 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
               </span>
             </div>
             <p className="text-[11px] text-slate-300 mt-1 leading-snug">
-              Мы за открытое образование и свободный обмен опытом среди мастеров. Если материалы полезны вам в работе или ремонте, поддержите проект добровольным донатом.
+              Мы за открытое образование и свободный обмен опытом среди мастеров. Если материалы полезны вам в работе или ремонте, поддержите развитие проекта.
             </p>
           </div>
         </div>
@@ -151,7 +151,7 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
             className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-400 hover:to-amber-400 text-slate-950 font-black text-xs transition flex items-center space-x-2 shrink-0 cursor-pointer shadow-md shadow-rose-950/50"
           >
             <Heart className="w-3.5 h-3.5 fill-slate-950 text-slate-950" />
-            <span>Поддержать проект (Донат)</span>
+            <span>Поддержать проект</span>
           </button>
         )}
       </div>

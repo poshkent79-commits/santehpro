@@ -1060,10 +1060,10 @@ function AppContent() {
                 type="button"
                 onClick={() => setIsDonationModalOpen(true)}
                 className="text-rose-400 hover:text-rose-300 font-bold flex items-center space-x-1 cursor-pointer transition"
-                title="Поддержать проект СантехПро добровольным донатом"
+                title="Поддержать проект СантехПро"
               >
                 <Heart className="w-3.5 h-3.5 fill-rose-400 text-rose-400" />
-                <span>Поддержать проект (Донат)</span>
+                <span>Поддержать проект</span>
               </button>
             </div>
 
