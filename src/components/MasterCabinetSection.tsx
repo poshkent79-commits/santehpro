@@ -40,7 +40,14 @@ import {
   Droplets,
   Flame,
   Bath,
-  FileCheck
+  FileCheck,
+  GraduationCap,
+  Video,
+  Volume2,
+  Upload,
+  Music,
+  CheckCircle2,
+  Image as ImageIcon
 } from 'lucide-react';
 import { PlumbingSpecialist, MasterWork, ServiceCallRequest, Article, MasterPlumbingEstimate } from '../types';
 import { WorkGalleryModal } from './WorkGalleryModal';
@@ -50,6 +57,7 @@ import { MasterEstimateBuilderModal } from './MasterEstimateBuilderModal';
 import { MasterContractsTab } from './MasterContractsTab';
 import { RequestReviewModal } from './RequestReviewModal';
 import { ENGINEERING_SERVICE_GROUPS, ALL_ENGINEERING_SERVICES, EngineeringServiceItem } from '../data/engineeringServices';
+import { getRuTubeEmbedUrl, getYouTubeEmbedUrl, getVkVideoEmbedUrl } from '../utils/videoUtils';
 
 interface MasterCabinetSectionProps {
   specialist: PlumbingSpecialist;
@@ -327,7 +335,7 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
     (m) => m.status !== 'completed' && m.status !== 'rejected' && !m.masterReply
   );
 
-  // Articles state with instant localStorage cache (High rating >= 4.8)
+  // Articles & Courses state with instant localStorage cache
   const [masterArticles, setMasterArticles] = useState<Article[]>(() => {
     try {
       const cached = localStorage.getItem(`santehpro_master_articles_${specialist.id}`);
@@ -340,6 +348,13 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
   const [isWritingArticle, setIsWritingArticle] = useState(false);
   const [articleTitle, setArticleTitle] = useState('');
   const [articleCategory, setArticleCategory] = useState<'water' | 'heating' | 'drainage' | 'bath' | 'tools'>('water');
+  const [articleSection, setArticleSection] = useState<'courses' | 'handbook'>('handbook');
+  const [articleType, setArticleType] = useState<'video' | 'article'>('article');
+  const [articleVkVideoUrl, setArticleVkVideoUrl] = useState('');
+  const [articleRutubeUrl, setArticleRutubeUrl] = useState('');
+  const [articleYoutubeUrl, setArticleYoutubeUrl] = useState('');
+  const [articleAudioUrl, setArticleAudioUrl] = useState('');
+  const [articleExternalUrl, setArticleExternalUrl] = useState('');
   const [articleDifficulty, setArticleDifficulty] = useState<'Новичок' | 'Продвинутый' | 'Профи'>('Новичок');
   const [articleTimeEst, setArticleTimeEst] = useState('15 мин');
   const [articleDescription, setArticleDescription] = useState('');
@@ -352,8 +367,155 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
   const [isSubmittingArticle, setIsSubmittingArticle] = useState(false);
   const [articleSuccessMsg, setArticleSuccessMsg] = useState('');
 
+  // Media limits for Article Form:
+  // 1. Cover Image: max 15MB file size with lossless client compression
+  // 2. Audio: max 50MB when uploading directly to server; unlimited when adding via link from third-party app
+  const MAX_COVER_IMAGE_SIZE_BYTES = 15 * 1024 * 1024; // 15 МБ
+  const MAX_AUDIO_UPLOAD_SIZE_BYTES = 50 * 1024 * 1024; // 50 МБ
+
+  const [coverInputMode, setCoverInputMode] = useState<'upload' | 'url'>('upload');
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const [coverStats, setCoverStats] = useState<{ originalSize: string; compressedSize: string; savings: string } | null>(null);
+  const [coverError, setCoverError] = useState<string | null>(null);
+
+  const [audioInputMode, setAudioInputMode] = useState<'link' | 'upload'>('link');
+  const [isUploadingAudio, setIsUploadingAudio] = useState(false);
+  const [audioUploadStats, setAudioUploadStats] = useState<{ fileName: string; sizeStr: string } | null>(null);
+  const [audioUploadError, setAudioUploadError] = useState<string | null>(null);
+
+  const formatByteSize = (bytes: number): string => {
+    if (!bytes || bytes <= 0) return '0 КБ';
+    if (bytes < 1024) return `${bytes} Б`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} КБ`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} МБ`;
+  };
+
+  const handleArticleCoverUpload = async (file: File) => {
+    if (!file) return;
+    setCoverError(null);
+
+    if (!file.type.startsWith('image/')) {
+      setCoverError('Пожалуйста, выберите файл изображения (JPEG, PNG, WebP).');
+      return;
+    }
+
+    if (file.size > MAX_COVER_IMAGE_SIZE_BYTES) {
+      setCoverError(
+        `Размер выбранного файла (${formatByteSize(file.size)}) превышает ограничение 15 МБ. Выберите изображение меньшего размера.`
+      );
+      return;
+    }
+
+    setIsUploadingCover(true);
+    try {
+      // Smart lossless client-side compression: 1600px width, quality 0.86
+      const compressed = await compressImageFile(file, 1600, 0.86);
+      const origSizeStr = formatByteSize(compressed.originalSize);
+      const compSizeStr = formatByteSize(compressed.compressedSize);
+      const savingsPercent = compressed.originalSize > 0
+        ? Math.max(0, Math.round((1 - compressed.compressedSize / compressed.originalSize) * 100))
+        : 0;
+
+      let finalUrl = compressed.base64;
+
+      try {
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fileName: file.name,
+            fileData: compressed.base64,
+            fileType: 'photo',
+            category: articleCategory,
+          }),
+        });
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          if (uploadData.fileUrl) {
+            finalUrl = uploadData.fileUrl;
+          }
+        }
+      } catch (uploadErr) {
+        console.warn('Cloud upload fallback for article cover:', uploadErr);
+      }
+
+      setArticleCover(finalUrl);
+      setCoverStats({
+        originalSize: origSizeStr,
+        compressedSize: compSizeStr,
+        savings: `-${savingsPercent}%`,
+      });
+    } catch (err: any) {
+      console.error('Failed to compress article cover:', err);
+      setCoverError('Ошибка при обработке изображения: ' + (err.message || ''));
+    } finally {
+      setIsUploadingCover(false);
+    }
+  };
+
+  const handleArticleAudioUpload = async (file: File) => {
+    if (!file) return;
+    setAudioUploadError(null);
+
+    const isAudioType = file.type.startsWith('audio/') || /\.(mp3|wav|ogg|m4a|aac)$/i.test(file.name);
+    if (!isAudioType) {
+      setAudioUploadError('Пожалуйста, выберите аудиофайл формата .mp3, .wav, .m4a, .ogg или .aac.');
+      return;
+    }
+
+    if (file.size > MAX_AUDIO_UPLOAD_SIZE_BYTES) {
+      setAudioUploadError(
+        `Размер аудиофайла (${formatByteSize(file.size)}) превышает лимит сервера 50 МБ. Для объёмных подкастов и длинных лекций используйте режим «По ссылке» (без ограничений размера).`
+      );
+      return;
+    }
+
+    setIsUploadingAudio(true);
+    try {
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = (e) => reject(e);
+        reader.readAsDataURL(file);
+      });
+
+      const base64Data = await base64Promise;
+
+      const uploadRes = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileName: file.name,
+          fileData: base64Data,
+          fileType: 'audio',
+          category: articleCategory,
+        }),
+      });
+
+      if (!uploadRes.ok) {
+        const errJson = await uploadRes.json().catch(() => ({}));
+        throw new Error(errJson.error || 'Ошибка загрузки аудиофайла на сервер');
+      }
+
+      const uploadData = await uploadRes.json();
+      const finalUrl = uploadData.fileUrl || base64Data;
+
+      setArticleAudioUrl(finalUrl);
+      setAudioUploadStats({
+        fileName: file.name,
+        sizeStr: formatByteSize(file.size),
+      });
+    } catch (err: any) {
+      console.error('Failed to upload audio file:', err);
+      setAudioUploadError('Ошибка при сохранении аудиофайла: ' + (err.message || ''));
+    } finally {
+      setIsUploadingAudio(false);
+    }
+  };
+
   const ratingNum = Number(specialist.rating) || 5.0;
-  const isHighRated = ratingNum >= 4.8; // Professional masters with elevated rating (4.8+)
+  const isVerifiedMaster = Boolean(specialist.verified || specialist.status === 'approved');
+  const isHighRated = isVerifiedMaster || ratingNum >= 4.8; // All verified masters have course publishing rights
 
   // Load works instantly from Server API
   const loadMasterWorks = async () => {
@@ -738,34 +900,63 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
         .map((s) => s.trim())
         .filter(Boolean);
 
+      const embedUrl = (articleRutubeUrl ? getRuTubeEmbedUrl(articleRutubeUrl) : undefined) ||
+        (articleVkVideoUrl ? getVkVideoEmbedUrl(articleVkVideoUrl) : undefined) ||
+        (articleYoutubeUrl ? getYouTubeEmbedUrl(articleYoutubeUrl) : undefined);
+
       const res = await fetch('/api/articles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: articleTitle,
+          title: articleTitle.trim(),
           category: articleCategory,
-          type: 'article',
+          type: articleType,
+          adminSection: articleSection,
           difficulty: articleDifficulty,
           timeEst: articleTimeEst,
-          description: articleDescription,
+          description: articleDescription.trim(),
           coverImage:
             articleCover.trim() ||
             'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80',
-          author: `${specialist.name} (Мастер СантехПро, рейтинг ${specialist.rating}⭐)`,
+          author: specialist.name,
           authorMasterId: specialist.id,
+          authorAddress: specialist.city ? `г. ${specialist.city}, Мастерская СантехПро` : undefined,
+          videoUrl: articleRutubeUrl.trim() || articleVkVideoUrl.trim() || articleYoutubeUrl.trim() || undefined,
+          rutubeUrl: articleRutubeUrl.trim() || undefined,
+          youtubeUrl: articleYoutubeUrl.trim() || undefined,
+          vkVideoUrl: articleVkVideoUrl.trim() || undefined,
+          videoEmbed: embedUrl || undefined,
+          audioUrl: articleAudioUrl.trim() || undefined,
+          buyUrl: articleExternalUrl.trim() || undefined,
           toolsRequired: toolsArr,
           materialsRequired: matArr,
           steps: articleSteps,
+          moderationStatus: 'pending',
+          isPublished: false,
         }),
       });
 
       if (res.ok) {
-        setArticleSuccessMsg('Статья успешно отправлена на проверку администратору! После модерации она будет опубликована в Справочнике СантехПро.');
+        setArticleSuccessMsg(
+          articleSection === 'courses'
+            ? '✓ Курс / видеоурок успешно отправлен на предварительную модерацию администратору! После одобрения он появится в разделе «Курсы».'
+            : '✓ Статья успешно отправлена на проверку администратору! После одобрения она появится в Справочнике СантехПро.'
+        );
         setIsWritingArticle(false);
         setArticleTitle('');
         setArticleDescription('');
+        setArticleVkVideoUrl('');
+        setArticleRutubeUrl('');
+        setArticleYoutubeUrl('');
+        setArticleAudioUrl('');
+        setArticleExternalUrl('');
+        setArticleCover('');
+        setCoverStats(null);
+        setCoverError(null);
+        setAudioUploadStats(null);
+        setAudioUploadError(null);
         loadMasterArticles();
-        setTimeout(() => setArticleSuccessMsg(''), 4000);
+        setTimeout(() => setArticleSuccessMsg(''), 5000);
       }
     } catch (e) {
       console.error('Failed to submit article:', e);
@@ -1059,8 +1250,11 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
                 : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
             }`}
           >
-            <FileText className="w-4 h-4" />
-            <span>Статьи о сантехнике ({masterArticles.length})</span>
+            <GraduationCap className="w-4 h-4 text-rose-400" />
+            <span>Курсы и статьи ({masterArticles.length})</span>
+            <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+              Видео/Аудио
+            </span>
           </button>
         </div>
       </div>
@@ -2208,15 +2402,23 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
             </div>
           ) : (
             <div className="space-y-6">
-              {/* Unlocked Banner */}
-              <div className="p-5 bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/15 border border-amber-500/30 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-amber-500" />
-                    Авторские экспертные статьи о сантехнике
-                  </h3>
-                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-0.5">
-                    У вас повышенный рейтинг ({specialist.rating}⭐)! Создавайте обучающие руководства и статьи, которые после модерации администратором будут опубликованы в Справочнике.
+              {/* Unlocked Banner - High contrast & crystal clear visibility */}
+              <div className="p-5 sm:p-6 bg-slate-900 border-2 border-amber-500/60 rounded-2xl shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
+                <div className="relative z-10 space-y-1.5">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <h3 className="text-lg sm:text-xl font-extrabold text-white flex items-center gap-2.5 tracking-tight">
+                      <span className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/40">
+                        <Sparkles className="w-5 h-5 text-amber-400" />
+                      </span>
+                      <span>Авторские экспертные статьи о сантехнике</span>
+                    </h3>
+                    <span className="px-3 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-bold flex items-center gap-1 shadow-sm">
+                      ⭐ Рейтинг: {specialist.rating || 5.0}
+                    </span>
+                  </div>
+                  <p className="text-sm text-slate-200 leading-relaxed max-w-2xl font-normal">
+                    У вас подтверждённый статус проверенного мастера! Создавайте обучающие руководства, аудиоподкасты и экспертные статьи, которые после проверки администратором будут опубликованы в Справочнике СантехПро.
                   </p>
                 </div>
 
@@ -2224,10 +2426,10 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
                   <button
                     id="write-master-article-btn"
                     onClick={() => setIsWritingArticle(true)}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs sm:text-sm shadow-md transition-all whitespace-nowrap"
+                    className="relative z-10 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-extrabold text-sm shadow-lg shadow-amber-500/25 transition-all hover:scale-[1.02] whitespace-nowrap cursor-pointer"
                   >
-                    <Plus className="w-4 h-4" />
-                    Написать статью
+                    <Plus className="w-4 h-4 stroke-[3]" />
+                    <span>Написать статью</span>
                   </button>
                 )}
               </div>
@@ -2236,12 +2438,13 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
               {isWritingArticle && (
                 <div className="p-5 sm:p-6 bg-white dark:bg-slate-800 border-2 border-amber-500/40 rounded-2xl shadow-lg space-y-4">
                   <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-700">
-                    <h4 className="text-base font-bold text-slate-900 dark:text-white">
-                      Создание новой статьи от мастера
+                    <h4 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-amber-500" />
+                      <span>Создание новой статьи от мастера</span>
                     </h4>
                     <button
                       onClick={() => setIsWritingArticle(false)}
-                      className="text-xs text-slate-400 hover:text-slate-600"
+                      className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                     >
                       Отмена
                     </button>
@@ -2251,13 +2454,13 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                          Заголовок статьи *
+                          Заголовок материала *
                         </label>
                         <input
                           type="text"
                           value={articleTitle}
                           onChange={(e) => setArticleTitle(e.target.value)}
-                          placeholder="Например: Как избежать завоздушивания теплого пола"
+                          placeholder="Например: Мастер-класс: Установка инсталляции и скрытых коммуникаций"
                           className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-amber-500"
                           required
                         />
@@ -2281,10 +2484,223 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
                       </div>
                     </div>
 
+                    {/* External video streaming links */}
+                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 space-y-3">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                          <Video className="w-4 h-4 text-rose-500" />
+                          <span>Видеохостинги для трансляции видеоматериалов (необязательно)</span>
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          VK Видео • RuTube • YouTube
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-blue-500 dark:text-blue-400 mb-1">
+                            💙 VK Видео (vk.com, vkvideo.ru)
+                          </label>
+                          <input
+                            type="url"
+                            value={articleVkVideoUrl}
+                            onChange={(e) => setArticleVkVideoUrl(e.target.value)}
+                            placeholder="https://vk.com/video-XXXX_YYYY"
+                            className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-red-500 dark:text-red-400 mb-1">
+                            🇷🇺 RuTube видео
+                          </label>
+                          <input
+                            type="url"
+                            value={articleRutubeUrl}
+                            onChange={(e) => setArticleRutubeUrl(e.target.value)}
+                            placeholder="https://rutube.ru/video/..."
+                            className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-red-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-rose-500 dark:text-rose-400 mb-1">
+                            ▶️ YouTube
+                          </label>
+                          <input
+                            type="url"
+                            value={articleYoutubeUrl}
+                            onChange={(e) => setArticleYoutubeUrl(e.target.value)}
+                            placeholder="https://youtube.com/watch?v=..."
+                            className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-rose-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* AUDIO PODCAST / LECTURE SECTION (Requirement 3: External link with NO limits, or Server upload with max 50MB limit) */}
+                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 space-y-3">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center gap-2">
+                          <Volume2 className="w-4 h-4 text-emerald-500" />
+                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                            Аудиоподкаст / аудиолекция к статье
+                          </span>
+                        </div>
+                        {/* Audio Mode Tabs */}
+                        <div className="flex items-center p-0.5 rounded-lg bg-slate-200 dark:bg-slate-800 text-[11px] font-medium">
+                          <button
+                            type="button"
+                            onClick={() => setAudioInputMode('link')}
+                            className={`px-3 py-1 rounded-md transition cursor-pointer ${
+                              audioInputMode === 'link'
+                                ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 font-bold shadow-sm'
+                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                            }`}
+                          >
+                            По ссылке (без ограничений)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAudioInputMode('upload')}
+                            className={`px-3 py-1 rounded-md transition cursor-pointer flex items-center gap-1 ${
+                              audioInputMode === 'upload'
+                                ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 font-bold shadow-sm'
+                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                            }`}
+                          >
+                            <Upload className="w-3 h-3" />
+                            Загрузить на сервер (до 50 МБ)
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Mode 1: Audio via External Link (NO limits on size) */}
+                      {audioInputMode === 'link' && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-slate-600 dark:text-slate-400">
+                              Вставьте ссылку на подкаст из стороннего приложения или хостинга:
+                            </span>
+                            <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 font-semibold border border-emerald-500/20 text-[10px]">
+                              Без ограничений размера файла
+                            </span>
+                          </div>
+                          <div className="relative">
+                            <input
+                              type="url"
+                              value={articleAudioUrl}
+                              onChange={(e) => setArticleAudioUrl(e.target.value)}
+                              placeholder="https://music.yandex.ru/album/... или прямая ссылка на .mp3 / .m4a / облако"
+                              className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
+                            />
+                            {articleAudioUrl && (
+                              <button
+                                type="button"
+                                onClick={() => setArticleAudioUrl('')}
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-500 text-xs"
+                                title="Очистить"
+                              >
+                                <XCircle className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-400">
+                            Поддерживаются Яндекс Музыка, VK, Podster, SoundCloud, облачные хранилища или прямые аудиопотоки. При добавлении по ссылке ограничений размера нет.
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Mode 2: Direct Server Upload (Max 50MB Limit) */}
+                      {audioInputMode === 'upload' && (
+                        <div className="space-y-2.5">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-slate-600 dark:text-slate-400">
+                              Выберите аудиофайл (.mp3, .wav, .m4a, .ogg, .aac, .flac):
+                            </span>
+                            <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 font-semibold border border-amber-500/20 text-[10px]">
+                              Лимит сервера: до 50 МБ
+                            </span>
+                          </div>
+
+                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                            <label className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-emerald-500/40 hover:border-emerald-500 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-semibold cursor-pointer transition">
+                              <Music className="w-4 h-4" />
+                              <span>{isUploadingAudio ? 'Загрузка и сохранение...' : 'Выбрать аудиофайл с устройства'}</span>
+                              <input
+                                type="file"
+                                accept="audio/*,.mp3,.wav,.m4a,.ogg,.aac,.flac"
+                                className="hidden"
+                                disabled={isUploadingAudio}
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handleArticleAudioUpload(file);
+                                }}
+                              />
+                            </label>
+
+                            {isUploadingAudio && (
+                              <div className="flex items-center gap-2 px-3 py-2 text-xs text-amber-500 font-medium">
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                <span>Обработка...</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {audioUploadError && (
+                            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-500 text-xs flex items-center gap-2">
+                              <AlertCircle className="w-4 h-4 shrink-0" />
+                              <span>{audioUploadError}</span>
+                            </div>
+                          )}
+
+                          {audioUploadStats && (
+                            <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs flex items-center justify-between">
+                              <div className="flex items-center gap-1.5 truncate">
+                                <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
+                                <span className="truncate font-medium">{audioUploadStats.fileName}</span>
+                              </div>
+                              <span className="font-bold text-[11px] ml-2 shrink-0">{audioUploadStats.sizeStr}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Built-in Audio Player for instant verification */}
+                      {articleAudioUrl && (
+                        <div className="pt-2 border-t border-slate-200 dark:border-slate-700/60">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                              <PlayCircle className="w-3.5 h-3.5" />
+                              <span>Предпрослушивание аудиоподкаста:</span>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setArticleAudioUrl('');
+                                setAudioUploadStats(null);
+                              }}
+                              className="text-[11px] text-slate-400 hover:text-rose-500 flex items-center gap-1"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              <span>Удалить</span>
+                            </button>
+                          </div>
+                          <audio
+                            controls
+                            src={articleAudioUrl}
+                            className="w-full h-9 rounded-lg outline-none"
+                            preload="metadata"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* COVER PHOTO & DIFFICULTY (Requirement 3: Cover upload with lossless compression & max 15MB limit) */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                          Сложность для читателя
+                          Сложность материала для читателя
                         </label>
                         <select
                           value={articleDifficulty}
@@ -2299,16 +2715,147 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
 
                       <div>
                         <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                          Ссылка на главное фото обложки
+                          Примерное время изучения
                         </label>
                         <input
-                          type="url"
-                          value={articleCover}
-                          onChange={(e) => setArticleCover(e.target.value)}
-                          placeholder="https://images.unsplash.com/..."
+                          type="text"
+                          value={articleTimeEst}
+                          onChange={(e) => setArticleTimeEst(e.target.value)}
+                          placeholder="Например: 15 мин"
                           className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-amber-500"
                         />
                       </div>
+                    </div>
+
+                    {/* COVER IMAGE UPLOAD & COMPRESSION (Lossless without quality loss, max 15MB limit) */}
+                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 space-y-3">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <ImageIcon className="w-4 h-4 text-amber-500" />
+                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                            Главная обложка статьи / курса
+                          </span>
+                        </div>
+
+                        {/* Cover input mode tabs */}
+                        <div className="flex items-center p-0.5 rounded-lg bg-slate-200 dark:bg-slate-800 text-[11px] font-medium">
+                          <button
+                            type="button"
+                            onClick={() => setCoverInputMode('upload')}
+                            className={`px-3 py-1 rounded-md transition cursor-pointer flex items-center gap-1 ${
+                              coverInputMode === 'upload'
+                                ? 'bg-white dark:bg-slate-700 text-amber-600 dark:text-amber-400 font-bold shadow-sm'
+                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                            }`}
+                          >
+                            <UploadCloud className="w-3 h-3" />
+                            Загрузить фото (до 15 МБ)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCoverInputMode('url')}
+                            className={`px-3 py-1 rounded-md transition cursor-pointer ${
+                              coverInputMode === 'url'
+                                ? 'bg-white dark:bg-slate-700 text-amber-600 dark:text-amber-400 font-bold shadow-sm'
+                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                            }`}
+                          >
+                            По ссылке
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Mode: Upload with client-side lossless compression */}
+                      {coverInputMode === 'upload' && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-slate-600 dark:text-slate-400">
+                              Автоматическое сжатие без потери визуального качества:
+                            </span>
+                            <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 font-semibold border border-amber-500/20 text-[10px]">
+                              Лимит: до 15 МБ
+                            </span>
+                          </div>
+
+                          <label className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-amber-500/40 hover:border-amber-500 bg-amber-500/5 hover:bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-semibold cursor-pointer transition">
+                            <Camera className="w-4 h-4" />
+                            <span>{isUploadingCover ? 'Сжатие и загрузка обложки...' : 'Выбрать обложку с устройства (до 15 МБ)'}</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              disabled={isUploadingCover}
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleArticleCoverUpload(file);
+                              }}
+                            />
+                          </label>
+
+                          {coverError && (
+                            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-500 text-xs flex items-center gap-2">
+                              <AlertCircle className="w-4 h-4 shrink-0" />
+                              <span>{coverError}</span>
+                            </div>
+                          )}
+
+                          {coverStats && (
+                            <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs flex items-center justify-between flex-wrap gap-2">
+                              <div className="flex items-center gap-1.5">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                                <span className="font-semibold">Сжато без потери качества:</span>
+                                <span>{coverStats.originalSize} → {coverStats.compressedSize}</span>
+                              </div>
+                              <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-bold text-[11px]">
+                                Экономия {coverStats.savings}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Mode: URL */}
+                      {coverInputMode === 'url' && (
+                        <div className="space-y-1">
+                          <input
+                            type="url"
+                            value={articleCover}
+                            onChange={(e) => setArticleCover(e.target.value)}
+                            placeholder="https://images.unsplash.com/... или ссылка на изображение"
+                            className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-amber-500"
+                          />
+                          <p className="text-[11px] text-slate-400">
+                            Прямая ссылка на внешнее изображение в формате JPEG, PNG или WebP.
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Cover Preview */}
+                      {articleCover && (
+                        <div className="relative rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 max-h-48 group">
+                          <img
+                            src={articleCover}
+                            alt="Превью обложки"
+                            className="w-full h-44 object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = 'none';
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-slate-950/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-3">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setArticleCover('');
+                                setCoverStats(null);
+                              }}
+                              className="px-3 py-1.5 rounded-lg bg-rose-600 text-white text-xs font-semibold flex items-center gap-1 hover:bg-rose-500 transition"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Удалить обложку</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div>
@@ -2472,10 +3019,34 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
                           className="w-16 h-16 rounded-xl object-cover border border-slate-200 dark:border-slate-700 flex-shrink-0"
                         />
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <h4 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white">
                               {art.title}
                             </h4>
+                            {art.adminSection === 'courses' ? (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                                🎓 Курс
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                                📚 Справочник
+                              </span>
+                            )}
+                            {art.vkVideoUrl && (
+                              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-600/20 text-blue-300 border border-blue-500/30">
+                                VK Видео
+                              </span>
+                            )}
+                            {art.rutubeUrl && (
+                              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-red-600/20 text-red-300 border border-red-500/30">
+                                RuTube
+                              </span>
+                            )}
+                            {art.youtubeUrl && (
+                              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-rose-600/20 text-rose-300 border border-rose-500/30">
+                                YouTube
+                              </span>
+                            )}
                           </div>
                           <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
                             {art.description}

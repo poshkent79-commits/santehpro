@@ -15,7 +15,6 @@ import {
   Sparkles,
   ArrowUpDown,
   Heart,
-  CheckCircle2,
   Wrench,
 } from 'lucide-react';
 import { Article } from '../types';
@@ -287,33 +286,15 @@ export const HandbookView: React.FC<HandbookViewProps> = ({
         })}
       </div>
 
-      {/* Access Tier Quick Filter Bar & Sort Controls */}
-      <div className="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
-        <div className="flex items-center space-x-2.5 flex-wrap gap-y-2">
-          <span className="px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-bold text-xs flex items-center space-x-1.5">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Все пошаговые инструкции бесплатны</span>
-          </span>
-
-          {onOpenDonation && (
-            <button
-              type="button"
-              onClick={onOpenDonation}
-              className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-rose-500/15 to-amber-500/15 hover:from-rose-500/25 hover:to-amber-500/25 border border-rose-500/30 hover:border-rose-400 text-rose-300 hover:text-white font-bold text-xs flex items-center space-x-1.5 transition cursor-pointer"
-              title="Поддержать развитие проекта"
-            >
-              <Heart className="w-3.5 h-3.5 fill-rose-400 text-rose-400" />
-              <span>Поддержать проект</span>
-            </button>
-          )}
-        </div>
+      {/* Sort Controls Bar */}
+      <div className="p-2.5 sm:p-3 rounded-2xl bg-slate-900/90 border border-slate-800 flex items-center justify-between gap-3 text-xs">
+        <span className="text-slate-400 font-semibold flex items-center space-x-1.5">
+          <ArrowUpDown className="w-3.5 h-3.5 text-cyan-400" />
+          <span>Сортировка:</span>
+        </span>
 
         {/* Sort Controls */}
-        <div className="flex items-center space-x-2 self-start md:self-auto">
-          <span className="text-slate-400 font-semibold flex items-center space-x-1">
-            <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
-            <span className="hidden sm:inline">Сортировка:</span>
-          </span>
+        <div className="flex items-center space-x-2">
           <div className="inline-flex rounded-xl bg-slate-950 p-1 border border-slate-800">
             <button
               type="button"
@@ -406,17 +387,6 @@ export const HandbookView: React.FC<HandbookViewProps> = ({
                     <div className="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded-lg bg-slate-950/85 backdrop-blur-sm text-[11px] font-black text-white border border-slate-700/50 shadow">
                       {art.steps?.length || 4} шагов
                     </div>
-
-                    {isAdvanced ? (
-                      <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-amber-500 text-slate-950 font-bold text-[9px] flex items-center space-x-1 shadow">
-                        <Wrench className="w-2.5 h-2.5" />
-                        <span>Инженерия</span>
-                      </div>
-                    ) : (
-                      <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-emerald-500/90 text-white font-bold text-[9px] flex items-center space-x-1 shadow">
-                        <span>База</span>
-                      </div>
-                    )}
 
                     {art.id.startsWith('art-') && (
                       <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-md bg-cyan-500 text-slate-950 font-black text-[9px] uppercase tracking-wider shadow">

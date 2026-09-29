@@ -24,31 +24,48 @@ import {
   Eye,
   ThumbsUp,
   GraduationCap,
-  Upload
+  Upload,
+  ShieldCheck,
+  CheckCircle2,
+  ExternalLink,
+  FileText
 } from 'lucide-react';
-import { Article, CategoryId, ArticleStep } from '../types';
+import { Article, CategoryId, ArticleStep, PlumbingSpecialist } from '../types';
 import { CATEGORIES } from '../data/initialData';
+import { getYouTubeEmbedUrl, getRuTubeEmbedUrl, getVkVideoEmbedUrl } from '../utils/videoUtils';
 
 interface ArticleEditorModalProps {
-  isOpen: boolean;
+  isOpen?: boolean;
   onClose: () => void;
+  article?: Article | null;
   articleToEdit?: Article | null;
-  onRefreshArticles: () => void;
+  onSave?: () => void;
+  onRefreshArticles?: () => void;
+  currentMaster?: PlumbingSpecialist | null;
+  isMasterSubmission?: boolean;
 }
 
 export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
-  isOpen,
+  isOpen = true,
   onClose,
+  article,
   articleToEdit,
+  onSave,
   onRefreshArticles,
+  currentMaster,
+  isMasterSubmission,
 }) => {
+  const effectiveArticle = articleToEdit || article || null;
+  const isMaster = Boolean(currentMaster || isMasterSubmission || effectiveArticle?.authorMasterId);
+
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<CategoryId>('water');
-  const [type, setType] = useState<'article' | 'video'>('article');
+  const [type, setType] = useState<'article' | 'video'>('video');
   const [adminSection, setAdminSection] = useState<'handbook' | 'courses' | 'cases'>('courses');
   const [accessType, setAccessType] = useState<'free' | 'paid'>('free');
   const [price, setPrice] = useState('1 990 ₽');
   const [buyUrl, setBuyUrl] = useState('');
+  const [externalMaterialsUrl, setExternalMaterialsUrl] = useState('');
   const [difficulty, setDifficulty] = useState<'Новичок' | 'Продвинутый' | 'Профи'>('Новичок');
   const [timeEst, setTimeEst] = useState('45 мин');
   const [description, setDescription] = useState('');
@@ -58,6 +75,7 @@ export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
   const [videoUrl, setVideoUrl] = useState('');
   const [rutubeUrl, setRutubeUrl] = useState('');
   const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [vkVideoUrl, setVkVideoUrl] = useState('');
   const [audioUrl, setAudioUrl] = useState('');
   const [audioTitle, setAudioTitle] = useState('');
   const [authorAddress, setAuthorAddress] = useState('г. Москва, ул. Вавилова 14, Мастерская СантехПро');
@@ -92,37 +110,39 @@ export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
 
   // Populate form when editing or clear when creating new
   useEffect(() => {
-    if (articleToEdit) {
-      setTitle(articleToEdit.title);
-      setCategory(articleToEdit.category);
-      setType(articleToEdit.type);
-      setAdminSection(articleToEdit.adminSection || (articleToEdit.type === 'video' ? 'courses' : 'handbook'));
-      setAccessType(articleToEdit.accessType || 'free');
-      setPrice(articleToEdit.price || '1 990 ₽');
-      setBuyUrl(articleToEdit.buyUrl || '');
-      setDifficulty(articleToEdit.difficulty);
-      setTimeEst(articleToEdit.timeEst);
-      setDescription(articleToEdit.description);
-      setCoverImage(articleToEdit.coverImage || 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80');
-      setVideoUrl(articleToEdit.videoUrl || '');
-      setRutubeUrl(articleToEdit.rutubeUrl || (articleToEdit.videoUrl?.includes('rutube') ? articleToEdit.videoUrl : ''));
-      setYoutubeUrl(articleToEdit.youtubeUrl || (articleToEdit.videoUrl?.includes('youtu') ? articleToEdit.videoUrl : ''));
-      setAudioUrl(articleToEdit.audioUrl || '');
-      setAudioTitle(articleToEdit.audioTitle || '');
-      setAuthorAddress(articleToEdit.authorAddress || 'г. Москва, ул. Вавилова 14, Мастерская СантехПро');
-      setAuthorName(articleToEdit.author || 'Достонджон Туйчиев');
-      setGalleryImagesStr(articleToEdit.galleryImages ? articleToEdit.galleryImages.join('\n') : '');
-      setStudentsCount(articleToEdit.studentsCount || 120);
-      setRating(articleToEdit.rating || 4.9);
-      setCertificate(articleToEdit.certificate ?? true);
-      setViewsCount(articleToEdit.views || 150);
-      setLikesCount(articleToEdit.likes || 30);
-      setToolsRequired(articleToEdit.toolsRequired?.join(', ') || '');
-      setMaterialsRequired(articleToEdit.materialsRequired?.join(', ') || '');
+    if (effectiveArticle) {
+      setTitle(effectiveArticle.title || '');
+      setCategory(effectiveArticle.category || 'water');
+      setType(effectiveArticle.type || (effectiveArticle.videoUrl || effectiveArticle.audioUrl ? 'video' : 'article'));
+      setAdminSection(effectiveArticle.adminSection || (effectiveArticle.type === 'video' ? 'courses' : 'courses'));
+      setAccessType(effectiveArticle.accessType || 'free');
+      setPrice(effectiveArticle.price || '1 990 ₽');
+      setBuyUrl(effectiveArticle.buyUrl || '');
+      setExternalMaterialsUrl(effectiveArticle.buyUrl || '');
+      setDifficulty(effectiveArticle.difficulty || 'Новичок');
+      setTimeEst(effectiveArticle.timeEst || '45 мин');
+      setDescription(effectiveArticle.description || '');
+      setCoverImage(effectiveArticle.coverImage || 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80');
+      setVideoUrl(effectiveArticle.videoUrl || '');
+      setRutubeUrl(effectiveArticle.rutubeUrl || (effectiveArticle.videoUrl?.includes('rutube') ? effectiveArticle.videoUrl : ''));
+      setYoutubeUrl(effectiveArticle.youtubeUrl || (effectiveArticle.videoUrl?.includes('youtu') ? effectiveArticle.videoUrl : ''));
+      setVkVideoUrl(effectiveArticle.vkVideoUrl || (effectiveArticle.videoUrl?.includes('vk.com') || effectiveArticle.videoUrl?.includes('vkvideo.ru') ? effectiveArticle.videoUrl : ''));
+      setAudioUrl(effectiveArticle.audioUrl || '');
+      setAudioTitle(effectiveArticle.audioTitle || '');
+      setAuthorAddress(effectiveArticle.authorAddress || (currentMaster?.city ? `г. ${currentMaster.city}, Мастерская СантехПро` : 'г. Москва, ул. Вавилова 14, Мастерская СантехПро'));
+      setAuthorName(effectiveArticle.author || currentMaster?.name || 'Достонджон Туйчиев');
+      setGalleryImagesStr(effectiveArticle.galleryImages ? effectiveArticle.galleryImages.join('\n') : '');
+      setStudentsCount(effectiveArticle.studentsCount || 120);
+      setRating(effectiveArticle.rating || 4.9);
+      setCertificate(effectiveArticle.certificate ?? true);
+      setViewsCount(effectiveArticle.views || 150);
+      setLikesCount(effectiveArticle.likes || 30);
+      setToolsRequired(effectiveArticle.toolsRequired?.join(', ') || '');
+      setMaterialsRequired(effectiveArticle.materialsRequired?.join(', ') || '');
 
-      if (articleToEdit.steps && articleToEdit.steps.length > 0) {
+      if (effectiveArticle.steps && effectiveArticle.steps.length > 0) {
         setSteps(
-          articleToEdit.steps.map((s) => ({
+          effectiveArticle.steps.map((s) => ({
             title: s.title,
             text: s.text,
             warning: s.warning || '',
@@ -133,10 +153,10 @@ export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
           }))
         );
       } else {
-        setSteps([{ title: 'Урок 1', text: articleToEdit.description }]);
+        setSteps([{ title: 'Урок 1: Вводная подготовка и обзор', text: effectiveArticle.description || 'Пошаговые действия' }]);
       }
     } else {
-      // Reset defaults
+      // Reset defaults for new course/material creation
       setTitle('');
       setCategory('water');
       setType('video');
@@ -144,6 +164,7 @@ export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
       setAccessType('free');
       setPrice('1 990 ₽');
       setBuyUrl('');
+      setExternalMaterialsUrl('');
       setDifficulty('Новичок');
       setTimeEst('45 мин');
       setDescription('');
@@ -151,10 +172,11 @@ export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
       setVideoUrl('');
       setRutubeUrl('');
       setYoutubeUrl('');
+      setVkVideoUrl('');
       setAudioUrl('');
       setAudioTitle('');
-      setAuthorAddress('г. Москва, ул. Вавилова 14, Мастерская СантехПро');
-      setAuthorName('Главный инженер-сантехник');
+      setAuthorAddress(currentMaster?.city ? `г. ${currentMaster.city}, Мастерская СантехПро` : 'г. Москва, ул. Вавилова 14, Мастерская СантехПро');
+      setAuthorName(currentMaster ? currentMaster.name : 'Главный инженер-сантехник');
       setGalleryImagesStr('');
       setStudentsCount(85);
       setRating(5.0);
@@ -176,7 +198,7 @@ export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
         }
       ]);
     }
-  }, [articleToEdit, isOpen]);
+  }, [articleToEdit, article, isOpen, currentMaster]);
 
   if (!isOpen) return null;
 
@@ -238,18 +260,12 @@ export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
 
   const parseEmbedUrl = (url: string) => {
     if (!url) return undefined;
-    if (url.includes('youtube.com/watch?v=')) {
-      const id = url.split('v=')[1]?.split('&')[0];
-      if (id) return `https://www.youtube.com/embed/${id}`;
-    } else if (url.includes('youtu.be/')) {
-      const id = url.split('youtu.be/')[1]?.split('?')[0];
-      if (id) return `https://www.youtube.com/embed/${id}`;
-    } else if (url.includes('rutube.ru/video/')) {
-      const id = url.split('rutube.ru/video/')[1]?.split('/')[0];
-      if (id) return `https://rutube.ru/play/embed/${id}`;
-    } else if (url.includes('vk.com/video')) {
-      return url;
-    }
+    const vkEmbed = getVkVideoEmbedUrl(url);
+    if (vkEmbed) return vkEmbed;
+    const rtEmbed = getRuTubeEmbedUrl(url);
+    if (rtEmbed) return rtEmbed;
+    const ytEmbed = getYouTubeEmbedUrl(url);
+    if (ytEmbed) return ytEmbed;
     return url;
   };
 
@@ -281,26 +297,35 @@ export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
         videoUrl: s.videoUrl?.trim() || undefined,
       }));
 
-      const embedUrl = parseEmbedUrl(videoUrl);
+      // Calculate embed URL from VK Video, RuTube, YouTube, or direct CDN
+      const embedUrl = (rutubeUrl ? getRuTubeEmbedUrl(rutubeUrl) : undefined) ||
+        (vkVideoUrl ? getVkVideoEmbedUrl(vkVideoUrl) : undefined) ||
+        (youtubeUrl ? getYouTubeEmbedUrl(youtubeUrl) : undefined) ||
+        (videoUrl ? parseEmbedUrl(videoUrl) : undefined);
 
-      const payload = {
-        title,
+      const targetArticle = effectiveArticle;
+      const targetId = targetArticle?.id || `art-${isMaster ? 'master-' : ''}${Date.now()}`;
+
+      const payload: Partial<Article> = {
+        id: targetId,
+        title: title.trim(),
         category,
         type,
         adminSection,
         accessType,
         price: accessType === 'paid' ? price || '1 990 ₽' : undefined,
-        buyUrl: accessType === 'paid' ? buyUrl || undefined : undefined,
+        buyUrl: externalMaterialsUrl.trim() || buyUrl.trim() || undefined,
         difficulty,
         timeEst,
-        description,
+        description: description.trim(),
         coverImage,
-        videoUrl: rutubeUrl.trim() || youtubeUrl.trim() || videoUrl.trim() || undefined,
+        videoUrl: rutubeUrl.trim() || vkVideoUrl.trim() || youtubeUrl.trim() || videoUrl.trim() || undefined,
         rutubeUrl: rutubeUrl.trim() || undefined,
         youtubeUrl: youtubeUrl.trim() || undefined,
-        videoEmbed: embedUrl || (rutubeUrl ? parseEmbedUrl(rutubeUrl) : undefined) || (youtubeUrl ? parseEmbedUrl(youtubeUrl) : undefined),
-        audioUrl: audioUrl || undefined,
-        audioTitle: audioTitle || undefined,
+        vkVideoUrl: vkVideoUrl.trim() || undefined,
+        videoEmbed: embedUrl || undefined,
+        audioUrl: audioUrl.trim() || undefined,
+        audioTitle: audioTitle.trim() || undefined,
         authorAddress: authorAddress || undefined,
         galleryImages: galleryArr.length > 0 ? galleryArr : undefined,
         studentsCount,
@@ -311,12 +336,15 @@ export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
         toolsRequired: toolsArr,
         materialsRequired: materialsArr,
         steps: formattedSteps,
-        author: authorName || 'Достонджон Туйчиев',
+        author: authorName || (currentMaster ? currentMaster.name : 'Главный инженер-сантехник'),
+        authorMasterId: isMaster ? (currentMaster?.id || targetArticle?.authorMasterId) : targetArticle?.authorMasterId,
+        moderationStatus: isMaster ? 'pending' : (targetArticle?.moderationStatus || 'approved'),
+        isPublished: isMaster ? false : (targetArticle?.isPublished !== undefined ? targetArticle.isPublished : true),
       };
 
       let res;
-      if (articleToEdit) {
-        res = await fetch(`/api/articles/${articleToEdit.id}`, {
+      if (targetArticle && targetArticle.id && !targetArticle.id.startsWith('new-')) {
+        res = await fetch(`/api/articles/${targetArticle.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -330,7 +358,11 @@ export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
       }
 
       if (res.ok) {
-        onRefreshArticles();
+        if (isMaster) {
+          alert('✓ Ваш обучающий материал / видеоурок успешно направлен на предварительное рассмотрение администратору! После проверки и одобрения он появится в разделе «Курсы» со знаком проверенного мастера.');
+        }
+        if (onRefreshArticles) onRefreshArticles();
+        if (onSave) onSave();
         onClose();
       } else {
         alert('Ошибка при сохранении материала');
@@ -344,14 +376,15 @@ export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
   };
 
   const handleDelete = async () => {
-    if (!articleToEdit) return;
-    if (!confirm(`Вы действительно хотите удалить материал "${articleToEdit.title}"?`)) return;
+    if (!effectiveArticle) return;
+    if (!confirm(`Вы действительно хотите удалить материал "${effectiveArticle.title}"?`)) return;
 
     setDeleting(true);
     try {
-      const res = await fetch(`/api/articles/${articleToEdit.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/articles/${effectiveArticle.id}`, { method: 'DELETE' });
       if (res.ok) {
-        onRefreshArticles();
+        if (onRefreshArticles) onRefreshArticles();
+        if (onSave) onSave();
         onClose();
       } else {
         alert('Не удалось удалить материал');
@@ -394,6 +427,28 @@ export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
 
         {/* Form Body */}
         <form onSubmit={handleSave} className="p-5 sm:p-6 overflow-y-auto space-y-6">
+          {/* Master Pre-moderation Banner */}
+          {isMaster && (
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/15 border border-amber-500/35 flex items-start gap-3.5 shadow-sm">
+              <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 shrink-0 mt-0.5">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div className="text-xs space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-extrabold text-amber-300 text-sm">
+                    Публикация от проверенного мастера: {currentMaster?.name || authorName}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-[10px] font-bold text-amber-300 border border-amber-500/40">
+                    ✓ Предварительное одобрение
+                  </span>
+                </div>
+                <p className="text-slate-300 leading-relaxed text-[11px] sm:text-xs">
+                  Вы можете размещать ссылки на внешние видеохостинги (VK Видео, RuTube / Restore, YouTube), аудиолекции и полезные файлы с пошаговыми инструкциями. Обучающий материал будет направлен на рассмотрение администратора и опубликован в разделе «Курсы» сразу после одобрения со знаком проверенного специалиста.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Main Title & Category */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -654,27 +709,51 @@ export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
           </div>
 
           {/* Video & Audio URL Inputs */}
-          <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center justify-between">
-              <span className="flex items-center space-x-2">
+          <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center space-x-2">
                 <Video className="w-4 h-4 text-rose-400" />
-                <span>Мультимедиа материалы курса (RuTube 🇷🇺 + YouTube 🌐 + Аудио)</span>
+                <span>Внешние видео- и аудиоресурсы (VK Видео, RuTube / Restore, YouTube, Аудиогид)</span>
+              </h3>
+              <span className="text-[11px] text-slate-400">
+                Трансляция объемного видео без ограничений по размеру
               </span>
-              <span className="text-[11px] text-slate-400 lowercase font-normal">
-                доступно на обеих платформах
-              </span>
-            </h3>
+            </div>
 
-            {/* RuTube & YouTube Dual Platform Inputs */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2">
+            {/* Tri-Platform Inputs: VK Video, RuTube / Restore, YouTube */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+              {/* VK Video */}
+              <div className="p-3.5 rounded-xl bg-slate-900/90 border border-blue-500/30 space-y-2">
+                <label className="block text-[11px] font-bold text-slate-200 flex items-center justify-between">
+                  <span className="flex items-center space-x-1.5 text-blue-400">
+                    <Video className="w-3.5 h-3.5" />
+                    <span>💙 VK Видео (ВКонтакте)</span>
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded bg-blue-950/80 text-[10px] text-blue-300 font-medium border border-blue-500/30">
+                    РФ Скорость
+                  </span>
+                </label>
+                <input
+                  type="url"
+                  value={vkVideoUrl}
+                  onChange={(e) => setVkVideoUrl(e.target.value)}
+                  placeholder="https://vk.com/video... или vkvideo.ru/..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:border-blue-500 focus:outline-none placeholder-slate-600"
+                />
+                <p className="text-[10px] text-slate-400">
+                  Ссылки vk.com/video-XXX_YYY, vkvideo.ru, клипы или код плеера
+                </p>
+              </div>
+
+              {/* RuTube / Restore */}
+              <div className="p-3.5 rounded-xl bg-slate-900/90 border border-red-500/30 space-y-2">
                 <label className="block text-[11px] font-bold text-slate-200 flex items-center justify-between">
                   <span className="flex items-center space-x-1.5 text-red-400">
                     <Video className="w-3.5 h-3.5" />
-                    <span>RuTube Видео (РФ без VPN)</span>
+                    <span>🇷🇺 RuTube / Restore</span>
                   </span>
                   <span className="px-1.5 py-0.5 rounded bg-red-950/80 text-[10px] text-red-300 font-medium border border-red-500/30">
-                    Приоритет в РФ
+                    РФ без VPN
                   </span>
                 </label>
                 <input
@@ -685,15 +764,16 @@ export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:border-red-500 focus:outline-none placeholder-slate-600"
                 />
                 <p className="text-[10px] text-slate-400">
-                  Вставьте прямую ссылку на видеоролик или ID из RuTube
+                  Ссылка на видеоролик, трансляцию Restore или ID из RuTube
                 </p>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2">
+              {/* YouTube */}
+              <div className="p-3.5 rounded-xl bg-slate-900/90 border border-rose-500/30 space-y-2">
                 <label className="block text-[11px] font-bold text-slate-200 flex items-center justify-between">
                   <span className="flex items-center space-x-1.5 text-rose-400">
                     <Video className="w-3.5 h-3.5" />
-                    <span>YouTube Видео (Global HD)</span>
+                    <span>▶️ YouTube (Global HD)</span>
                   </span>
                   <span className="px-1.5 py-0.5 rounded bg-rose-950/80 text-[10px] text-rose-300 font-medium border border-rose-500/30">
                     Международный
@@ -707,23 +787,23 @@ export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:border-rose-500 focus:outline-none placeholder-slate-600"
                 />
                 <p className="text-[10px] text-slate-400">
-                  Вставьте ссылку на YouTube (полную или короткую youtu.be)
+                  Ссылка на видео YouTube (youtube.com, youtu.be или shorts)
                 </p>
               </div>
             </div>
 
-            {/* Direct Video & Audio Inputs */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Direct Video, Audio and External Materials Links */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-1">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-300 mb-1 flex items-center space-x-1">
                   <Video className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Прямой видеопоток / Резерв (.mp4, CDN URL)</span>
+                  <span>Прямой видеопоток (.mp4, облачный CDN)</span>
                 </label>
                 <input
                   type="url"
                   value={videoUrl}
                   onChange={(e) => setVideoUrl(e.target.value)}
-                  placeholder="https://.../video.mp4 или /uploads/video.mp4"
+                  placeholder="https://.../video.mp4 или CDN стрим"
                   className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:border-cyan-500 focus:outline-none"
                 />
               </div>
@@ -731,14 +811,28 @@ export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
               <div>
                 <label className="block text-[11px] font-semibold text-slate-300 mb-1 flex items-center space-x-1">
                   <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Ссылка на Аудио-подкаст / лекцию (.mp3, web URL)</span>
+                  <span>Ссылка на Аудио-подкаст / лекцию (.mp3)</span>
                 </label>
                 <input
                   type="url"
                   value={audioUrl}
                   onChange={(e) => setAudioUrl(e.target.value)}
-                  placeholder="https://example.com/audio/lesson-1.mp3 или /uploads/audio.mp3"
+                  placeholder="https://example.com/audio.mp3"
                   className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:border-emerald-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-300 mb-1 flex items-center space-x-1">
+                  <ExternalLink className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Полезные материалы (Яндекс Диск, PDF, чертежи)</span>
+                </label>
+                <input
+                  type="url"
+                  value={externalMaterialsUrl}
+                  onChange={(e) => setExternalMaterialsUrl(e.target.value)}
+                  placeholder="https://disk.yandex.ru/d/... или облачный диск"
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:border-amber-500 focus:outline-none"
                 />
               </div>
             </div>

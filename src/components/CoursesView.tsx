@@ -18,8 +18,10 @@ import {
   Bookmark,
   Heart,
   Sparkles,
+  ShieldCheck,
+  ExternalLink,
 } from 'lucide-react';
-import { Article } from '../types';
+import { Article, PlumbingSpecialist } from '../types';
 import { ArticleEditorModal } from './ArticleEditorModal';
 import { useAuth } from '../context/AuthContext';
 
@@ -31,6 +33,9 @@ interface CoursesViewProps {
   searchQuery?: string;
   onSearchQueryChange?: (query: string) => void;
   onOpenDonation?: () => void;
+  currentMaster?: PlumbingSpecialist | null;
+  isVerifiedMaster?: boolean;
+  onNavigateToCabinet?: () => void;
 }
 
 export const CoursesView: React.FC<CoursesViewProps> = ({
@@ -41,17 +46,26 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
   searchQuery = '',
   onSearchQueryChange,
   onOpenDonation,
+  currentMaster,
+  isVerifiedMaster,
+  onNavigateToCabinet,
 }) => {
   const { isFavorite, toggleFavorite } = useAuth();
-  const [filterType, setFilterType] = useState<'all' | 'video' | 'audio' | 'certificate'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'video' | 'audio' | 'certificate' | 'my'>('all');
   
-  // Admin Article Editor modal state
+  // Admin / Master Article Editor modal state
   const [isEditorModalOpen, setIsEditorModalOpen] = useState<boolean>(false);
   const [articleToEdit, setArticleToEdit] = useState<Article | null>(null);
 
   const handleOpenCreateCourse = () => {
     // Preset adminSection to 'courses' for new course materials
-    setArticleToEdit({ adminSection: 'courses', type: 'video' } as Article);
+    setArticleToEdit({
+      adminSection: 'courses',
+      type: 'video',
+      authorMasterId: currentMaster?.id,
+      author: currentMaster ? currentMaster.name : undefined,
+      authorAddress: currentMaster?.city ? `г. ${currentMaster.city}, Мастерская СантехПро` : undefined,
+    } as Article);
     setIsEditorModalOpen(true);
   };
 
@@ -79,12 +93,20 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
 
   // Filter articles that belong to courses (or are video/audio training materials)
   const coursesList = articles.filter((art) => {
+    // Only approved articles or system articles are visible to regular users, but master sees their own pending course
+    if (art.moderationStatus && art.moderationStatus !== 'approved' && !isAdmin) {
+      if (!currentMaster || art.authorMasterId !== currentMaster.id) {
+        return false;
+      }
+    }
+
     const isCourse = art.adminSection === 'courses' || art.type === 'video' || Boolean(art.audioUrl);
     if (!isCourse) return false;
 
     if (filterType === 'video' && !(art.type === 'video' || Boolean(art.videoUrl) || Boolean(art.videoEmbed))) return false;
     if (filterType === 'audio' && !art.audioUrl) return false;
     if (filterType === 'certificate' && !art.certificate) return false;
+    if (filterType === 'my' && currentMaster && art.authorMasterId !== currentMaster.id) return false;
 
     if (searchQuery.trim() !== '') {
       const q = searchQuery.toLowerCase();
@@ -96,62 +118,103 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
     return true;
   });
 
+  const myCoursesCount = currentMaster ? articles.filter((a) => a.authorMasterId === currentMaster.id && (a.adminSection === 'courses' || a.type === 'video')).length : 0;
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Header Bar */}
       <div className="p-4 sm:p-5 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
         <div>
-          <h1 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
-            Курсы и видеоуроки по сантехнике
+          <h1 className="text-lg sm:text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
+            <span>Курсы и видеоуроки по сантехнике</span>
+            {isVerifiedMaster && (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 hidden md:inline-flex items-center gap-1">
+                <ShieldCheck className="w-3 h-3 text-amber-400" />
+                <span>Авторский доступ</span>
+              </span>
+            )}
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
             Обучающие видеокурсы, практические видеоуроки, аудиолекции и программы обучения от экспертов
           </p>
         </div>
 
-        <div className="flex items-center space-x-2 shrink-0 self-start sm:self-auto">
+        <div className="flex items-center space-x-2 shrink-0 self-start sm:self-auto flex-wrap gap-2">
           {isAdmin && (
             <button
               type="button"
               onClick={handleOpenCreateCourse}
-              className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs transition flex items-center justify-center space-x-1.5"
+              className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs transition flex items-center justify-center space-x-1.5 shadow-md"
             >
               <Plus className="w-4 h-4 text-slate-950" />
-              <span>Добавить курс</span>
+              <span>Добавить курс (Админ)</span>
+            </button>
+          )}
+
+          {isVerifiedMaster && (
+            <button
+              type="button"
+              onClick={handleOpenCreateCourse}
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-400 hover:to-amber-400 text-white font-extrabold text-xs transition flex items-center justify-center space-x-1.5 shadow-md shadow-rose-500/20"
+            >
+              <ShieldCheck className="w-4 h-4 text-white" />
+              <span>Опубликовать курс / видеоурок</span>
+            </button>
+          )}
+
+          {!isVerifiedMaster && currentMaster && currentMaster.status === 'pending' && onNavigateToCabinet && (
+            <button
+              type="button"
+              onClick={onNavigateToCabinet}
+              className="px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-bold transition flex items-center space-x-1.5"
+            >
+              <Clock className="w-3.5 h-3.5 text-amber-400" />
+              <span>Верификация на проверке</span>
+            </button>
+          )}
+
+          {!isVerifiedMaster && !currentMaster && onNavigateToCabinet && (
+            <button
+              type="button"
+              onClick={onNavigateToCabinet}
+              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-semibold transition flex items-center space-x-1.5"
+            >
+              <Award className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden sm:inline">Для мастеров: стать автором курсов</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* 100% Free Open Access & Support Banner */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900 to-rose-950/40 border border-rose-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs shadow-md">
-        <div className="flex items-start sm:items-center space-x-3.5">
-          <div className="w-10 h-10 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-center justify-center shrink-0 shadow-inner">
-            <Heart className="w-5 h-5 fill-rose-400 text-rose-400" />
+      {/* Information Banner for verified masters and audience */}
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900/90 to-slate-850 border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs shadow-sm">
+        <div className="flex items-start sm:items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-center justify-center shrink-0">
+            <GraduationCap className="w-5 h-5" />
           </div>
           <div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="font-extrabold text-white text-xs sm:text-sm">
-                Все курсы и видеоуроки открыты бесплатно для каждого!
+                Публикация контента для проверенных мастеров
               </span>
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold uppercase">
-                Свободный доступ
+              <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-bold text-[10px] border border-emerald-500/30">
+                ✓ VK Видео • RuTube / Restore • YouTube
               </span>
             </div>
-            <p className="text-[11px] text-slate-300 mt-1 leading-snug">
-              Мы за открытое образование и свободный обмен опытом среди мастеров. Если материалы полезны вам в работе или ремонте, поддержите развитие проекта.
+            <p className="text-slate-400 text-[11px] sm:text-xs mt-0.5">
+              Специалисты после верификации могут транслировать объемные обучающие видео, аудиолекции и пошаговые инструкции. Материалы публикуются после предварительного одобрения администратором.
             </p>
           </div>
         </div>
 
-        {onOpenDonation && (
+        {isVerifiedMaster && (
           <button
             type="button"
-            onClick={onOpenDonation}
-            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-400 hover:to-amber-400 text-slate-950 font-black text-xs transition flex items-center space-x-2 shrink-0 cursor-pointer shadow-md shadow-rose-950/50"
+            onClick={handleOpenCreateCourse}
+            className="shrink-0 px-3.5 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 font-bold text-xs flex items-center gap-1.5 transition whitespace-nowrap"
           >
-            <Heart className="w-3.5 h-3.5 fill-slate-950 text-slate-950" />
-            <span>Поддержать проект</span>
+            <Plus className="w-3.5 h-3.5" />
+            <span>Предложить видеоурок</span>
           </button>
         )}
       </div>
@@ -210,6 +273,21 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
           <Award className="w-3.5 h-3.5 text-amber-400" />
           <span>С сертификатом</span>
         </button>
+
+        {currentMaster && myCoursesCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setFilterType('my')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
+              filterType === 'my'
+                ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
+                : 'bg-slate-950 text-cyan-300 hover:bg-slate-800 border border-cyan-500/30'
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Мои курсы ({myCoursesCount})</span>
+          </button>
+        )}
       </div>
 
       {/* Courses Cards Grid */}
@@ -253,10 +331,21 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
                       <span>КУРС</span>
                     </span>
 
-                    <span className="px-3 py-1 rounded-lg text-xs font-bold bg-emerald-500 text-slate-950 shadow-lg flex items-center space-x-1">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Бесплатно</span>
-                    </span>
+                    {course.moderationStatus === 'pending' ? (
+                      <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-500 text-slate-950 shadow-lg flex items-center space-x-1 animate-pulse">
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>На модерации</span>
+                      </span>
+                    ) : course.moderationStatus === 'rejected' ? (
+                      <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-600 text-white shadow-lg flex items-center space-x-1">
+                        <span>Отклонен</span>
+                      </span>
+                    ) : (
+                      <span className="px-3 py-1 rounded-lg text-xs font-bold bg-emerald-500 text-slate-950 shadow-lg flex items-center space-x-1">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Бесплатно</span>
+                      </span>
+                    )}
 
                     {course.certificate && (
                       <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-400/20 text-amber-300 border border-amber-400/40 backdrop-blur-md flex items-center space-x-1">
@@ -280,7 +369,7 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
                       <Bookmark className={`w-4 h-4 ${isFavorite(course.id) ? 'fill-cyan-400 text-cyan-400' : ''}`} />
                     </button>
 
-                    {isAdmin && (
+                    {(isAdmin || (currentMaster && course.authorMasterId === currentMaster.id)) && (
                       <>
                         <button
                           type="button"
@@ -294,14 +383,16 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
                           <Edit className="w-3.5 h-3.5" />
                           <span className="hidden sm:inline">Изменить</span>
                         </button>
-                        <button
-                          type="button"
-                          onClick={(e) => handleDeleteCourse(course, e)}
-                          className="p-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition shadow-lg"
-                          title="Удалить курс"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {isAdmin && (
+                          <button
+                            type="button"
+                            onClick={(e) => handleDeleteCourse(course, e)}
+                            className="p-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition shadow-lg"
+                            title="Удалить курс"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </>
                     )}
                   </div>
@@ -320,6 +411,13 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
                         <span className="px-2 py-0.5 rounded-lg bg-blue-500/25 border border-blue-400/40 text-blue-300 font-bold text-[10px] flex items-center space-x-1 backdrop-blur-md">
                           <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
                           <span>RuTube</span>
+                        </span>
+                      )}
+
+                      {(course.vkVideoUrl || (course.videoUrl && (course.videoUrl.includes('vk.com') || course.videoUrl.includes('vkvideo.ru')))) && (
+                        <span className="px-2 py-0.5 rounded-lg bg-indigo-500/25 border border-indigo-400/40 text-indigo-300 font-bold text-[10px] flex items-center space-x-1 backdrop-blur-md">
+                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+                          <span>VK Видео</span>
                         </span>
                       )}
 
@@ -366,9 +464,16 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
                   {/* Instructor & Address Section */}
                   <div className="p-3.5 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-2 text-xs">
                     <div className="flex items-center justify-between text-slate-300">
-                      <span className="font-semibold text-slate-200">
-                        Автор: {course.author && !course.author.includes('Смирнов') && !course.author.includes('Мастеровой') && !course.author.includes('Волков') && !course.author.includes('Кузнецов') && course.author !== 'Администратор Справочника' ? course.author : 'Достонджон Туйчиев'}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-semibold text-slate-200">
+                          Автор: {course.author && !course.author.includes('Смирнов') && !course.author.includes('Мастеровой') && !course.author.includes('Волков') && !course.author.includes('Кузнецов') && course.author !== 'Администратор Справочника' ? course.author : 'Достонджон Туйчиев'}
+                        </span>
+                        {course.authorMasterId && (
+                          <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold">
+                            ✓ Мастер
+                          </span>
+                        )}
+                      </div>
                       {course.rating && (
                         <span className="flex items-center space-x-1 text-amber-400 font-extrabold">
                           <Star className="w-3.5 h-3.5 fill-current" />
@@ -411,6 +516,8 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
       {isEditorModalOpen && (
         <ArticleEditorModal
           article={articleToEdit}
+          currentMaster={currentMaster}
+          isMasterSubmission={Boolean(currentMaster && !isAdmin)}
           onClose={() => {
             setIsEditorModalOpen(false);
             setArticleToEdit(null);

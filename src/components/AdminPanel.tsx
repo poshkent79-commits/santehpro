@@ -76,6 +76,8 @@ import { SmtpSettingsTab } from './admin/SmtpSettingsTab';
 import { YandexOAuthSettingsTab } from './admin/YandexOAuthSettingsTab';
 import { TimeWebCloudTab } from './admin/TimeWebCloudTab';
 import { CitySpecialistsWorkloadChart } from './admin/CitySpecialistsWorkloadChart';
+import { SpecialistRejectionModal } from './admin/SpecialistRejectionModal';
+import { SpecialistApprovalModal } from './admin/SpecialistApprovalModal';
 import { compressImageFile } from '../utils/imageCompressor';
 import { useTimeWebSync } from '../services/timewebSyncClient';
 
@@ -1016,7 +1018,80 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   const [moderatingId, setModeratingId] = useState<string | null>(null);
 
+  const [rejectingSpecialist, setRejectingSpecialist] = useState<PlumbingSpecialist | null>(null);
+  const [approvingSpecialist, setApprovingSpecialist] = useState<PlumbingSpecialist | null>(null);
+
+  const handleConfirmApproveSpecialist = async (
+    id: string,
+    verified: boolean,
+    welcomeComment?: string,
+    notifyUser?: boolean
+  ) => {
+    try {
+      const res = await fetch(`/api/specialists/${encodeURIComponent(id)}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        body: JSON.stringify({ status: 'approved', verified, moderationComment: welcomeComment, notifyUser }),
+      });
+      if (res.ok) {
+        showToast('✓ Мастер успешно одобрен и опубликован в каталоге!');
+        onRefreshSpecialists();
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        showToast(errData.error || 'Ошибка при одобрении мастера.', 'error');
+      }
+    } catch (err) {
+      console.error('Error approving specialist:', err);
+      showToast('Ошибка соединения с сервером при модерации.', 'error');
+    }
+  };
+
+  const handleConfirmRejectSpecialist = async (
+    id: string,
+    reason: string,
+    comment: string,
+    notifyUser: boolean
+  ) => {
+    try {
+      const res = await fetch(`/api/specialists/${encodeURIComponent(id)}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        body: JSON.stringify({
+          status: 'rejected',
+          rejectionReason: reason,
+          moderationComment: comment,
+          notifyUser,
+        }),
+      });
+      if (res.ok) {
+        showToast('Заявка мастера отклонена. Причина зафиксирована и отправлена пользователю.');
+        onRefreshSpecialists();
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        showToast(errData.error || 'Ошибка при отклонении мастера.', 'error');
+      }
+    } catch (err) {
+      console.error('Error rejecting specialist:', err);
+      showToast('Ошибка соединения с сервером при модерации.', 'error');
+    }
+  };
+
   const handleModerateSpecialist = async (id: string, status: 'approved' | 'rejected', verified?: boolean) => {
+    const spec = specialists.find(s => s.id === id);
+    if (status === 'rejected') {
+      if (spec) {
+        setRejectingSpecialist(spec);
+        return;
+      }
+    } else if (status === 'approved') {
+      if (spec) {
+        setApprovingSpecialist(spec);
+        return;
+      }
+    }
+
     setModeratingId(id);
     try {
       const res = await fetch(`/api/specialists/${encodeURIComponent(id)}/status`, {
@@ -3822,6 +3897,26 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Specialist Rejection Modal with Reasons and Automated Notifications */}
+      {rejectingSpecialist && (
+        <SpecialistRejectionModal
+          isOpen={Boolean(rejectingSpecialist)}
+          specialist={rejectingSpecialist}
+          onClose={() => setRejectingSpecialist(null)}
+          onConfirmReject={handleConfirmRejectSpecialist}
+        />
+      )}
+
+      {/* Specialist Approval Modal with Welcome & Verification */}
+      {approvingSpecialist && (
+        <SpecialistApprovalModal
+          isOpen={Boolean(approvingSpecialist)}
+          specialist={approvingSpecialist}
+          onClose={() => setApprovingSpecialist(null)}
+          onConfirmApprove={handleConfirmApproveSpecialist}
+        />
       )}
     </div>
   );

@@ -39,7 +39,13 @@ import {
   Loader2,
   Heart,
   Share2,
+  RefreshCw,
+  FileQuestion,
+  FileText,
+  AlertCircle,
+  ArrowUpRight,
 } from 'lucide-react';
+import { ApplySpecialistModal } from './ApplySpecialistModal';
 import { useAuth } from '../context/AuthContext';
 import { Article, UserPurchase, UserFavorite, ServiceCallRequest, PlumbingSpecialist } from '../types';
 import { RUSSIAN_CITIES } from '../data/initialData';
@@ -197,6 +203,20 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
   const [cabinetCountry, setCabinetCountry] = useState<string>(() => {
     return getCountryByCity(currentUser?.city || selectedCity || 'Москва').code;
   });
+
+  // Master Pre-moderation & Reapplication State
+  const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
+  const [isReapplying, setIsReapplying] = useState(false);
+  const [isRefreshingSpecialistStatus, setIsRefreshingSpecialistStatus] = useState(false);
+
+  const handleRefreshSpecialistStatus = async () => {
+    setIsRefreshingSpecialistStatus(true);
+    try {
+      await onRefreshSpecialists?.();
+    } finally {
+      setTimeout(() => setIsRefreshingSpecialistStatus(false), 500);
+    }
+  };
 
   useEffect(() => {
     if (isCityModalOpen) {
@@ -858,6 +878,82 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
         </div>
       )}
 
+      {/* Specialist Pre-Moderation & Rejection Notifications */}
+      {userSpecialist && userSpecialist.status === 'pending' && (
+        <div className="p-4 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg shadow-amber-950/20">
+          <div className="flex items-start space-x-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 mt-0.5 border border-amber-500/30">
+              <Clock className="w-5 h-5 animate-pulse" />
+            </div>
+            <div>
+              <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+                <h4 className="text-sm font-bold text-amber-300">Ваша анкета мастера находится на рассмотрении</h4>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  Премодерация
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">
+                Администрация проверяет данные и документы. После одобрения личный кабинет мастера разблокируется автоматически, а на e-mail поступит подтверждение.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setActiveTab('master')}
+            className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition flex items-center space-x-1 shrink-0 cursor-pointer shadow-md"
+          >
+            <span>Статус проверки</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {userSpecialist && userSpecialist.status === 'rejected' && (
+        <div className="p-4 rounded-3xl bg-rose-500/10 border border-rose-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg shadow-rose-950/20">
+          <div className="flex items-start space-x-3">
+            <div className="w-10 h-10 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0 mt-0.5 border border-rose-500/30">
+              <AlertCircle className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+                <h4 className="text-sm font-bold text-rose-300">Заявка мастера отклонена администратором</h4>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                  Отклонено
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">
+                Причина: <strong className="text-rose-200">«{userSpecialist.rejectionReason || 'Требуется исправление данных анкеты'}»</strong>
+                {userSpecialist.moderationComment && (
+                  <span className="block text-slate-400 text-[11px] mt-0.5">
+                    Рекомендация: {userSpecialist.moderationComment}
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setIsReapplying(true);
+                setIsApplyModalOpen(true);
+              }}
+              className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer shadow-md"
+            >
+              <Edit2 className="w-3.5 h-3.5" />
+              <span>Исправить и отправить снова</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('master')}
+              className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition cursor-pointer"
+            >
+              Подробнее
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Tabs Navigation */}
       <div className="flex items-center space-x-2 border-b border-slate-800 pb-2 overflow-x-auto">
         {/* Master's Cabinet Tab: moved to the very BEGINNING (position 1) for verified masters, specialists, or pending applicants */}
@@ -879,8 +975,14 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
                 {masterPendingDirectRequestsCount} нов.
               </span>
             ) : (
-              <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-blue-500/20 text-blue-300 font-semibold">
-                {isVerifiedMaster ? 'Верифицирован' : 'На проверке'}
+              <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
+                userSpecialist?.status === 'rejected'
+                  ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                  : isVerifiedMaster
+                  ? 'bg-blue-500/20 text-blue-300'
+                  : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+              }`}>
+                {userSpecialist?.status === 'rejected' ? 'Отклонено' : isVerifiedMaster ? 'Верифицирован' : 'На проверке'}
               </span>
             )}
           </button>
@@ -1469,59 +1571,276 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
             onRefreshSpecialist={onRefreshSpecialists}
             onOpenArticle={onSelectArticle}
           />
-        ) : masterProfile && masterProfile.status === 'pending' ? (
-          <div className="p-8 text-center bg-slate-900 border border-amber-500/30 rounded-3xl space-y-4 max-w-lg mx-auto shadow-xl">
-            <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto">
-              <Clock className="w-7 h-7 animate-pulse" />
+        ) : (userSpecialist?.status === 'rejected' || masterProfile?.status === 'rejected') ? (
+          /* REJECTED APPLICATION STATE WITH REASON & REAPPLICATION ACTION */
+          <div className="bg-slate-900 border border-rose-500/30 rounded-3xl p-6 sm:p-8 space-y-6 max-w-2xl mx-auto shadow-2xl shadow-rose-950/20 animate-in fade-in duration-200">
+            <div className="flex items-start space-x-4">
+              <div className="w-14 h-14 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-center justify-center shrink-0">
+                <AlertCircle className="w-7 h-7" />
+              </div>
+              <div>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                  ✕ Заявка отклонена
+                </span>
+                <h3 className="text-lg sm:text-xl font-bold text-white mt-1">
+                  Заявка мастера не прошла модерацию
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Кандидат: <strong className="text-white">{userSpecialist?.name || masterProfile?.name}</strong> ({userSpecialist?.city || masterProfile?.city})
+                </p>
+              </div>
             </div>
-            <div className="space-y-1">
-              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                Заявка на модерации
-              </span>
-              <h3 className="text-base font-bold text-white mt-2">Анкета мастера находится на проверке</h3>
-              <p className="text-xs text-slate-400 leading-relaxed max-w-md mx-auto">
-                Мастер: <strong className="text-white">{userSpecialist.name}</strong> ({userSpecialist.city}).
-                Ваша анкета специалиста успешно сохранена и проверяется администрацией сервиса «СантехПро».
-                Сразу после одобрения вам станет доступен Личный кабинет: загрузка портфолио работ с фотографиями (до 3 файлов), описание услуг и публикация экспертных статей.
-              </p>
+
+            {/* Official Rejection Reason Box */}
+            <div className="p-5 rounded-2xl bg-slate-950/80 border border-rose-500/30 space-y-3">
+              <div className="flex items-center justify-between text-xs text-slate-400 border-b border-slate-800 pb-2">
+                <span className="font-semibold text-rose-300 flex items-center space-x-1.5">
+                  <ShieldAlert className="w-4 h-4 text-rose-400" />
+                  <span>Официальная причина отклонения:</span>
+                </span>
+                {(userSpecialist?.moderatedAt || masterProfile?.moderatedAt) && (
+                  <span className="text-[11px] text-slate-500">
+                    Решение от: {new Date(userSpecialist?.moderatedAt || masterProfile?.moderatedAt || '').toLocaleString('ru-RU')}
+                  </span>
+                )}
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-rose-950/30 border border-rose-500/20 text-sm font-semibold text-rose-200">
+                «{userSpecialist?.rejectionReason || masterProfile?.rejectionReason || 'Требуется исправление данных анкеты или документов'}»
+              </div>
+
+              {(userSpecialist?.moderationComment || masterProfile?.moderationComment) && (
+                <div className="space-y-1 pt-1">
+                  <span className="text-[11px] font-semibold text-slate-400">
+                    Комментарий и рекомендации модератора:
+                  </span>
+                  <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-200 leading-relaxed italic">
+                    "{userSpecialist?.moderationComment || masterProfile?.moderationComment}"
+                  </div>
+                </div>
+              )}
+
+              <div className="text-[11px] text-slate-400 flex items-center space-x-1.5 pt-1">
+                <Mail className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                <span>
+                  Автоматическое уведомление направлено на почту:{' '}
+                  <strong className="text-slate-200">{currentUser?.email || userSpecialist?.email || masterProfile?.email || 'ваш e-mail'}</strong>
+                </span>
+              </div>
             </div>
-            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2">
+
+            {/* Instructions on how to reapply */}
+            <div className="p-4 rounded-2xl bg-slate-950/50 border border-slate-800 text-xs space-y-2 text-slate-300">
+              <h4 className="font-bold text-white flex items-center space-x-1.5">
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <span>Как успешно пройти повторную модерацию:</span>
+              </h4>
+              <ul className="space-y-1 text-slate-400 list-disc list-inside text-[11px] leading-relaxed">
+                <li>Проверьте корректность номера телефона и контактных мессенджеров (Telegram/WhatsApp).</li>
+                <li>Загрузите четкие фотографии или сканы документов (паспорт, сертификаты, квалификационные удостоверения).</li>
+                <li>Убедитесь, что перечень заявленных услуг и стаж соответствуют действительности.</li>
+              </ul>
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
               <button
                 type="button"
-                onClick={onRefreshSpecialists}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold transition shadow-md shadow-cyan-500/20"
+                onClick={() => {
+                  setIsReapplying(true);
+                  setIsApplyModalOpen(true);
+                }}
+                className="w-full sm:w-auto px-6 py-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs sm:text-sm transition shadow-lg shadow-rose-600/30 flex items-center justify-center space-x-2 cursor-pointer"
               >
-                Проверить статус одобрения
+                <Edit2 className="w-4 h-4" />
+                <span>Исправить данные и подать заявку повторно</span>
               </button>
+
               <button
                 type="button"
                 onClick={() => setActiveTab('favorites')}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition border border-slate-700"
+                className="w-full sm:w-auto px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition cursor-pointer"
+              >
+                В мои материалы
+              </button>
+            </div>
+          </div>
+        ) : (userSpecialist?.status === 'pending' || masterProfile?.status === 'pending') ? (
+          /* PENDING PRE-MODERATION STATE WITH CANDIDATE OVERVIEW */
+          <div className="bg-slate-900 border border-amber-500/30 rounded-3xl p-6 sm:p-8 space-y-6 max-w-2xl mx-auto shadow-2xl shadow-amber-950/20 animate-in fade-in duration-200">
+            <div className="flex items-start space-x-4">
+              <div className="w-14 h-14 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shrink-0">
+                <Clock className="w-7 h-7 animate-pulse" />
+              </div>
+              <div className="space-y-1">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  ⏳ На премодерации
+                </span>
+                <h3 className="text-lg sm:text-xl font-bold text-white">
+                  Анкета мастера находится на рассмотрении
+                </h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Служба верификации проверяет предоставленные данные, опыт и прикрепленные документы (152-ФЗ / 63-ФЗ).
+                </p>
+              </div>
+            </div>
+
+            {/* 3-Step Verification Pipeline */}
+            <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-3">
+              <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Этапы рассмотрения:</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs space-y-1">
+                  <div className="flex items-center space-x-1.5 text-emerald-400 font-bold">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>1. Анкета подана</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400">Данные и согласия зафиксированы в БД</p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-amber-500/15 border border-amber-500/40 text-xs space-y-1 shadow">
+                  <div className="flex items-center space-x-1.5 text-amber-300 font-bold">
+                    <Clock className="w-3.5 h-3.5 animate-spin" />
+                    <span>2. Премодерация</span>
+                  </div>
+                  <p className="text-[10px] text-amber-200/80">Проверка администратором (15–60 мин)</p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs space-y-1 opacity-70">
+                  <div className="flex items-center space-x-1.5 text-slate-400 font-bold">
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>3. Доступ открыт</span>
+                  </div>
+                  <p className="text-[10px] text-slate-500">Портфолио, заявки, статьи и каталог</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Candidate Summary Grid */}
+            {(() => {
+              const spec = userSpecialist || masterProfile;
+              if (!spec) return null;
+              const docsCount = Array.isArray(spec.verificationDocs)
+                ? spec.verificationDocs.length
+                : spec.verificationDocsJson
+                ? (() => {
+                    try {
+                      return JSON.parse(spec.verificationDocsJson).length;
+                    } catch {
+                      return 0;
+                    }
+                  })()
+                : 0;
+
+              return (
+                <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2.5 text-xs">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <span className="font-bold text-white flex items-center space-x-1.5">
+                      <User className="w-4 h-4 text-cyan-400" />
+                      <span>Параметры вашей заявки:</span>
+                    </span>
+                    <span className="text-[11px] font-mono text-cyan-300">
+                      ID: {spec.id}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-300 text-[11px]">
+                    <div>• Специалист: <strong className="text-white">{spec.name}</strong></div>
+                    <div>• Город: <strong className="text-white">{spec.city}</strong></div>
+                    <div>• Телефон: <strong className="text-white font-mono">{spec.phone}</strong></div>
+                    <div>• Стаж: <strong className="text-white">{spec.experienceYears} лет</strong></div>
+                    <div>• Выезд: <strong className="text-white">от {spec.minPrice} ₽</strong></div>
+                    <div>• Прикреплено документов: <strong className="text-cyan-400">{docsCount} шт.</strong></div>
+                  </div>
+
+                  {Array.isArray(spec.services) && spec.services.length > 0 && (
+                    <div className="pt-1.5 border-t border-slate-800/80">
+                      <span className="text-[10px] text-slate-400 block mb-1">Заявленные услуги:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {spec.services.map((srv, idx) => (
+                          <span key={idx} className="px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 text-[10px] text-slate-300">
+                            {srv}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="pt-1 text-[11px] text-slate-400 flex items-center space-x-1.5">
+                    <Mail className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                    <span>
+                      Уведомление поступит на адрес:{' '}
+                      <strong className="text-slate-200">{currentUser?.email || spec.email || 'ваш e-mail'}</strong>
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+              <div className="flex items-center space-x-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={handleRefreshSpecialistStatus}
+                  disabled={isRefreshingSpecialistStatus}
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition shadow-md shadow-amber-500/20 flex items-center justify-center space-x-1.5 cursor-pointer disabled:opacity-60"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingSpecialistStatus ? 'animate-spin' : ''}`} />
+                  <span>{isRefreshingSpecialistStatus ? 'Обновление...' : 'Проверить статус'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsReapplying(false);
+                    setIsApplyModalOpen(true);
+                  }}
+                  className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition flex items-center justify-center space-x-1 cursor-pointer"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                  <span>Редактировать анкету</span>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('favorites')}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition cursor-pointer"
               >
                 В мои материалы
               </button>
             </div>
           </div>
         ) : (
-          <div className="p-8 text-center bg-slate-900 border border-slate-800 rounded-3xl space-y-4 max-w-lg mx-auto">
-            <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto">
-              <ShieldAlert className="w-7 h-7" />
+          /* NOT APPLIED YET - PROMPT TO BECOME A MASTER */
+          <div className="p-8 text-center bg-slate-900 border border-slate-800 rounded-3xl space-y-4 max-w-lg mx-auto shadow-xl animate-in fade-in duration-200">
+            <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center mx-auto">
+              <Wrench className="w-7 h-7" />
             </div>
-            <h3 className="text-base font-bold text-white">Доступ только для проверенных мастеров</h3>
+            <h3 className="text-base sm:text-lg font-bold text-white">Станьте мастером сервиса «СантехПро»</h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Личный кабинет мастера с возможностью загружать фотографии работ (до 3 файлов), описывать услуги и писать статьи на модерацию доступен подтверждённым специалистам сервиса «СантехПро».
+              Личный кабинет мастера позволяет получать прямые вызовы клиентов, загружать примеры выполненных работ (до 3 файлов), формировать сметы и публиковать экспертные обучающие материалы.
             </p>
+
+            <div className="p-3.5 rounded-2xl bg-slate-950/70 border border-slate-800 text-left text-xs space-y-1.5 text-slate-300">
+              <span className="font-bold text-white block">Что даёт статус проверенного мастера:</span>
+              <div className="space-y-1 text-[11px] text-slate-400">
+                <div>✓ Размещение анкеты в каталоге специалистов вашего города</div>
+                <div>✓ Прямые заявки от заказчиков без скрытых комиссий</div>
+                <div>✓ Протокол согласия 152-ФЗ / 63-ФЗ в сертифицированной базе Timeweb Cloud</div>
+              </div>
+            </div>
 
             {/* Quick profile linker if user already has an approved specialist in database */}
             {specialists.length > 0 && (
               <div className="p-3 bg-slate-950/70 border border-slate-800 rounded-2xl text-left space-y-2">
                 <span className="text-[11px] font-bold text-slate-300 block">
-                  Ваша заявка уже была одобрена ранее? Привяжите вашу анкету к аккаунту:
+                  Ваша анкета уже есть в базе? Привяжите её к аккаунту:
                 </span>
                 <div className="flex items-center space-x-2">
                   <select
                     id="select-link-specialist"
-                    className="flex-1 px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white outline-none"
+                    className="flex-1 px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white outline-none cursor-pointer"
                     onChange={(e) => {
                       if (e.target.value) {
                         localStorage.setItem('santehpro_master_specialist_id', e.target.value);
@@ -1533,7 +1852,7 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
                     <option value="" disabled>-- Выберите вашу анкету из списка --</option>
                     {specialists.map((s) => (
                       <option key={s.id} value={s.id}>
-                        {s.name} ({s.city}) {s.verified || s.status === 'approved' ? '✓ Одобрен' : '• На проверке'}
+                        {s.name} ({s.city}) {s.verified || s.status === 'approved' ? '✓ Одобрен' : s.status === 'rejected' ? '✕ Отклонен' : '⏳ На проверке'}
                       </option>
                     ))}
                   </select>
@@ -1542,19 +1861,21 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
             )}
 
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2">
-              {onNavigateToSpecialists && (
-                <button
-                  type="button"
-                  onClick={onNavigateToSpecialists}
-                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition shadow-lg shadow-blue-500/20"
-                >
-                  Подать анкету мастера
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsReapplying(false);
+                  setIsApplyModalOpen(true);
+                }}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition shadow-lg shadow-blue-500/20 flex items-center justify-center space-x-1.5 cursor-pointer"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>Подать анкету мастера</span>
+              </button>
               <button
                 type="button"
                 onClick={() => setActiveTab('favorites')}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition border border-slate-700"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition border border-slate-700 cursor-pointer"
               >
                 В личный кабинет
               </button>
@@ -1649,6 +1970,23 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Apply / Re-apply Specialist Modal */}
+      {isApplyModalOpen && (
+        <ApplySpecialistModal
+          onClose={() => {
+            setIsApplyModalOpen(false);
+            setIsReapplying(false);
+          }}
+          onSuccess={() => {
+            setIsApplyModalOpen(false);
+            setIsReapplying(false);
+            onRefreshSpecialists?.();
+          }}
+          initialSpecialist={userSpecialist || masterProfile}
+          isReapplying={isReapplying}
+        />
       )}
     </div>
   );

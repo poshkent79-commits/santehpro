@@ -28,6 +28,10 @@ import {
   Lock,
   Sparkles,
   Heart,
+  FileText,
+  ExternalLink,
+  Download,
+  ChevronRight,
 } from 'lucide-react';
 import { Article, ArticleStep } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -83,8 +87,8 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
   }, [article, selectedCity]);
 
   const dualVideo = resolveDualPlatformVideos(article);
-  const hasVideo = Boolean(article.type === 'video' || article.videoEmbed || article.videoUrl || article.rutubeUrl || article.youtubeUrl);
-  const [selectedVideoPlatform, setSelectedVideoPlatform] = useState<'rutube' | 'youtube' | 'direct'>(dualVideo.defaultPlatform);
+  const hasVideo = Boolean(article.type === 'video' || article.videoEmbed || article.videoUrl || article.rutubeUrl || article.youtubeUrl || article.vkVideoUrl);
+  const [selectedVideoPlatform, setSelectedVideoPlatform] = useState<'rutube' | 'vk' | 'youtube' | 'direct'>(dualVideo.defaultPlatform);
 
   React.useEffect(() => {
     setSelectedVideoPlatform(dualVideo.defaultPlatform);
@@ -273,6 +277,23 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                     </span>
                   </button>
 
+                  {dualVideo.vkEmbed && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedVideoPlatform('vk')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
+                        selectedVideoPlatform === 'vk'
+                          ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-500/30'
+                          : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                      }`}
+                    >
+                      <span>💙 VK Видео</span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-blue-950/60 font-semibold border border-blue-400/40">
+                        ВКонтакте
+                      </span>
+                    </button>
+                  )}
+
                   <button
                     type="button"
                     onClick={() => setSelectedVideoPlatform('youtube')}
@@ -309,6 +330,8 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                   <span>
                     {selectedVideoPlatform === 'rutube'
                       ? 'Трансляция через официальный CDN RuTube'
+                      : selectedVideoPlatform === 'vk'
+                      ? 'Трансляция через плеер VK Видео'
                       : selectedVideoPlatform === 'direct'
                       ? 'Прямой облачный видеопоток высокой четкости'
                       : 'Трансляция через YouTube'}
@@ -327,7 +350,13 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                   />
                 ) : (
                   <iframe
-                    src={selectedVideoPlatform === 'rutube' ? dualVideo.rutubeEmbed! : dualVideo.youtubeEmbed!}
+                    src={
+                      selectedVideoPlatform === 'vk' && dualVideo.vkEmbed
+                        ? dualVideo.vkEmbed
+                        : selectedVideoPlatform === 'rutube'
+                        ? dualVideo.rutubeEmbed!
+                        : dualVideo.youtubeEmbed!
+                    }
                     title={article.title}
                     className="w-full h-full border-0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -469,6 +498,43 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                 </span>
               </div>
             )}
+
+            {/* Master Author Card for UGC Master materials */}
+            {article.authorMasterId && (
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-950/40 via-slate-900 to-amber-950/30 border border-blue-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-md">
+                <div className="flex items-center space-x-3 min-w-0">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                    <Wrench className="w-5 h-5 text-amber-400" />
+                  </div>
+                  <div>
+                    <div className="flex items-center space-x-2 flex-wrap">
+                      <span className="font-extrabold text-white text-sm">
+                        {article.author}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                        ✓ Проверенный мастер
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Материал подготовлен практикующим сантехником. Доступен для консультаций и выезда на объекты.
+                    </p>
+                  </div>
+                </div>
+                {onCallMasterForArticle && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onCallMasterForArticle(article);
+                    }}
+                    className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center space-x-1.5 transition shrink-0 shadow-sm"
+                  >
+                    <span>Вызвать этого мастера</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Additional Gallery Photos if exists */}
@@ -569,6 +635,111 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
               )}
             </div>
           ) : null}
+
+          {/* Useful Materials & External Streaming Resources */}
+          {(article.buyUrl || article.vkVideoUrl || article.rutubeUrl || article.youtubeUrl) && (
+            <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border border-slate-800 space-y-3.5 shadow-lg">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shrink-0">
+                    <FileText className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs sm:text-sm font-extrabold text-white flex items-center gap-1.5">
+                      <span>Полезные материалы и ссылки на внешние ресурсы</span>
+                      <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        От автора
+                      </span>
+                    </h3>
+                    <p className="text-[11px] text-slate-400">
+                      Смотрите полноформатное видео без сжатия и скачивайте приложенные схемы, чертежи и инструкции
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-1">
+                {article.vkVideoUrl && (
+                  <a
+                    href={article.vkVideoUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="p-3 rounded-xl bg-blue-950/40 hover:bg-blue-950/70 border border-blue-500/40 text-blue-200 transition flex items-center justify-between group"
+                  >
+                    <div className="flex items-center space-x-2.5">
+                      <span className="text-base">💙</span>
+                      <div>
+                        <div className="text-xs font-bold text-white group-hover:text-blue-300 transition">VK Видео</div>
+                        <div className="text-[10px] text-blue-400/80">Оригинал в соцсети</div>
+                      </div>
+                    </div>
+                    <ExternalLink className="w-3.5 h-3.5 text-blue-400 group-hover:translate-x-0.5 transition" />
+                  </a>
+                )}
+
+                {article.rutubeUrl && (
+                  <a
+                    href={article.rutubeUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="p-3 rounded-xl bg-red-950/40 hover:bg-red-950/70 border border-red-500/40 text-red-200 transition flex items-center justify-between group"
+                  >
+                    <div className="flex items-center space-x-2.5">
+                      <span className="text-base">🇷🇺</span>
+                      <div>
+                        <div className="text-xs font-bold text-white group-hover:text-red-300 transition">RuTube / Restore</div>
+                        <div className="text-[10px] text-red-400/80">Трансляция без VPN</div>
+                      </div>
+                    </div>
+                    <ExternalLink className="w-3.5 h-3.5 text-red-400 group-hover:translate-x-0.5 transition" />
+                  </a>
+                )}
+
+                {article.youtubeUrl && (
+                  <a
+                    href={article.youtubeUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="p-3 rounded-xl bg-rose-950/40 hover:bg-rose-950/70 border border-rose-500/40 text-rose-200 transition flex items-center justify-between group"
+                  >
+                    <div className="flex items-center space-x-2.5">
+                      <span className="text-base">▶️</span>
+                      <div>
+                        <div className="text-xs font-bold text-white group-hover:text-rose-300 transition">YouTube Канал</div>
+                        <div className="text-[10px] text-rose-400/80">Full HD / 4K видео</div>
+                      </div>
+                    </div>
+                    <ExternalLink className="w-3.5 h-3.5 text-rose-400 group-hover:translate-x-0.5 transition" />
+                  </a>
+                )}
+
+                {article.buyUrl && (
+                  <a
+                    href={article.buyUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="p-3 rounded-xl bg-amber-950/40 hover:bg-amber-950/70 border border-amber-500/40 text-amber-200 transition flex items-center justify-between group sm:col-span-2 md:col-span-3"
+                  >
+                    <div className="flex items-center space-x-2.5">
+                      <Download className="w-4 h-4 text-amber-400 shrink-0" />
+                      <div>
+                        <div className="text-xs font-bold text-white group-hover:text-amber-300 transition">
+                          Скачать полезные материалы (PDF, схемы, таблицы типоразмеров)
+                        </div>
+                        <div className="text-[10px] text-amber-400/80 truncate max-w-md">
+                          {article.buyUrl}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-lg bg-amber-500 text-slate-950 text-xs font-bold shrink-0 flex items-center gap-1">
+                      <span>Открыть</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </span>
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Visual Comparison of Mounting Technologies & Route Turns */}
           <div className="p-5 rounded-2xl bg-slate-950/90 border border-slate-800 space-y-4 shadow-xl">

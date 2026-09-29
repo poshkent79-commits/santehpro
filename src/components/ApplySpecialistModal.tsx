@@ -38,43 +38,64 @@ import { LegalTermsModal } from './LegalTermsModal';
 import { PLATFORM_LEGAL_DETAILS } from '../data/legalTerms';
 import { useAuth } from '../context/AuthContext';
 import { ALL_ENGINEERING_SERVICES } from '../data/engineeringServices';
+import { PlumbingSpecialist } from '../types';
 
 interface ApplySpecialistModalProps {
   onClose: () => void;
   onSuccess: (masterName?: string) => void;
+  initialSpecialist?: PlumbingSpecialist | null;
+  isReapplying?: boolean;
 }
 
-export const ApplySpecialistModal: React.FC<ApplySpecialistModalProps> = ({ onClose, onSuccess }) => {
+export const ApplySpecialistModal: React.FC<ApplySpecialistModalProps> = ({
+  onClose,
+  onSuccess,
+  initialSpecialist,
+  isReapplying,
+}) => {
   const { currentUser } = useAuth();
-  const initialCountry = getCountryByCity(currentUser?.city || 'Москва').code;
+  const initialCountry = getCountryByCity(initialSpecialist?.city || currentUser?.city || 'Москва').code;
   const [selectedCountryCode, setSelectedCountryCode] = useState<string>(initialCountry);
 
   const [formData, setFormData] = useState({
-    name: currentUser?.name || '',
-    city: currentUser?.city || 'Москва',
-    phone: currentUser?.phone || '',
-    telegram: '',
-    whatsapp: '',
-    experienceYears: 5,
-    minPrice: 1000,
-    emergency247: true,
-    services: 'Замена смесителей, Устранение протечек, Пайка полипропилена',
-    bio: '',
-    photo: '',
+    name: initialSpecialist?.name || currentUser?.name || '',
+    city: initialSpecialist?.city || currentUser?.city || 'Москва',
+    phone: initialSpecialist?.phone || currentUser?.phone || '',
+    telegram: initialSpecialist?.telegram || '',
+    whatsapp: initialSpecialist?.whatsapp || '',
+    experienceYears: initialSpecialist?.experienceYears || 5,
+    minPrice: initialSpecialist?.minPrice || 1000,
+    emergency247: initialSpecialist?.emergency247 !== undefined ? initialSpecialist.emergency247 : true,
+    services: initialSpecialist?.services && Array.isArray(initialSpecialist.services)
+      ? initialSpecialist.services.join(', ')
+      : 'Замена смесителей, Устранение протечек, Пайка полипропилена',
+    bio: initialSpecialist?.bio || '',
+    photo: initialSpecialist?.photo || '',
   });
 
   // Verification Documents (Up to 3 files)
-  const [verificationDocs, setVerificationDocs] = useState<SpecialistVerificationDoc[]>([]);
+  const [verificationDocs, setVerificationDocs] = useState<SpecialistVerificationDoc[]>(() => {
+    if (initialSpecialist?.verificationDocs && Array.isArray(initialSpecialist.verificationDocs)) {
+      return initialSpecialist.verificationDocs;
+    }
+    if (initialSpecialist?.verificationDocsJson) {
+      try {
+        const parsed = JSON.parse(initialSpecialist.verificationDocsJson);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {}
+    }
+    return [];
+  });
   const [docTypeToUpload, setDocTypeToUpload] = useState<string>('Паспорт / Удостоверение');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   // Main Photo State
-  const [customPhotoSelected, setCustomPhotoSelected] = useState(false);
+  const [customPhotoSelected, setCustomPhotoSelected] = useState(Boolean(initialSpecialist?.photo));
 
   // 2 Consolidated Legal Agreement states (152-FZ Personal Data & Document Verification + Terms of Use & Authenticity Guarantee)
-  const [dataConsentAccepted, setDataConsentAccepted] = useState(false);
-  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [dataConsentAccepted, setDataConsentAccepted] = useState(Boolean(initialSpecialist?.dataConsent));
+  const [termsAccepted, setTermsAccepted] = useState(Boolean(initialSpecialist?.legalConsent));
   const [legalDocType, setLegalDocType] = useState<'privacy' | 'terms' | 'master_moderation' | 'offer'>('master_moderation');
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -198,6 +219,7 @@ export const ApplySpecialistModal: React.FC<ApplySpecialistModalProps> = ({ onCl
 
       const payload = {
         ...formData,
+        id: initialSpecialist?.id || undefined,
         email: currentUser?.email,
         userUid: currentUser?.uid,
         services: servicesArray,
@@ -334,13 +356,37 @@ export const ApplySpecialistModal: React.FC<ApplySpecialistModalProps> = ({ onCl
             <div>
               <div className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 mb-2">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Модерация администрацией</span>
+                <span>{isReapplying || initialSpecialist?.status === 'rejected' ? 'Повторная модерация анкеты' : 'Модерация администрацией'}</span>
               </div>
-              <h2 className="text-2xl font-bold text-white">Стать мастером в вашем городе</h2>
+              <h2 className="text-2xl font-bold text-white">
+                {isReapplying || initialSpecialist?.status === 'rejected'
+                  ? 'Доработка и повторная отправка анкеты'
+                  : 'Стать мастером в вашем городе'}
+              </h2>
               <p className="text-xs text-slate-400 mt-1">
-                Заполните анкету специалиста, чтобы получать заказы от жильцов в вашем городе.
+                {isReapplying || initialSpecialist?.status === 'rejected'
+                  ? 'Внесите необходимые исправления в данные или документы, чтобы пройти повторную проверку администратором.'
+                  : 'Заполните анкету специалиста, чтобы получать заказы от жильцов в вашем городе.'}
               </p>
             </div>
+
+            {/* Reapplication Notice if previously rejected */}
+            {(isReapplying || initialSpecialist?.status === 'rejected') && initialSpecialist?.rejectionReason && (
+              <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-xs space-y-1.5 animate-in fade-in duration-200">
+                <div className="flex items-center space-x-2 text-rose-300 font-bold">
+                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                  <span>Указанная причина предыдущего отказа:</span>
+                </div>
+                <div className="text-white font-medium pl-6">
+                  {initialSpecialist.rejectionReason}
+                </div>
+                {initialSpecialist.moderationComment && (
+                  <div className="text-slate-300 italic pl-6 text-[11px] pt-1 border-t border-rose-500/20">
+                    Рекомендация модератора: «{initialSpecialist.moderationComment}»
+                  </div>
+                )}
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Main Photo Upload Section */}

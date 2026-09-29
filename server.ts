@@ -57,6 +57,7 @@ import { ensureCloudSqlProxy } from './src/db/index.ts';
 import {
   sendPasswordResetEmail,
   sendSpecialistModerationNotification,
+  sendSpecialistModerationDecisionNotification,
   isSmtpConfigured,
   getSmtpStatus,
   saveSmtpSettings,
@@ -80,8 +81,8 @@ const currentDirname = typeof __dirname !== 'undefined' ? __dirname : process.cw
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
 // Universal CORS & caching policy for API & Auth routes (resolves cross-domain and mobile proxy issues)
 app.use((req, res, next) => {
@@ -264,6 +265,7 @@ app.post('/api/articles', async (req, res) => {
       videoEmbed: req.body.videoEmbed || undefined,
       rutubeUrl: req.body.rutubeUrl || undefined,
       youtubeUrl: req.body.youtubeUrl || undefined,
+      vkVideoUrl: req.body.vkVideoUrl || undefined,
       videoTimestamps: req.body.videoTimestamps || [],
       audioUrl: req.body.audioUrl || undefined,
       audioTitle: req.body.audioTitle || undefined,
@@ -372,6 +374,7 @@ app.put('/api/articles/:id', async (req, res) => {
       videoEmbed: req.body.videoEmbed !== undefined ? req.body.videoEmbed : existing.videoEmbed,
       rutubeUrl: req.body.rutubeUrl !== undefined ? req.body.rutubeUrl : existing.rutubeUrl,
       youtubeUrl: req.body.youtubeUrl !== undefined ? req.body.youtubeUrl : existing.youtubeUrl,
+      vkVideoUrl: req.body.vkVideoUrl !== undefined ? req.body.vkVideoUrl : existing.vkVideoUrl,
       videoTimestamps: req.body.videoTimestamps !== undefined ? req.body.videoTimestamps : existing.videoTimestamps,
       audioUrl: req.body.audioUrl !== undefined ? req.body.audioUrl : existing.audioUrl,
       audioTitle: req.body.audioTitle !== undefined ? req.body.audioTitle : existing.audioTitle,
@@ -636,6 +639,26 @@ app.post('/api/upload', async (req, res) => {
       ext = fileName.split('.').pop()!.toLowerCase();
     }
 
+    const isImage = mimeType.startsWith('image/') || ['jpg', 'jpeg', 'png', 'webp', 'svg'].includes(ext);
+    const isVideo = mimeType.startsWith('video/') || ['mp4', 'webm', 'mov'].includes(ext);
+    const isAudio = mimeType.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'].includes(ext);
+
+    // Enforce size limits: Image max 15MB, Audio direct upload max 50MB
+    const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
+    const MAX_AUDIO_BYTES = 50 * 1024 * 1024;
+
+    if (isImage && buffer.length > MAX_IMAGE_BYTES) {
+      return res.status(400).json({
+        error: `Размер изображения (${originalSizeMb} МБ) превышает ограничение 15 МБ. Выберите или сожмите изображение перед загрузкой.`,
+      });
+    }
+
+    if (isAudio && buffer.length > MAX_AUDIO_BYTES) {
+      return res.status(400).json({
+        error: `Размер аудиофайла (${originalSizeMb} МБ) превышает лимит сервера 50 МБ. Для подкастов большего размера добавьте аудио по прямой ссылке из стороннего сервиса (без ограничений).`,
+      });
+    }
+
     const cleanName = (fileName || 'media').replace(/[^a-zA-Z0-9_\-\.]/g, '_').replace(/\.[^/.]+$/, '');
     const uniqueId = `${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
     const outputFileName = `${cleanName}-${uniqueId}.${ext}`;
@@ -643,10 +666,6 @@ app.post('/api/upload', async (req, res) => {
 
     // Write file to cloud uploads directory
     await fs.promises.writeFile(filePath, buffer);
-
-    const isImage = mimeType.startsWith('image/') || ['jpg', 'jpeg', 'png', 'webp', 'svg'].includes(ext);
-    const isVideo = mimeType.startsWith('video/') || ['mp4', 'webm', 'mov'].includes(ext);
-    const isAudio = mimeType.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'm4a', 'aac'].includes(ext);
 
     let optimizationRatio = '-45% (Cloud Compressed)';
     if (isImage) {
@@ -1262,8 +1281,17 @@ app.post('/api/specialists/apply', async (req, res) => {
     }
   }
 
+  // Check if this is a resubmission/reapplication of an existing specialist profile
+  let targetId = req.body.id;
+  if (!targetId && req.body.userUid) {
+    const existingByUser = specialistsStore.find(s => s.userUid === req.body.userUid && (s.status === 'rejected' || s.status === 'pending'));
+    if (existingByUser) {
+      targetId = existingByUser.id;
+    }
+  }
+
   const newSpec: PlumbingSpecialist = {
-    id: `spec-${Date.now()}`,
+    id: targetId || `spec-${Date.now()}`,
     name: req.body.name.trim(),
     photo: specialistPhoto,
     city: req.body.city || 'Москва',
@@ -1281,6 +1309,10 @@ app.post('/api/specialists/apply', async (req, res) => {
     verified: false,
     bio: req.body.bio ? req.body.bio.trim() : '',
     status: 'pending', // Requires admin approval!
+    rejectionReason: undefined,
+    moderationComment: undefined,
+    moderatedAt: undefined,
+    moderatedBy: undefined,
     appliedAt: nowIso.split('T')[0],
     dataConsent: true,
     consentTimestamp: nowIso,
@@ -1410,16 +1442,33 @@ app.put('/api/specialists/:id', async (req, res) => {
   }
 });
 
-// PUT Specialist Status (Admin approve/reject)
+// PUT Specialist Status (Admin approve/reject with rejection reason and automated notification)
 app.put('/api/specialists/:id/status', async (req, res) => {
   const { id } = req.params;
-  const { status, verified } = req.body;
+  const { status, verified, rejectionReason, moderationComment, notifyUser } = req.body;
 
   try {
-    const updated = await updateDbSpecialist(id, { status, verified });
+    const nowIso = new Date().toISOString();
+    const updates: Partial<PlumbingSpecialist> = {
+      status,
+      verified: status === 'approved' ? (verified !== undefined ? Boolean(verified) : true) : false,
+      rejectionReason: status === 'rejected' ? (rejectionReason || 'Кандидатура отклонена модератором') : null as any,
+      moderationComment: moderationComment !== undefined ? moderationComment : null as any,
+      moderatedAt: nowIso,
+      moderatedBy: 'Администратор',
+    };
+
+    const updated = await updateDbSpecialist(id, updates);
     if (!updated) {
       return res.status(404).json({ error: 'Специалист не найден' });
     }
+
+    // Also update in-memory specialistsStore
+    const storeIdx = specialistsStore.findIndex(s => s.id === id);
+    if (storeIdx >= 0) {
+      specialistsStore[storeIdx] = { ...specialistsStore[storeIdx], ...updated };
+    }
+
     if (status === 'approved' && updated.userUid) {
       try {
         const user = await getUserByUid(updated.userUid);
@@ -1430,6 +1479,22 @@ app.put('/api/specialists/:id/status', async (req, res) => {
         console.error('Error updating user role on specialist approval:', err);
       }
     }
+
+    // Automatically send decision email notification to applicant
+    if (notifyUser !== false) {
+      try {
+        await sendSpecialistModerationDecisionNotification({
+          specialist: updated,
+          status,
+          reason: rejectionReason,
+          adminComment: moderationComment,
+          moderatedAt: nowIso,
+        });
+      } catch (emailErr) {
+        console.error('Error sending moderation decision notification:', emailErr);
+      }
+    }
+
     broadcastRealtimeEvent({
       type: 'specialist:updated',
       data: updated,

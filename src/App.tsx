@@ -869,6 +869,12 @@ function AppContent() {
               searchQuery={searchQuery}
               onSearchQueryChange={setSearchQuery}
               onOpenDonation={() => setIsDonationModalOpen(true)}
+              currentMaster={approvedMasterSpecialist}
+              isVerifiedMaster={isApprovedMaster}
+              onNavigateToCabinet={() => {
+                setCabinetInitialTab('master');
+                setActiveTab('cabinet');
+              }}
             />
           </ErrorBoundary>
         )}

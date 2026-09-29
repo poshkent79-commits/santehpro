@@ -106,6 +106,12 @@ export async function getDbSpecialists(): Promise<PlumbingSpecialist[]> {
               legalChecklistJson: r.legalChecklistJson || undefined,
               verificationDocs,
               verificationDocsJson: r.verificationDocsJson || undefined,
+              userUid: r.userUid || undefined,
+              email: r.email || undefined,
+              rejectionReason: r.rejectionReason || undefined,
+              moderationComment: r.moderationComment || undefined,
+              moderatedAt: r.moderatedAt ? r.moderatedAt.toISOString() : undefined,
+              moderatedBy: r.moderatedBy || undefined,
             };
           });
         inMemorySpecialists = mapped;
@@ -166,6 +172,12 @@ export async function createDbSpecialist(spec: PlumbingSpecialist): Promise<Plum
           legalConsentTimestamp: specWithConsent.legalConsentTimestamp ? new Date(specWithConsent.legalConsentTimestamp) : new Date(),
           legalChecklistJson: specWithConsent.legalChecklistJson || null,
           verificationDocsJson: specWithConsent.verificationDocsJson || null,
+          userUid: specWithConsent.userUid || null,
+          email: specWithConsent.email || null,
+          rejectionReason: specWithConsent.rejectionReason || null,
+          moderationComment: specWithConsent.moderationComment || null,
+          moderatedAt: specWithConsent.moderatedAt ? new Date(specWithConsent.moderatedAt) : null,
+          moderatedBy: specWithConsent.moderatedBy || null,
         }).where(eq(specialists.id, specWithConsent.id));
       } else {
         await db.insert(specialists).values({
@@ -193,6 +205,12 @@ export async function createDbSpecialist(spec: PlumbingSpecialist): Promise<Plum
           legalConsentTimestamp: specWithConsent.legalConsentTimestamp ? new Date(specWithConsent.legalConsentTimestamp) : new Date(),
           legalChecklistJson: specWithConsent.legalChecklistJson || null,
           verificationDocsJson: specWithConsent.verificationDocsJson || null,
+          userUid: specWithConsent.userUid || null,
+          email: specWithConsent.email || null,
+          rejectionReason: specWithConsent.rejectionReason || null,
+          moderationComment: specWithConsent.moderationComment || null,
+          moderatedAt: specWithConsent.moderatedAt ? new Date(specWithConsent.moderatedAt) : null,
+          moderatedBy: specWithConsent.moderatedBy || null,
           createdAt: new Date(),
         });
       }
@@ -297,6 +315,12 @@ export async function updateDbSpecialist(id: string, updates: Partial<PlumbingSp
       if (updates.legalConsent !== undefined) values.legalConsent = updates.legalConsent;
       if (updates.legalChecklistJson !== undefined) values.legalChecklistJson = updates.legalChecklistJson;
       if (updates.verificationDocsJson !== undefined) values.verificationDocsJson = updates.verificationDocsJson;
+      if (updates.userUid !== undefined) values.userUid = updates.userUid;
+      if (updates.email !== undefined) values.email = updates.email;
+      if (updates.rejectionReason !== undefined) values.rejectionReason = updates.rejectionReason;
+      if (updates.moderationComment !== undefined) values.moderationComment = updates.moderationComment;
+      if (updates.moderatedAt !== undefined) values.moderatedAt = updates.moderatedAt ? new Date(updates.moderatedAt) : null;
+      if (updates.moderatedBy !== undefined) values.moderatedBy = updates.moderatedBy;
 
       const existingRow = await db.select().from(specialists).where(eq(specialists.id, id)).limit(1);
       if (existingRow && existingRow.length > 0) {
@@ -327,6 +351,12 @@ export async function updateDbSpecialist(id: string, updates: Partial<PlumbingSp
           legalConsentTimestamp: updated.legalConsentTimestamp ? new Date(updated.legalConsentTimestamp) : new Date(),
           legalChecklistJson: updated.legalChecklistJson || null,
           verificationDocsJson: updated.verificationDocsJson || null,
+          userUid: updated.userUid || null,
+          email: updated.email || null,
+          rejectionReason: updated.rejectionReason || null,
+          moderationComment: updated.moderationComment || null,
+          moderatedAt: updated.moderatedAt ? new Date(updated.moderatedAt) : null,
+          moderatedBy: updated.moderatedBy || null,
           createdAt: new Date(),
         });
       }

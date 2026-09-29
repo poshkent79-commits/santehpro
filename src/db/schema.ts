@@ -117,6 +117,7 @@ export const articles = pgTable('articles', {
   videoEmbed: text('video_embed'),
   rutubeUrl: text('rutube_url'),
   youtubeUrl: text('youtube_url'),
+  vkVideoUrl: text('vk_video_url'),
   videoTimestampsJson: text('video_timestamps_json'),
   audioUrl: text('audio_url'),
   audioTitle: text('audio_title'),
@@ -168,6 +169,10 @@ export const specialists = pgTable('specialists', {
   verificationDocsJson: text('verification_docs_json'), // JSON прикрепленных документов для верификации анкеты
   userUid: text('user_uid'), // Связь с учетной записью пользователя
   email: text('email'),
+  rejectionReason: text('rejection_reason'), // Причина отказа при отклонении кандидатуры администратором
+  moderationComment: text('moderation_comment'), // Подробный комментарий администратора с рекомендациями
+  moderatedAt: timestamp('moderated_at'), // Дата и время вынесения решения модератором
+  moderatedBy: text('moderated_by'), // Кем проведена модерация (Администратор)
   createdAt: timestamp('created_at').defaultNow(),
   deletedAt: timestamp('deleted_at'), // Дата и время удаления мастера из активного каталога
 });

@@ -1,5 +1,5 @@
 /**
- * Video Utilities for Dual-Platform Player: RuTube & YouTube
+ * Video Utilities for Multi-Platform Player: RuTube, VK Video, YouTube & Cloud CDN
  */
 
 export function parseYouTubeId(url?: string): string | null {
@@ -52,6 +52,47 @@ export function parseRuTubeId(url?: string): string | null {
   return null;
 }
 
+/**
+ * Parses and returns VK Video embed URL for iframe
+ * Supports:
+ * - https://vk.com/video-123456_789012
+ * - https://vkvideo.ru/video-123456_789012
+ * - https://vk.com/clip-123456_789012
+ * - https://vk.com/video_ext.php?oid=...&id=...&hash=...
+ * - <iframe src="https://vk.com/video_ext.php?..."></iframe>
+ */
+export function parseVkVideoEmbed(url?: string): string | null {
+  if (!url || typeof url !== 'string') return null;
+  const trimmed = url.trim();
+
+  // If iframe markup was pasted directly, extract src
+  if (trimmed.includes('<iframe') && trimmed.includes('src=')) {
+    const srcMatch = trimmed.match(/src=["']([^"']+)["']/);
+    if (srcMatch && srcMatch[1]) {
+      return srcMatch[1];
+    }
+  }
+
+  // Direct video_ext.php URL
+  if (trimmed.includes('video_ext.php')) {
+    return trimmed.startsWith('//') ? `https:${trimmed}` : trimmed;
+  }
+
+  // vk.com/video-123456_789012 or vkvideo.ru/video-123456_789012 or vk.com/clip-123456_789012
+  const vkRegex = /(?:vk\.com|vkvideo\.ru)\/(?:video|clip)(-?\d+)_(\d+)/i;
+  const match = trimmed.match(vkRegex);
+  if (match && match[1] && match[2]) {
+    const oid = match[1];
+    const id = match[2];
+    // Check for optional hash query param
+    const hashMatch = trimmed.match(/[?&]hash=([a-zA-Z0-9]+)/);
+    const hashQuery = hashMatch && hashMatch[1] ? `&hash=${hashMatch[1]}` : '';
+    return `https://vk.com/video_ext.php?oid=${oid}&id=${id}&hd=2${hashQuery}`;
+  }
+
+  return null;
+}
+
 export function getYouTubeEmbedUrl(url?: string): string | null {
   const id = parseYouTubeId(url);
   return id ? `https://www.youtube.com/embed/${id}?rel=0` : null;
@@ -62,40 +103,51 @@ export function getRuTubeEmbedUrl(url?: string): string | null {
   return id ? `https://rutube.ru/play/embed/${id}` : null;
 }
 
+export function getVkVideoEmbedUrl(url?: string): string | null {
+  return parseVkVideoEmbed(url);
+}
+
 export interface VideoPlatformSources {
   youtubeEmbed: string | null;
   rutubeEmbed: string | null;
+  vkEmbed: string | null;
   directVideoUrl: string | null;
   hasYouTube: boolean;
   hasRuTube: boolean;
+  hasVk: boolean;
   hasDirect: boolean;
-  defaultPlatform: 'rutube' | 'youtube' | 'direct';
+  defaultPlatform: 'rutube' | 'vk' | 'youtube' | 'direct';
 }
 
 /**
- * Extracts and prepares both RuTube and YouTube embed sources from article data
+ * Detect which video platform a URL belongs to: 'rutube' | 'vk' | 'youtube' | 'direct' | 'unknown'
+ */
+export function detectVideoPlatform(url?: string): 'rutube' | 'vk' | 'youtube' | 'direct' | 'unknown' {
+  if (!url || typeof url !== 'string') return 'unknown';
+  const u = url.toLowerCase().trim();
+  if (u.includes('rutube.ru')) return 'rutube';
+  if (u.includes('vk.com') || u.includes('vkvideo.ru')) return 'vk';
+  if (u.includes('youtube.com') || u.includes('youtu.be')) return 'youtube';
+  if (u.endsWith('.mp4') || u.endsWith('.webm') || u.endsWith('.ogg') || u.startsWith('/uploads/')) return 'direct';
+  return 'unknown';
+}
+
+/**
+ * Extracts and prepares RuTube, VK Video and YouTube embed sources from article data
  */
 export function resolveDualPlatformVideos(data: {
   videoUrl?: string;
   videoEmbed?: string;
   rutubeUrl?: string;
   youtubeUrl?: string;
+  vkVideoUrl?: string;
 }): VideoPlatformSources {
   let yt = getYouTubeEmbedUrl(data.youtubeUrl);
   let rt = getRuTubeEmbedUrl(data.rutubeUrl);
+  let vk = getVkVideoEmbedUrl(data.vkVideoUrl);
   let direct: string | null = null;
 
-  // If youtubeUrl wasn't set, try parsing from generic videoUrl or videoEmbed
-  if (!yt) {
-    yt = getYouTubeEmbedUrl(data.videoUrl) || getYouTubeEmbedUrl(data.videoEmbed);
-  }
-
-  // If rutubeUrl wasn't set, try parsing from generic videoUrl or videoEmbed
-  if (!rt) {
-    rt = getRuTubeEmbedUrl(data.videoUrl) || getRuTubeEmbedUrl(data.videoEmbed);
-  }
-
-  // Check for direct MP4 / WebM video
+  // Check direct video
   const checkDirect = (url?: string) => {
     if (!url) return false;
     return url.endsWith('.mp4') || url.endsWith('.webm') || url.endsWith('.ogg') || url.startsWith('/uploads/');
@@ -107,26 +159,49 @@ export function resolveDualPlatformVideos(data: {
     direct = data.videoUrl!;
   }
 
-  // Fallbacks: If an educational material has video content, provide reliable RuTube and YouTube channels
-  // For Russian Federation users where YouTube may experience ISP throttling, RuTube provides instant seamless playback
+  // Parse generic videoUrl or videoEmbed if platform-specific fields were empty
+  const rawUrl = data.videoUrl || data.videoEmbed || '';
+  if (rawUrl) {
+    if (!rt && (rawUrl.includes('rutube.ru') || parseRuTubeId(rawUrl))) {
+      rt = getRuTubeEmbedUrl(rawUrl);
+    }
+    if (!vk && (rawUrl.includes('vk.com') || rawUrl.includes('vkvideo.ru'))) {
+      vk = getVkVideoEmbedUrl(rawUrl);
+    }
+    if (!yt && (rawUrl.includes('youtube.com') || rawUrl.includes('youtu.be') || parseYouTubeId(rawUrl))) {
+      yt = getYouTubeEmbedUrl(rawUrl);
+    }
+  }
+
+  // Fallbacks: If an educational material has video content, provide reliable RuTube/YouTube channels
   const defaultRuTubeEmbed = rt || 'https://rutube.ru/play/embed/e5428a1ce74328325a7a972c3d5964bb';
   const defaultYouTubeEmbed = yt || 'https://www.youtube.com/embed/dQw4w9WgXcQ?rel=0';
 
   const hasExplicitRuTube = Boolean(rt);
+  const hasExplicitVk = Boolean(vk);
   const hasExplicitYouTube = Boolean(yt);
   const hasDirect = Boolean(direct);
 
-  // If both exist or only RuTube exists, prioritize RuTube for domestic stability
-  const defaultPlatform: 'rutube' | 'youtube' | 'direct' = direct 
-    ? 'direct' 
-    : (hasExplicitRuTube ? 'rutube' : 'youtube');
+  // Priority order: direct CDN -> RuTube -> VK Video -> YouTube
+  let defaultPlatform: 'rutube' | 'vk' | 'youtube' | 'direct' = 'rutube';
+  if (hasDirect) {
+    defaultPlatform = 'direct';
+  } else if (hasExplicitRuTube) {
+    defaultPlatform = 'rutube';
+  } else if (hasExplicitVk) {
+    defaultPlatform = 'vk';
+  } else if (hasExplicitYouTube) {
+    defaultPlatform = 'youtube';
+  }
 
   return {
     youtubeEmbed: yt || defaultYouTubeEmbed,
     rutubeEmbed: rt || defaultRuTubeEmbed,
+    vkEmbed: vk,
     directVideoUrl: direct,
     hasYouTube: hasExplicitYouTube || Boolean(yt),
     hasRuTube: hasExplicitRuTube || Boolean(rt),
+    hasVk: hasExplicitVk,
     hasDirect,
     defaultPlatform,
   };

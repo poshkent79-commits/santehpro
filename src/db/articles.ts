@@ -73,6 +73,7 @@ export async function getDbArticles(): Promise<Article[]> {
             videoEmbed: art.videoEmbed || null,
             rutubeUrl: art.rutubeUrl || null,
             youtubeUrl: art.youtubeUrl || null,
+            vkVideoUrl: art.vkVideoUrl || null,
             videoTimestampsJson: art.videoTimestamps ? JSON.stringify(art.videoTimestamps) : null,
             audioUrl: art.audioUrl || null,
             audioTitle: art.audioTitle || null,
@@ -175,6 +176,7 @@ function mapRowsToArticles(rows: any[]): Article[] {
       videoEmbed: r.videoEmbed || undefined,
       rutubeUrl: (r as any).rutubeUrl || undefined,
       youtubeUrl: (r as any).youtubeUrl || undefined,
+      vkVideoUrl: (r as any).vkVideoUrl || undefined,
       videoTimestamps,
       audioUrl: r.audioUrl || undefined,
       audioTitle: r.audioTitle || undefined,
@@ -228,6 +230,7 @@ export async function createDbArticle(art: Article): Promise<Article> {
       videoEmbed: art.videoEmbed || null,
       rutubeUrl: art.rutubeUrl || null,
       youtubeUrl: art.youtubeUrl || null,
+      vkVideoUrl: art.vkVideoUrl || null,
       videoTimestampsJson: art.videoTimestamps ? JSON.stringify(art.videoTimestamps) : null,
       audioUrl: art.audioUrl || null,
       audioTitle: art.audioTitle || null,
@@ -290,6 +293,7 @@ export async function updateDbArticle(id: string, updates: Partial<Article>): Pr
     if (updates.videoEmbed !== undefined) values.videoEmbed = updates.videoEmbed || null;
     if (updates.rutubeUrl !== undefined) values.rutubeUrl = updates.rutubeUrl || null;
     if (updates.youtubeUrl !== undefined) values.youtubeUrl = updates.youtubeUrl || null;
+    if (updates.vkVideoUrl !== undefined) values.vkVideoUrl = updates.vkVideoUrl || null;
     if (updates.videoTimestamps !== undefined) values.videoTimestampsJson = updates.videoTimestamps ? JSON.stringify(updates.videoTimestamps) : null;
     if (updates.audioUrl !== undefined) values.audioUrl = updates.audioUrl || null;
     if (updates.audioTitle !== undefined) values.audioTitle = updates.audioTitle || null;

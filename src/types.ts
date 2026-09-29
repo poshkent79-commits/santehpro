@@ -68,6 +68,7 @@ export interface Article {
   videoEmbed?: string;
   rutubeUrl?: string;
   youtubeUrl?: string;
+  vkVideoUrl?: string;
   videoTimestamps?: VideoTimestamp[];
   audioUrl?: string;
   audioTitle?: string;
@@ -138,6 +139,10 @@ export interface PlumbingSpecialist {
   userUid?: string;
   email?: string;
   portfolioWorksCount?: number;
+  rejectionReason?: string;
+  moderationComment?: string;
+  moderatedAt?: string;
+  moderatedBy?: string;
 }
 
 export interface MasterWork {
