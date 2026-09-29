@@ -924,8 +924,8 @@ export const MaterialsCalculator: React.FC<MaterialsCalculatorProps> = ({
     <div className="space-y-6">
       {/* Top Navigation Mode Selector for Section "Материалы" */}
       {!embedded && (
-        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 p-2.5 bg-slate-900 border border-slate-800 rounded-3xl shadow-xl">
-          <div className="flex items-center gap-2 p-1 bg-slate-950/80 rounded-2xl border border-slate-800 overflow-x-auto">
+        <div className="p-2 sm:p-2.5 bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl shadow-xl">
+          <div className="flex items-center gap-2 p-1 bg-slate-950/80 rounded-2xl border border-slate-800/80 overflow-x-auto scrollbar-none whitespace-nowrap scroll-smooth touch-pan-x">
             <button
               type="button"
               onClick={() => setMaterialsMode('kits')}
@@ -951,18 +951,17 @@ export const MaterialsCalculator: React.FC<MaterialsCalculatorProps> = ({
               <Calculator className="w-4 h-4" />
               <span>По метражу и точкам</span>
             </button>
-          </div>
 
-          <div className="flex items-center gap-2 px-1 justify-end">
+            <div className="w-px h-6 bg-slate-800 shrink-0 my-auto mx-0.5" />
+
             <button
               type="button"
               onClick={() => setIsMaterialsModalOpen(true)}
-              className="px-3.5 py-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer shadow-sm"
+              className="px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer shrink-0 shadow-sm"
               title="Каталог сантехнического оборудования"
             >
               <Boxes className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden sm:inline">Каталог оборудования</span>
-              <span className="sm:hidden">Каталог</span>
+              <span>Каталог оборудования</span>
               {customMaterials.length > 0 && (
                 <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-500 text-slate-950 font-black">
                   {customMaterials.length}
@@ -973,12 +972,11 @@ export const MaterialsCalculator: React.FC<MaterialsCalculatorProps> = ({
             <button
               type="button"
               onClick={() => setIsSavedListModalOpen(true)}
-              className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer shadow-sm"
+              className="px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer shrink-0 shadow-sm"
               title="Сохранённые сметы"
             >
               <FolderOpen className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="hidden sm:inline">Мои сметы</span>
-              <span className="sm:hidden">Сметы</span>
+              <span>Мои сметы</span>
               {savedEstimates.length > 0 && (
                 <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-cyan-500 text-slate-950 font-black">
                   {savedEstimates.length}

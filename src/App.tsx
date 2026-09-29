@@ -16,7 +16,7 @@ import { ProtectedSectionGuard, ProtectedSectionType } from './components/Protec
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Article, PlumbingSpecialist, ServiceCallRequest, CommunityQuestion } from './types';
 import { INITIAL_ARTICLES, INITIAL_SPECIALISTS, INITIAL_SERVICE_REQUESTS, INITIAL_QUESTIONS } from './data/initialData';
-import { Wrench, ShieldCheck, Scale, CheckCircle2, X, MapPin, Check, Search, ArrowRight, Share2, Heart } from 'lucide-react';
+import { Wrench, ShieldCheck, Scale, CheckCircle2, X, MapPin, Check, Search, ArrowRight, Share2, Heart, Bell } from 'lucide-react';
 import { LegalTermsModal } from './components/LegalTermsModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { detectBestUserLocation, RUSSIAN_CITIES, DetectedCityResult } from './utils/geoCity';
@@ -31,6 +31,7 @@ import { ClientContractModal } from './components/ClientContractModal';
 import { MasterPlumbingEstimate, PlumbingContract } from './types';
 import { DonationModal } from './components/DonationModal';
 import { triggerNativeShare } from './utils/shareApp';
+import { playIncomingRequestSound, sendBrowserNotification } from './utils/notificationSound';
 
 function AppContent() {
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
@@ -696,6 +697,46 @@ function AppContent() {
 
   const userBadgeCount = clientReviewCount + masterIncomingOrdersCount;
 
+  // Floating alert and chime sound when a new request arrives for the logged-in master
+  const [newMasterOrderToast, setNewMasterOrderToast] = useState<ServiceCallRequest | null>(null);
+  const knownMasterOrderIdsRef = React.useRef<Set<string> | null>(null);
+
+  useEffect(() => {
+    if (!userMasterSpecialist) {
+      knownMasterOrderIdsRef.current = null;
+      return;
+    }
+
+    const currentMasterOrders = serviceRequests.filter(
+      (r) =>
+        (r.preferredMasterId === userMasterSpecialist.id ||
+          r.preferredMasterName === userMasterSpecialist.name ||
+          (userMasterSpecialist.userUid &&
+            (r.preferredMasterId === userMasterSpecialist.userUid ||
+              (r as any).preferredMasterUid === userMasterSpecialist.userUid))) &&
+        r.status !== 'completed' &&
+        r.status !== 'rejected' &&
+        !r.masterReply
+    );
+
+    const currentIds = new Set(currentMasterOrders.map((o) => o.id));
+
+    if (knownMasterOrderIdsRef.current !== null) {
+      // Find orders that were not previously known
+      const newOrders = currentMasterOrders.filter((o) => !knownMasterOrderIdsRef.current!.has(o.id));
+      if (newOrders.length > 0) {
+        const latest = newOrders[0];
+        setNewMasterOrderToast(latest);
+        playIncomingRequestSound();
+        sendBrowserNotification(`СантехПро: Новая заявка мастеру!`, {
+          body: `${latest.clientName || 'Заказчик'} (${latest.city || ''}): ${latest.problemDescription?.slice(0, 90) || 'Новое обращение к мастеру'}`,
+        });
+      }
+    }
+
+    knownMasterOrderIdsRef.current = currentIds;
+  }, [serviceRequests, userMasterSpecialist]);
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950">
       {/* Top Navbar */}
@@ -1200,6 +1241,60 @@ function AppContent() {
             setViewingContractForApproval(updatedContract);
           }}
         />
+      )}
+
+      {/* Toast alert for newly arrived master order */}
+      {newMasterOrderToast && (
+        <div className="fixed bottom-6 right-4 sm:right-6 z-50 max-w-sm sm:max-w-md w-full shadow-2xl transition-all">
+          <div className="bg-slate-900/95 backdrop-blur-md border-2 border-emerald-500 rounded-2xl p-4 text-white shadow-2xl">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
+                <Bell className="w-5 h-5 animate-pulse text-emerald-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-black tracking-wider text-emerald-400 uppercase">
+                    🔔 Новая заявка мастеру!
+                  </span>
+                  <button
+                    onClick={() => setNewMasterOrderToast(null)}
+                    className="text-slate-400 hover:text-white text-xs cursor-pointer p-1"
+                    title="Закрыть"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <p className="text-sm font-bold text-white truncate mt-0.5">
+                  {newMasterOrderToast.clientName || 'Заказчик'} • {newMasterOrderToast.city || ''}
+                </p>
+                <p className="text-xs text-slate-300 line-clamp-2 mt-1">
+                  {newMasterOrderToast.problemDescription}
+                </p>
+                <div className="mt-3 flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setNewMasterOrderToast(null);
+                      setCabinetInitialTab('requests');
+                      setActiveTab('cabinet');
+                    }}
+                    className="px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition cursor-pointer shadow-sm"
+                  >
+                    Открыть в кабинете
+                  </button>
+                  <button
+                    onClick={() => {
+                      playIncomingRequestSound(true);
+                    }}
+                    className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition cursor-pointer border border-slate-700"
+                    title="Повторить звук"
+                  >
+                    🔊
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

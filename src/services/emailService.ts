@@ -1,6 +1,12 @@
 import nodemailer from 'nodemailer';
 import fs from 'fs';
 import path from 'path';
+import dns from 'dns';
+
+// Ensure Node.js prefers IPv4 over IPv6 to avoid EHOSTUNREACH in cloud environments without IPv6 routing
+if (typeof dns.setDefaultResultOrder === 'function') {
+  dns.setDefaultResultOrder('ipv4first');
+}
 
 export interface SendResetEmailParams {
   to: string;
@@ -144,17 +150,18 @@ function getMailTransporter(customConfig?: Partial<SmtpSettings>) {
       host: config.host,
       port: config.port,
       secure: config.secure,
+      family: 4, // CRITICAL: forces IPv4 socket connection to avoid EHOSTUNREACH on IPv6 in cloud environments
       auth: {
         user: config.user,
         pass: config.pass,
       },
-      connectionTimeout: 10000,
-      greetingTimeout: 8000,
-      socketTimeout: 15000,
+      connectionTimeout: 15000,
+      greetingTimeout: 10000,
+      socketTimeout: 20000,
       tls: {
         rejectUnauthorized: false,
       },
-    }),
+    } as any),
     config,
   };
 }

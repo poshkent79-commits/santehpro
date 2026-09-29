@@ -44,11 +44,22 @@ import {
   GraduationCap,
   Video,
   Volume2,
+  VolumeX,
   Upload,
   Music,
   CheckCircle2,
   Image as ImageIcon
 } from 'lucide-react';
+import {
+  isNotificationSoundEnabled,
+  setNotificationSoundEnabled,
+  playIncomingRequestSound,
+  testNotificationSound,
+  isBrowserNotificationSupported,
+  getBrowserNotificationPermission,
+  requestBrowserNotificationPermission,
+  sendBrowserNotification,
+} from '../utils/notificationSound';
 import { PlumbingSpecialist, MasterWork, ServiceCallRequest, Article, MasterPlumbingEstimate } from '../types';
 import { WorkGalleryModal } from './WorkGalleryModal';
 import { compressImageFile } from '../utils/imageCompressor';
@@ -330,6 +341,11 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
   const [newRequestAlert, setNewRequestAlert] = useState<ServiceCallRequest | null>(null);
   const prevMessagesCountRef = useRef<number | null>(null);
 
+  // Sound and push notification settings for incoming master requests
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(() => isNotificationSoundEnabled());
+  const [browserPerm, setBrowserPerm] = useState<NotificationPermission | 'unsupported'>(() => getBrowserNotificationPermission());
+  const [soundTestSuccess, setSoundTestSuccess] = useState(false);
+
   // Unhandled direct requests (not completed and no reply yet)
   const unhandledRequests = messages.filter(
     (m) => m.status !== 'completed' && m.status !== 'rejected' && !m.masterReply
@@ -369,19 +385,13 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
 
   // Media limits for Article Form:
   // 1. Cover Image: max 15MB file size with lossless client compression
-  // 2. Audio: max 50MB when uploading directly to server; unlimited when adding via link from third-party app
+  // 2. Audio: direct link format without file size limits
   const MAX_COVER_IMAGE_SIZE_BYTES = 15 * 1024 * 1024; // 15 МБ
-  const MAX_AUDIO_UPLOAD_SIZE_BYTES = 50 * 1024 * 1024; // 50 МБ
 
   const [coverInputMode, setCoverInputMode] = useState<'upload' | 'url'>('upload');
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   const [coverStats, setCoverStats] = useState<{ originalSize: string; compressedSize: string; savings: string } | null>(null);
   const [coverError, setCoverError] = useState<string | null>(null);
-
-  const [audioInputMode, setAudioInputMode] = useState<'link' | 'upload'>('link');
-  const [isUploadingAudio, setIsUploadingAudio] = useState(false);
-  const [audioUploadStats, setAudioUploadStats] = useState<{ fileName: string; sizeStr: string } | null>(null);
-  const [audioUploadError, setAudioUploadError] = useState<string | null>(null);
 
   const formatByteSize = (bytes: number): string => {
     if (!bytes || bytes <= 0) return '0 КБ';
@@ -453,66 +463,6 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
     }
   };
 
-  const handleArticleAudioUpload = async (file: File) => {
-    if (!file) return;
-    setAudioUploadError(null);
-
-    const isAudioType = file.type.startsWith('audio/') || /\.(mp3|wav|ogg|m4a|aac)$/i.test(file.name);
-    if (!isAudioType) {
-      setAudioUploadError('Пожалуйста, выберите аудиофайл формата .mp3, .wav, .m4a, .ogg или .aac.');
-      return;
-    }
-
-    if (file.size > MAX_AUDIO_UPLOAD_SIZE_BYTES) {
-      setAudioUploadError(
-        `Размер аудиофайла (${formatByteSize(file.size)}) превышает лимит сервера 50 МБ. Для объёмных подкастов и длинных лекций используйте режим «По ссылке» (без ограничений размера).`
-      );
-      return;
-    }
-
-    setIsUploadingAudio(true);
-    try {
-      const reader = new FileReader();
-      const base64Promise = new Promise<string>((resolve, reject) => {
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = (e) => reject(e);
-        reader.readAsDataURL(file);
-      });
-
-      const base64Data = await base64Promise;
-
-      const uploadRes = await fetch('/api/upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fileName: file.name,
-          fileData: base64Data,
-          fileType: 'audio',
-          category: articleCategory,
-        }),
-      });
-
-      if (!uploadRes.ok) {
-        const errJson = await uploadRes.json().catch(() => ({}));
-        throw new Error(errJson.error || 'Ошибка загрузки аудиофайла на сервер');
-      }
-
-      const uploadData = await uploadRes.json();
-      const finalUrl = uploadData.fileUrl || base64Data;
-
-      setArticleAudioUrl(finalUrl);
-      setAudioUploadStats({
-        fileName: file.name,
-        sizeStr: formatByteSize(file.size),
-      });
-    } catch (err: any) {
-      console.error('Failed to upload audio file:', err);
-      setAudioUploadError('Ошибка при сохранении аудиофайла: ' + (err.message || ''));
-    } finally {
-      setIsUploadingAudio(false);
-    }
-  };
-
   const ratingNum = Number(specialist.rating) || 5.0;
   const isVerifiedMaster = Boolean(specialist.verified || specialist.status === 'approved');
   const isHighRated = isVerifiedMaster || ratingNum >= 4.8; // All verified masters have course publishing rights
@@ -553,21 +503,10 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
           if (prevMessagesCountRef.current !== null && fetchedRequests.length > prevMessagesCountRef.current) {
             const latest = fetchedRequests[0];
             setNewRequestAlert(latest);
-            try {
-              const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-              const osc = ctx.createOscillator();
-              const gain = ctx.createGain();
-              osc.connect(gain);
-              gain.connect(ctx.destination);
-              osc.frequency.setValueAtTime(587.33, ctx.currentTime);
-              osc.frequency.setValueAtTime(880, ctx.currentTime + 0.12);
-              gain.gain.setValueAtTime(0.25, ctx.currentTime);
-              gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
-              osc.start();
-              osc.stop(ctx.currentTime + 0.35);
-            } catch (audioErr) {
-              // benign
-            }
+            playIncomingRequestSound();
+            sendBrowserNotification(`СантехПро: Новая заявка от ${latest.clientName || 'клиента'}`, {
+              body: `${latest.city ? latest.city + ': ' : ''}${latest.problemDescription?.slice(0, 100) || 'Новое обращение к мастеру'}`,
+            });
           }
           prevMessagesCountRef.current = fetchedRequests.length;
           setMessages(fetchedRequests);
@@ -953,8 +892,6 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
         setArticleCover('');
         setCoverStats(null);
         setCoverError(null);
-        setAudioUploadStats(null);
-        setAudioUploadError(null);
         loadMasterArticles();
         setTimeout(() => setArticleSuccessMsg(''), 5000);
       }
@@ -2175,6 +2112,82 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
             </p>
           </div>
 
+          {/* Sound & Notification Control Bar */}
+          <div className="p-4 bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-slate-900/40 border border-emerald-500/30 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${soundEnabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700/50 text-slate-400'}`}>
+                {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">
+                    Звуковой сигнал при поступлении заявки
+                  </span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded font-black tracking-wide ${soundEnabled ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-slate-700 text-slate-400'}`}>
+                    {soundEnabled ? 'ВКЛЮЧЕН' : 'ОТКЛЮЧЕН'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  При получении нового заказа мгновенно прозвучит мягкий мелодичный гонг оповещения.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap sm:shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  testNotificationSound();
+                  setSoundTestSuccess(true);
+                  setTimeout(() => setSoundTestSuccess(false), 2500);
+                }}
+                className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                title="Воспроизвести проверочный сигнал"
+              >
+                <Bell className="w-3.5 h-3.5 text-amber-500" />
+                <span>{soundTestSuccess ? '✓ Звук проигран!' : 'Проверить звук'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !soundEnabled;
+                  setSoundEnabled(next);
+                  setNotificationSoundEnabled(next);
+                  if (next) {
+                    testNotificationSound();
+                  }
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-xs ${
+                  soundEnabled
+                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                    : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700'
+                }`}
+              >
+                {soundEnabled ? 'Звук активен' : 'Включить звук'}
+              </button>
+
+              {isBrowserNotificationSupported() && browserPerm !== 'granted' && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const granted = await requestBrowserNotificationPermission();
+                    setBrowserPerm(granted ? 'granted' : 'denied');
+                    if (granted) {
+                      sendBrowserNotification('СантехПро: Уведомления включены!', {
+                        body: 'Теперь вы будете получать всплывающие оповещения о заказах.',
+                      });
+                    }
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 text-xs font-bold transition cursor-pointer flex items-center gap-1"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Всплывающие пуши</span>
+                </button>
+              )}
+            </div>
+          </div>
+
           {isLoadingMessages ? (
             <div className="p-10 text-center text-sm text-slate-400">
               Загрузка обращений...
@@ -2538,135 +2551,49 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
                       </div>
                     </div>
 
-                    {/* AUDIO PODCAST / LECTURE SECTION (Requirement 3: External link with NO limits, or Server upload with max 50MB limit) */}
+                    {/* AUDIO PODCAST / LECTURE SECTION (Direct link format without file size limits) */}
                     <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 space-y-3">
                       <div className="flex items-center justify-between flex-wrap gap-2">
                         <div className="flex items-center gap-2">
                           <Volume2 className="w-4 h-4 text-emerald-500" />
                           <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                            Аудиоподкаст / аудиолекция к статье
+                            Аудиоподкаст / аудиолекция (прямая ссылка)
                           </span>
                         </div>
-                        {/* Audio Mode Tabs */}
-                        <div className="flex items-center p-0.5 rounded-lg bg-slate-200 dark:bg-slate-800 text-[11px] font-medium">
-                          <button
-                            type="button"
-                            onClick={() => setAudioInputMode('link')}
-                            className={`px-3 py-1 rounded-md transition cursor-pointer ${
-                              audioInputMode === 'link'
-                                ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 font-bold shadow-sm'
-                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                            }`}
-                          >
-                            По ссылке (без ограничений)
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setAudioInputMode('upload')}
-                            className={`px-3 py-1 rounded-md transition cursor-pointer flex items-center gap-1 ${
-                              audioInputMode === 'upload'
-                                ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 font-bold shadow-sm'
-                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                            }`}
-                          >
-                            <Upload className="w-3 h-3" />
-                            Загрузить на сервер (до 50 МБ)
-                          </button>
-                        </div>
+                        <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-500/20 text-[10px]">
+                          Прямая ссылка • Без ограничений размера
+                        </span>
                       </div>
 
-                      {/* Mode 1: Audio via External Link (NO limits on size) */}
-                      {audioInputMode === 'link' && (
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-[11px]">
-                            <span className="text-slate-600 dark:text-slate-400">
-                              Вставьте ссылку на подкаст из стороннего приложения или хостинга:
-                            </span>
-                            <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 font-semibold border border-emerald-500/20 text-[10px]">
-                              Без ограничений размера файла
-                            </span>
-                          </div>
-                          <div className="relative">
-                            <input
-                              type="url"
-                              value={articleAudioUrl}
-                              onChange={(e) => setArticleAudioUrl(e.target.value)}
-                              placeholder="https://music.yandex.ru/album/... или прямая ссылка на .mp3 / .m4a / облако"
-                              className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
-                            />
-                            {articleAudioUrl && (
-                              <button
-                                type="button"
-                                onClick={() => setArticleAudioUrl('')}
-                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-500 text-xs"
-                                title="Очистить"
-                              >
-                                <XCircle className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-                          <p className="text-[11px] text-slate-400">
-                            Поддерживаются Яндекс Музыка, VK, Podster, SoundCloud, облачные хранилища или прямые аудиопотоки. При добавлении по ссылке ограничений размера нет.
-                          </p>
+                      <div className="space-y-2">
+                        <div className="text-[11px] text-slate-600 dark:text-slate-400">
+                          Укажите прямую ссылку на аудиофайл или выпуск подкаста из стороннего приложения/сервиса:
                         </div>
-                      )}
-
-                      {/* Mode 2: Direct Server Upload (Max 50MB Limit) */}
-                      {audioInputMode === 'upload' && (
-                        <div className="space-y-2.5">
-                          <div className="flex items-center justify-between text-[11px]">
-                            <span className="text-slate-600 dark:text-slate-400">
-                              Выберите аудиофайл (.mp3, .wav, .m4a, .ogg, .aac, .flac):
-                            </span>
-                            <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 font-semibold border border-amber-500/20 text-[10px]">
-                              Лимит сервера: до 50 МБ
-                            </span>
-                          </div>
-
-                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                            <label className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-emerald-500/40 hover:border-emerald-500 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-semibold cursor-pointer transition">
-                              <Music className="w-4 h-4" />
-                              <span>{isUploadingAudio ? 'Загрузка и сохранение...' : 'Выбрать аудиофайл с устройства'}</span>
-                              <input
-                                type="file"
-                                accept="audio/*,.mp3,.wav,.m4a,.ogg,.aac,.flac"
-                                className="hidden"
-                                disabled={isUploadingAudio}
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) handleArticleAudioUpload(file);
-                                }}
-                              />
-                            </label>
-
-                            {isUploadingAudio && (
-                              <div className="flex items-center gap-2 px-3 py-2 text-xs text-amber-500 font-medium">
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                <span>Обработка...</span>
-                              </div>
-                            )}
-                          </div>
-
-                          {audioUploadError && (
-                            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-500 text-xs flex items-center gap-2">
-                              <AlertCircle className="w-4 h-4 shrink-0" />
-                              <span>{audioUploadError}</span>
-                            </div>
-                          )}
-
-                          {audioUploadStats && (
-                            <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs flex items-center justify-between">
-                              <div className="flex items-center gap-1.5 truncate">
-                                <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
-                                <span className="truncate font-medium">{audioUploadStats.fileName}</span>
-                              </div>
-                              <span className="font-bold text-[11px] ml-2 shrink-0">{audioUploadStats.sizeStr}</span>
-                            </div>
+                        <div className="relative">
+                          <input
+                            type="url"
+                            value={articleAudioUrl}
+                            onChange={(e) => setArticleAudioUrl(e.target.value)}
+                            placeholder="https://music.yandex.ru/... или прямая ссылка на .mp3 / .wav / .m4a / облачный диск"
+                            className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
+                          />
+                          {articleAudioUrl && (
+                            <button
+                              type="button"
+                              onClick={() => setArticleAudioUrl('')}
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-500 text-xs"
+                              title="Очистить"
+                            >
+                              <XCircle className="w-4 h-4" />
+                            </button>
                           )}
                         </div>
-                      )}
+                        <p className="text-[11px] text-slate-400">
+                          Поддерживаются прямые ссылки на аудио (.mp3, .wav, .m4a, .ogg), Яндекс Музыка, VK Музыка, Podster, SoundCloud или общедоступные ссылки из облака. При добавлении по прямой ссылке лимиты на размер файла отсутствуют.
+                        </p>
+                      </div>
 
-                      {/* Built-in Audio Player for instant verification */}
+                      {/* Built-in Audio Player for instant verification if audio URL is provided */}
                       {articleAudioUrl && (
                         <div className="pt-2 border-t border-slate-200 dark:border-slate-700/60">
                           <div className="flex items-center justify-between mb-1.5">
@@ -2676,14 +2603,11 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
                             </span>
                             <button
                               type="button"
-                              onClick={() => {
-                                setArticleAudioUrl('');
-                                setAudioUploadStats(null);
-                              }}
+                              onClick={() => setArticleAudioUrl('')}
                               className="text-[11px] text-slate-400 hover:text-rose-500 flex items-center gap-1"
                             >
                               <Trash2 className="w-3 h-3" />
-                              <span>Удалить</span>
+                              <span>Удалить ссылку</span>
                             </button>
                           </div>
                           <audio
