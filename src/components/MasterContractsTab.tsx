@@ -3,26 +3,18 @@ import {
   FileText,
   Plus,
   Search,
-  Filter,
   CheckCircle2,
   Clock,
   Printer,
-  Copy,
   Trash2,
   Edit2,
-  Share2,
-  Phone,
-  MapPin,
   ShieldCheck,
-  DollarSign,
-  Sparkles,
-  ExternalLink,
   MessageCircle,
   FileCheck,
   Check,
-  Briefcase,
   AlertCircle,
-  Layers
+  Award,
+  ArrowRight
 } from 'lucide-react';
 import { PlumbingContract, PlumbingSpecialist, MasterPlumbingEstimate } from '../types';
 import { ContractBuilderModal } from './ContractBuilderModal';
@@ -37,7 +29,6 @@ interface MasterContractsTabProps {
 export const MasterContractsTab: React.FC<MasterContractsTabProps> = ({
   specialist,
   availableEstimates = [],
-  onOpenEstimate,
 }) => {
   const [contracts, setContracts] = useState<PlumbingContract[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -57,56 +48,82 @@ export const MasterContractsTab: React.FC<MasterContractsTabProps> = ({
 
   const storageKey = `santehpro_master_contracts_${specialist.id}`;
 
-  // Load contracts
+  const defaultContract: PlumbingContract = {
+    id: `contract_sample_${specialist.id}`,
+    specialistId: specialist.id,
+    specialistName: specialist.name || 'Мастер-сантехник',
+    specialistPhone: specialist.phone || '+7 (999) 000-00-00',
+    specialistStatus: 'self_employed',
+    specialistCity: specialist.city || 'Москва',
+    clientName: 'Алексей Смирнов',
+    clientPhone: '+7 (916) 450-20-10',
+    clientAddress: `г. ${specialist.city || 'Москва'}, ул. Ленина, д. 24, кв. 86`,
+    contractNumber: `СП-2026/09-1082`,
+    contractDate: new Date().toISOString().slice(0, 10),
+    startDate: new Date().toISOString().slice(0, 10),
+    endDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+    title: 'Комплексный монтаж узла ввода водоснабжения и труб Rehau',
+    worksList:
+      '1. Сборка коллекторного узла (Far, редукторы давления, фильтры 100 мкм)\n2. Разводка труб горячего и холодного водоснабжения (сшитый полиэтилен Rehau 16/20)\n3. Монтаж шумопоглощающей канализации\n4. Установка системы защиты от протечек Neptun\n5. Опрессовка системы избыточным давлением 10 бар в течение 60 минут',
+    totalPrice: 42000,
+    advancePayment: 15000,
+    remainingPayment: 27000,
+    warrantyMonths: 24,
+    materialsResponsibility: 'mixed',
+    status: 'active',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  // Load contracts: sync from server with localStorage fallback
   useEffect(() => {
     setIsLoading(true);
+    let initialList: PlumbingContract[] = [];
     try {
       const saved = localStorage.getItem(storageKey);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          setContracts(parsed);
-          setIsLoading(false);
-          return;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          initialList = parsed;
         }
       }
-    } catch (e) {
-      console.warn('Error loading contracts from local storage:', e);
-    }
-
-    // Default sample contract if empty so master sees how it looks right away!
-    const defaultContract: PlumbingContract = {
-      id: `contract_sample_${specialist.id}`,
-      specialistId: specialist.id,
-      specialistName: specialist.name || 'Мастер-сантехник',
-      specialistPhone: specialist.phone || '+7 (999) 000-00-00',
-      specialistStatus: 'self_employed',
-      specialistCity: specialist.city || 'Москва',
-      clientName: 'Алексей Смирнов',
-      clientPhone: '+7 (916) 450-20-10',
-      clientAddress: `г. ${specialist.city || 'Москва'}, ул. Ленина, д. 24, кв. 86`,
-      contractNumber: `СП-2026/09-1082`,
-      contractDate: new Date().toISOString().slice(0, 10),
-      startDate: new Date().toISOString().slice(0, 10),
-      endDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-      title: 'Комплексный монтаж узла ввода водоснабжения и труб Rehau',
-      worksList:
-        '1. Сборка коллекторного узла (Far, редукторы давления, фильтры 100 мкм)\n2. Разводка труб горячего и холодного водоснабжения (сшитый полиэтилен Rehau 16/20)\n3. Монтаж шумопоглощающей канализации\n4. Установка системы защиты от протечек Neptun\n5. Опрессовка системы избыточным давлением 10 бар в течение 60 минут',
-      totalPrice: 42000,
-      advancePayment: 15000,
-      remainingPayment: 27000,
-      warrantyMonths: 24,
-      materialsResponsibility: 'mixed',
-      status: 'active',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    setContracts([defaultContract]);
-    try {
-      localStorage.setItem(storageKey, JSON.stringify([defaultContract]));
     } catch {}
-    setIsLoading(false);
+
+    // Fetch from server /api/contracts?specialistId=...
+    fetch(`/api/contracts?specialistId=${encodeURIComponent(specialist.id)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((serverContracts) => {
+        if (Array.isArray(serverContracts) && serverContracts.length > 0) {
+          const mergedMap = new Map<string, PlumbingContract>();
+          initialList.forEach((c) => mergedMap.set(c.id, c));
+          serverContracts.forEach((c: PlumbingContract) => {
+            const loc = mergedMap.get(c.id);
+            if (!loc || new Date(c.updatedAt || 0) >= new Date(loc.updatedAt || 0)) {
+              mergedMap.set(c.id, c);
+            }
+          });
+          const merged = Array.from(mergedMap.values());
+          setContracts(merged);
+          try {
+            localStorage.setItem(storageKey, JSON.stringify(merged));
+          } catch {}
+        } else if (initialList.length > 0) {
+          setContracts(initialList);
+        } else {
+          setContracts([defaultContract]);
+          try {
+            localStorage.setItem(storageKey, JSON.stringify([defaultContract]));
+          } catch {}
+        }
+      })
+      .catch(() => {
+        if (initialList.length > 0) {
+          setContracts(initialList);
+        } else {
+          setContracts([defaultContract]);
+        }
+      })
+      .finally(() => setIsLoading(false));
   }, [specialist.id]);
 
   const saveContractsList = (newList: PlumbingContract[]) => {
@@ -116,7 +133,7 @@ export const MasterContractsTab: React.FC<MasterContractsTabProps> = ({
     } catch {}
   };
 
-  const handleSaveContract = (contract: PlumbingContract) => {
+  const handleSaveContract = async (contract: PlumbingContract) => {
     const existingIndex = contracts.findIndex((c) => c.id === contract.id);
     let updated: PlumbingContract[];
     if (existingIndex >= 0) {
@@ -131,22 +148,46 @@ export const MasterContractsTab: React.FC<MasterContractsTabProps> = ({
     setIsBuilderOpen(false);
     setEditingContract(null);
     setViewingContract(contract);
+
+    // Save to server database
+    try {
+      await fetch('/api/contracts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(contract),
+      });
+    } catch (e) {
+      console.warn('Error syncing contract to server:', e);
+    }
   };
 
-  const handleDeleteContract = (id: string) => {
+  const handleDeleteContract = async (id: string) => {
     if (!window.confirm('Вы действительно хотите удалить этот договор?')) return;
     const updated = contracts.filter((c) => c.id !== id);
     saveContractsList(updated);
     showToast('Договор удален');
     if (viewingContract?.id === id) setViewingContract(null);
+
+    try {
+      await fetch(`/api/contracts/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    } catch {}
   };
 
-  const handleStatusChange = (newStatus: PlumbingContract['status']) => {
+  const handleStatusChange = async (newStatus: PlumbingContract['status']) => {
     if (!viewingContract) return;
     const updated = contracts.map((c) => (c.id === viewingContract.id ? { ...c, status: newStatus } : c));
     saveContractsList(updated);
-    setViewingContract({ ...viewingContract, status: newStatus });
+    const updatedItem = { ...viewingContract, status: newStatus };
+    setViewingContract(updatedItem);
     showToast(`Статус договора изменен на «${newStatus === 'completed' ? 'Исполнен' : 'В работе'}»`);
+
+    try {
+      await fetch(`/api/contracts/${encodeURIComponent(viewingContract.id)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+    } catch {}
   };
 
   // Filtered list
@@ -161,7 +202,6 @@ export const MasterContractsTab: React.FC<MasterContractsTabProps> = ({
     return matchSearch && matchStatus;
   });
 
-  // Calculate stats
   const totalAmount = contracts.reduce((acc, c) => acc + (c.totalPrice || 0), 0);
   const activeCount = contracts.filter((c) => c.status === 'active').length;
   const completedCount = contracts.filter((c) => c.status === 'completed').length;
@@ -195,11 +235,10 @@ export const MasterContractsTab: React.FC<MasterContractsTabProps> = ({
               <span>Официальный юридический инструмент мастера</span>
             </div>
             <h2 className="text-base sm:text-xl font-extrabold text-white tracking-tight">
-              Договоры подряда и акты сдачи-приёмки (PDF)
+              Договоры подряда, Акты сдачи и Гарантийные талоны
             </h2>
             <p className="text-xs text-slate-300 leading-relaxed">
-              Защитите себя от необоснованных претензий и неплатежей. Формируйте официальный договор подряда
-              с гарантией и актом в 1 клик прямо из сметы. Отправляйте клиенту в WhatsApp или распечатывайте.
+              Защитите себя от необоснованных претензий и задержек оплаты. Оформляйте договор с клиентом перед началом работ, подписывайте на экране смартфона или по ссылке в WhatsApp, а после опрессовки в 1 клик формируйте Акт сдачи и Гарантийный талон.
             </p>
           </div>
 
@@ -209,7 +248,7 @@ export const MasterContractsTab: React.FC<MasterContractsTabProps> = ({
               setEditingContract(null);
               setIsBuilderOpen(true);
             }}
-            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 hover:from-blue-500 hover:to-indigo-400 text-white font-bold text-xs flex items-center space-x-2 transition shadow-lg shadow-blue-500/25 shrink-0 cursor-pointer"
+            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 hover:from-blue-500 hover:to-indigo-400 text-white font-bold text-xs flex items-center space-x-2 transition shadow-lg shadow-blue-500/25 shrink-0 cursor-pointer active:scale-95"
           >
             <Plus className="w-4 h-4" />
             <span>Создать договор</span>
@@ -295,8 +334,8 @@ export const MasterContractsTab: React.FC<MasterContractsTabProps> = ({
             <h3 className="text-base font-bold text-white">Договоры не найдены</h3>
             <p className="text-xs text-slate-400">
               {searchQuery || statusFilter !== 'all'
-                ? 'По заданным параметрам поиска ничего не найдено. Попробуйте сбросить фильтры.'
-                : 'Создайте свой первый официальный договор с актом сдачи-приёмки. Вы сможете распечатать его или отправить клиенту в WhatsApp.'}
+                ? 'По заданным параметрам ничего не найдено. Сбросьте фильтры поиска.'
+                : 'Создайте первый официальный договор с актом и гарантией. Вы сможете подписать его на телефоне или отправить клиенту в WhatsApp.'}
             </p>
           </div>
           <button
@@ -314,6 +353,9 @@ export const MasterContractsTab: React.FC<MasterContractsTabProps> = ({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredContracts.map((contract) => {
+            const isContractSigned = Boolean(contract.clientSignature || contract.clientSignedAt);
+            const isActSigned = Boolean(contract.actClientSignature || contract.actClientSignedAt || contract.status === 'completed');
+
             return (
               <div
                 key={contract.id}
@@ -336,15 +378,19 @@ export const MasterContractsTab: React.FC<MasterContractsTabProps> = ({
                       </h3>
                     </div>
 
-                    {/* Status Badge */}
+                    {/* Status Badges */}
                     <div>
-                      {contract.status === 'completed' ? (
+                      {contract.status === 'completed' || isActSigned ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40">
-                          <CheckCircle2 className="w-3 h-3" /> Завершен
+                          <CheckCircle2 className="w-3 h-3" /> Акт подписан
+                        </span>
+                      ) : isContractSigned ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                          <Check className="w-3 h-3" /> Договор в силе
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                          <Clock className="w-3 h-3" /> В работе
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                          <Clock className="w-3 h-3" /> Ожидает подписи
                         </span>
                       )}
                     </div>
@@ -376,7 +422,7 @@ export const MasterContractsTab: React.FC<MasterContractsTabProps> = ({
                   {/* Highlights */}
                   <div className="flex flex-wrap items-center gap-2 text-[11px]">
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-800 text-slate-300 border border-slate-700">
-                      <ShieldCheck className="w-3 h-3 text-emerald-400" /> Гарантия: {contract.warrantyMonths} мес.
+                      <Award className="w-3 h-3 text-emerald-400" /> Гарантия: {contract.warrantyMonths || 24} мес.
                     </span>
                     {contract.advancePayment > 0 && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-950/60 text-blue-300 border border-blue-800/50">
@@ -397,12 +443,12 @@ export const MasterContractsTab: React.FC<MasterContractsTabProps> = ({
 
                   {/* Action buttons */}
                   <div className="flex flex-wrap items-center gap-1.5">
-                    {/* View / Print Full Document */}
+                    {/* View Full Document */}
                     <button
                       type="button"
                       onClick={() => setViewingContract(contract)}
-                      className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold transition flex items-center gap-1 shadow-md cursor-pointer"
-                      title="Открыть официальный бланк договора и акта"
+                      className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold transition flex items-center gap-1 shadow-md cursor-pointer active:scale-95"
+                      title="Открыть официальный бланк договора, акта и гарантии"
                     >
                       <FileCheck className="w-3.5 h-3.5" />
                       <span>Бланк и Акт</span>
@@ -412,11 +458,12 @@ export const MasterContractsTab: React.FC<MasterContractsTabProps> = ({
                     <button
                       type="button"
                       onClick={() => {
-                        const text = `Здравствуйте, ${contract.clientName}!\n\nНаправляю вам официальный договор подряда и акт № ${contract.contractNumber} на сантехнические работы по адресу: ${contract.clientAddress}.\nСумма: ${contract.totalPrice.toLocaleString('ru-RU')} ₽. Гарантия: ${contract.warrantyMonths} мес.\nСервис СантехПро: https://santehpro.info`;
+                        const shareUrl = `${window.location.origin}/?contractId=${encodeURIComponent(contract.id)}`;
+                        const text = `Здравствуйте, ${contract.clientName}!\n\nНаправляю вам официальный договор подряда и акт № ${contract.contractNumber} на сантехнические работы по адресу: ${contract.clientAddress}.\nСумма: ${contract.totalPrice.toLocaleString('ru-RU')} ₽. Гарантия: ${contract.warrantyMonths || 24} мес.\nСсылка для согласования и подписи:\n${shareUrl}`;
                         const url = `https://wa.me/${contract.clientPhone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;
                         window.open(url, '_blank');
                       }}
-                      className="p-2 rounded-xl bg-emerald-950 hover:bg-emerald-900 text-emerald-400 border border-emerald-800/60 transition cursor-pointer"
+                      className="p-2 rounded-xl bg-emerald-950 hover:bg-emerald-900 text-emerald-400 border border-emerald-800/60 transition cursor-pointer active:scale-95"
                       title="Отправить в WhatsApp"
                     >
                       <MessageCircle className="w-3.5 h-3.5" />
@@ -429,7 +476,7 @@ export const MasterContractsTab: React.FC<MasterContractsTabProps> = ({
                         setEditingContract(contract);
                         setIsBuilderOpen(true);
                       }}
-                      className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer"
+                      className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer active:scale-95"
                       title="Редактировать данные договора"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
@@ -439,7 +486,7 @@ export const MasterContractsTab: React.FC<MasterContractsTabProps> = ({
                     <button
                       type="button"
                       onClick={() => handleDeleteContract(contract.id)}
-                      className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-rose-400 transition cursor-pointer"
+                      className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-rose-400 transition cursor-pointer active:scale-95"
                       title="Удалить договор"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -479,10 +526,17 @@ export const MasterContractsTab: React.FC<MasterContractsTabProps> = ({
             setIsBuilderOpen(true);
           }}
           onStatusChange={handleStatusChange}
-          onUpdateContract={(updated) => {
+          onUpdateContract={async (updated) => {
             const newArr = contracts.map((c) => (c.id === updated.id ? updated : c));
             saveContractsList(newArr);
             setViewingContract(updated);
+            try {
+              await fetch(`/api/contracts/${encodeURIComponent(updated.id)}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updated),
+              });
+            } catch {}
           }}
         />
       )}

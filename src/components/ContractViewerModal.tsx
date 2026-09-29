@@ -11,15 +11,29 @@ import {
   FileText,
   FileCheck,
   Wrench,
-  ExternalLink,
-  MessageCircle,
   PenTool,
-  Send,
-  Sparkles,
-  RotateCcw
+  Maximize2,
+  Minimize2,
+  ZoomIn,
+  ZoomOut,
+  Type,
+  Award,
+  ArrowRight,
+  Clock,
+  CheckCircle2,
+  Globe
 } from 'lucide-react';
 import { PlumbingContract } from '../types';
 import { SignaturePadModal } from './SignaturePadModal';
+import { ShareContractModal } from './ShareContractModal';
+import {
+  downloadContractWordDoc,
+  printContractPdfDocument,
+  downloadContractHtmlFile,
+  formatDateRu,
+  getStatusLabel,
+  getMaterialsLabel
+} from '../utils/contractExport';
 
 export const getContractShareUrl = (contractId: string) => {
   if (typeof window === 'undefined') return `https://santehpro.info/?contractId=${contractId}`;
@@ -44,9 +58,14 @@ export const ContractViewerModal: React.FC<ContractViewerModalProps> = ({
   onUpdateContract,
 }) => {
   const [copied, setCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState<'contract' | 'act'>('contract');
+  const [activeTab, setActiveTab] = useState<'contract' | 'act' | 'warranty'>('contract');
   const [signingRole, setSigningRole] = useState<'master' | 'client' | null>(null);
+  const [signingTarget, setSigningTarget] = useState<'contract' | 'act'>('contract');
   const [toastMessage, setToastMessage] = useState('');
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(true);
+  const [fontScale, setFontScale] = useState<1 | 2 | 3>(2);
 
   if (!isOpen || !contract) return null;
 
@@ -55,61 +74,63 @@ export const ContractViewerModal: React.FC<ContractViewerModalProps> = ({
     setTimeout(() => setToastMessage(''), 4000);
   };
 
-  const formatDate = (isoStr?: string) => {
-    if (!isoStr) return '';
+  const statusLabel = getStatusLabel(contract.specialistStatus);
+  const materialsLabel = getMaterialsLabel(contract.materialsResponsibility);
+  const warrantyMonths = contract.warrantyMonths || 24;
+
+  const handleToggleFullscreen = () => {
+    const nextState = !isFullscreen;
+    setIsFullscreen(nextState);
     try {
-      const d = new Date(isoStr);
-      return d.toLocaleDateString('ru-RU', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric',
-      });
-    } catch {
-      return isoStr;
+      if (nextState) {
+        if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
+      } else {
+        if (document.fullscreenElement && document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
+      }
+    } catch {}
+  };
+
+  // High-Resolution Print / PDF dialog
+  const handlePrint = () => {
+    showToast('Подготовка документа к печати / PDF...');
+    printContractPdfDocument(contract, activeTab);
+  };
+
+  // 100% UTF-8 BOM Word (.doc) export (prevents all mojibake!)
+  const handleDownloadDoc = () => {
+    if (isDownloading) return;
+    setIsDownloading(true);
+    showToast('Скачивание Word (.doc) в кодировке UTF-8...');
+    try {
+      downloadContractWordDoc(contract, activeTab);
+    } catch (err) {
+      console.error('Download error:', err);
+      showToast('Ошибка при скачивании файла');
+    } finally {
+      setTimeout(() => setIsDownloading(false), 800);
     }
   };
 
-  const statusLabel = {
-    self_employed: 'Плательщик налога на профессиональный доход (Самозанятый)',
-    individual: 'Физическое лицо',
-    ip: 'Индивидуальный предприниматель',
-    company: 'Юридическое лицо',
-  }[contract.specialistStatus || 'self_employed'];
-
-  const materialsLabel = {
-    contractor: 'Материалы приобретаются Исполнителем за счёт Заказчика',
-    client: 'Материалы приобретаются и предоставляются Заказчиком',
-    mixed: 'По согласованию сторон (основные материалы Заказчика, расходные материалы Исполнителя)',
-  }[contract.materialsResponsibility || 'mixed'];
-
-  // Print function
-  const handlePrint = () => {
-    window.print();
+  // Standalone offline HTML export
+  const handleDownloadHtml = () => {
+    showToast('Скачивание автономного файла (.html)...');
+    try {
+      downloadContractHtmlFile(contract);
+    } catch {
+      showToast('Ошибка при скачивании HTML');
+    }
   };
 
-  // WhatsApp sharing with remote approval link
-  const handleShareWhatsApp = () => {
-    const shareLink = getContractShareUrl(contract.id);
-    const text = `Здравствуйте, ${contract.clientName}!\n\nНаправляю вам официальный договор подряда и акт № ${contract.contractNumber} от ${formatDate(contract.contractDate)} на выполнение сантехнических работ по адресу: ${contract.clientAddress}.\n\nСумма договора: ${contract.totalPrice.toLocaleString('ru-RU')} ₽.\nОфициальная гарантия на монтаж: ${contract.warrantyMonths} мес.\n\nОзнакомьтесь и согласуйте договор со своего смартфона по защищённой ссылке:\n${shareLink}\n\nС уважением, мастер ${contract.specialistName} (${contract.specialistPhone})\nСервис СантехПро: https://santehpro.info`;
-    const url = `https://wa.me/${contract.clientPhone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
-  };
-
-  // Quick copy link
-  const handleCopyLink = async () => {
-    const link = getContractShareUrl(contract.id);
-    await navigator.clipboard.writeText(link);
-    showToast('Ссылка на согласование договора скопирована в буфер обмена!');
-  };
-
-  // Copy full text
+  // Copy plain text summary of contract to clipboard
   const handleCopyText = async () => {
-    const fullDocText = `ДОГОВОР ПОДРЯДА № ${contract.contractNumber}
-на выполнение сантехнических работ
-г. ${contract.specialistCity || 'Москва'}                                      ${formatDate(contract.contractDate)}
+    const fullDocText = `ДОГОВОР ПОДРЯДА № ${contract.contractNumber} от ${formatDateRu(contract.contractDate)}
 
 1. СТОРОНЫ:
-Исполнитель: ${contract.specialistName} (${statusLabel}), тел: ${contract.specialistPhone}${contract.specialistInn ? `, ИНН: ${contract.specialistInn}` : ''}
+Исполнитель: ${contract.specialistName}, тел: ${contract.specialistPhone}
 Заказчик: ${contract.clientName}, тел: ${contract.clientPhone || '—'}, адрес объекта: ${contract.clientAddress}
 
 2. ПРЕДМЕТ ДОГОВОРА:
@@ -120,310 +141,356 @@ ${contract.worksList}
 3. СТОИМОСТЬ И ПОРЯДОК РАСЧЁТОВ:
 Общая стоимость работ: ${contract.totalPrice.toLocaleString('ru-RU')} рублей.
 Аванс: ${contract.advancePayment.toLocaleString('ru-RU')} рублей.
-Остаток к оплате после подписания Акта сдачи-приёмки: ${contract.remainingPayment.toLocaleString('ru-RU')} рублей.
+Остаток к оплате после приёмки: ${contract.remainingPayment.toLocaleString('ru-RU')} рублей.
 
 4. СРОКИ И ГАРАНТИЯ:
-Срок выполнения: с ${formatDate(contract.startDate)} по ${formatDate(contract.endDate)}.
-Гарантийный срок на монтажные работы: ${contract.warrantyMonths} месяцев со дня подписания Акта.
+Срок выполнения: с ${formatDateRu(contract.startDate)} по ${formatDateRu(contract.endDate)}.
+Гарантийный срок на монтажные работы: ${warrantyMonths} месяцев со дня подписания Акта.
 
 Сформировано в сервисе СантехПро: https://santehpro.info`;
 
     await navigator.clipboard.writeText(fullDocText);
     setCopied(true);
     setTimeout(() => setCopied(false), 3000);
-  };
-
-  // Download Word doc format (.doc html template)
-  const handleDownloadDoc = () => {
-    const docContent = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Договор № ${contract.contractNumber}</title>
-  <style>
-    body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.4; color: #000; padding: 20px; }
-    h1 { font-size: 14pt; text-align: center; text-transform: uppercase; margin-bottom: 5px; }
-    h2 { font-size: 12pt; text-align: center; margin-top: 0; }
-    .header-table { width: 100%; border: none; margin-bottom: 20px; }
-    .section-title { font-weight: bold; margin-top: 15px; margin-bottom: 5px; }
-    p { margin: 6px 0; text-align: justify; }
-    .sign-table { width: 100%; margin-top: 40px; border-collapse: collapse; }
-    .sign-table td { width: 50%; vertical-align: top; padding: 10px; }
-    .page-break { page-break-before: always; }
-  </style>
-</head>
-<body>
-  <h1>Договор подряда № ${contract.contractNumber}</h1>
-  <h2>на выполнение сантехнических и монтажных работ</h2>
-  <table class="header-table">
-    <tr>
-      <td>г. ${contract.specialistCity || 'Москва'}</td>
-      <td style="text-align: right;">«___» _________ 202_ г.</td>
-    </tr>
-  </table>
-
-  <p><b>Исполнитель:</b> ${contract.specialistName}, статус: ${statusLabel}${contract.specialistInn ? `, ИНН: ${contract.specialistInn}` : ''}, телефон: ${contract.specialistPhone}, с одной стороны, и</p>
-  <p><b>Заказчик:</b> ${contract.clientName}${contract.clientPassport ? `, паспортные данные: ${contract.clientPassport}` : ''}, телефон: ${contract.clientPhone || '—'}, проживающий/объект по адресу: ${contract.clientAddress}, с другой стороны, заключили настоящий Договор о нижеследующем:</p>
-
-  <div class="section-title">1. ПРЕДМЕТ ДОГОВОРА</div>
-  <p>1.1. Заказчик поручает, а Исполнитель принимает на себя обязательства по выполнению комплекса сантехнических работ на объекте: <b>${contract.clientAddress}</b>.</p>
-  <p>1.2. Наименование объекта/работ: <b>${contract.title}</b>.</p>
-  <p>1.3. Перечень выполняемых работ:</p>
-  <p style="white-space: pre-wrap; font-family: monospace; font-size: 11pt; padding-left: 20px;">${contract.worksList}</p>
-
-  <div class="section-title">2. СРОКИ ВЫПОЛНЕНИЯ РАБОТ</div>
-  <p>2.1. Дата начала работ: «${formatDate(contract.startDate)}».</p>
-  <p>2.2. Плановая дата окончания работ: «${formatDate(contract.endDate)}».</p>
-  <p>2.3. Сроки могут быть скорректированы по согласованию сторон в случае задержки подачи воды/электричества или задержки поставки материалов Заказчиком.</p>
-
-  <div class="section-title">3. СТОИМОСТЬ И ПОРЯДОК РАСЧЁТОВ</div>
-  <p>3.1. Общая стоимость работ по настоящему Договору составляет: <b>${contract.totalPrice.toLocaleString('ru-RU')} (рублей)</b>.</p>
-  <p>3.2. Сумма авансового платежа (предоплаты): <b>${contract.advancePayment.toLocaleString('ru-RU')} рублей</b> (выплачивается до начала работ).</p>
-  <p>3.3. Окончательный расчёт в размере <b>${contract.remainingPayment.toLocaleString('ru-RU')} рублей</b> производится Заказчиком в день подписания Сторонами Акта сдачи-приёмки выполненных работ.</p>
-  <p>3.4. Условие по материалам: ${materialsLabel}.</p>
-
-  <div class="section-title">4. КАЧЕСТВО И ГАРАНТИЙНЫЕ ОБЯЗАТЕЛЬСТВА</div>
-  <p>4.1. Исполнитель гарантирует качество выполненных монтажных соединений и соблюдение действующих строительных норм (СП 73.13330 / СНиП 3.05.01-85).</p>
-  <p>4.2. Перед сдачей работ Исполнитель обязан провести опрессовку (гидравлические испытания) смонтированной системы избыточным рабочим давлением в присутствии Заказчика.</p>
-  <p>4.3. Гарантийный срок на выполненные монтажные работы составляет <b>${contract.warrantyMonths} месяцев</b> с момента подписания Акта сдачи-приёмки.</p>
-  <p>4.4. Гарантия не распространяется на заводской брак сантехнических приборов и запорной арматуры, предоставленных Заказчиком, а также на дефекты, возникшие вследствие гидроударов в общедомовой сети сверх нормы или механических повреждений третьими лицами.</p>
-
-  <div class="section-title">5. РЕКВИЗИТЫ И ПОДПИСИ СТОРОН</div>
-  <table class="sign-table">
-    <tr>
-      <td>
-        <b>ИСПОЛНИТЕЛЬ:</b><br><br>
-        ${contract.specialistName}<br>
-        Тел: ${contract.specialistPhone}<br>
-        ${contract.specialistInn ? `ИНН: ${contract.specialistInn}<br>` : ''}
-        Подпись: ________________ / ${contract.specialistName} /<br>
-        М.П.
-      </td>
-      <td>
-        <b>ЗАКАЗЧИК:</b><br><br>
-        ${contract.clientName}<br>
-        Тел: ${contract.clientPhone || '—'}<br>
-        Адрес: ${contract.clientAddress}<br>
-        Подпись: ________________ / ${contract.clientName} /
-      </td>
-    </tr>
-  </table>
-
-  <div class="page-break"></div>
-
-  <h1>АКТ СДАЧИ-ПРИЁМКИ ВЫПОЛНЕННЫХ РАБОТ</h1>
-  <h2>Приложение № 1 к Договору подряда № ${contract.contractNumber}</h2>
-  <table class="header-table">
-    <tr>
-      <td>г. ${contract.specialistCity || 'Москва'}</td>
-      <td style="text-align: right;">«___» _________ 202_ г.</td>
-    </tr>
-  </table>
-
-  <p>Мы, нижеподписавшиеся, Исполнитель <b>${contract.specialistName}</b> и Заказчик <b>${contract.clientName}</b>, составили настоящий Акт о том, что:</p>
-  <p>1. Исполнителем выполнены в полном объёме и в установленный срок сантехнические работы по объекту: <b>${contract.clientAddress}</b> в соответствии с Договором № ${contract.contractNumber}.</p>
-  <p>2. Гидравлические испытания (опрессовка) системы проведены успешно, видимых и скрытых протечек не обнаружено.</p>
-  <p>3. Стороны претензий по качеству, объёму и срокам выполненных работ друг к другу не имеют.</p>
-  <p>4. Общая стоимость фактически выполненных работ составляет: <b>${contract.totalPrice.toLocaleString('ru-RU')} рублей</b>. Оплата произведена Заказчиком в полном объёме.</p>
-  <p>5. Настоящий Акт подтверждает вступление в силу гарантийных обязательств сроком на <b>${contract.warrantyMonths} месяцев</b>.</p>
-
-  <table class="sign-table" style="margin-top: 50px;">
-    <tr>
-      <td>
-        <b>Работу сдал (Исполнитель):</b><br><br>
-        Подпись: ________________ / ${contract.specialistName} /
-      </td>
-      <td>
-        <b>Работу принял (Заказчик):</b><br><br>
-        Подпись: ________________ / ${contract.clientName} /
-      </td>
-    </tr>
-  </table>
-  
-  <p style="margin-top: 40px; font-size: 10pt; color: #666; text-align: center;">Документ оформлен с помощью сервиса «СантехПро» — santehpro.info</p>
-</body>
-</html>`;
-
-    const blob = new Blob([docContent], { type: 'application/msword;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Договор_${contract.contractNumber.replace(/[\/\\:]/g, '_')}.doc`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    showToast('Текст договора скопирован в буфер обмена!');
   };
 
   // Save signed signature from SignaturePadModal
-  const handleSignatureCaptured = (dataUrl: string) => {
+  const handleSignatureCaptured = async (dataUrl: string) => {
     const nowIso = new Date().toISOString();
     let updated: PlumbingContract;
 
-    if (signingRole === 'master') {
-      updated = {
-        ...contract,
-        masterSignature: dataUrl,
-        masterSignedAt: nowIso,
-        updatedAt: nowIso,
-      };
-      showToast('Подпись мастера успешно сохранена в документе!');
+    const certNum = contract.warrantyCertificateNumber || `ГАР-${contract.contractNumber.replace(/\D/g, '') || '2026-01'}`;
+    const baseDate = new Date();
+    baseDate.setMonth(baseDate.getMonth() + warrantyMonths);
+    const validUntil = baseDate.toISOString().slice(0, 10);
+
+    if (signingTarget === 'contract') {
+      if (signingRole === 'master') {
+        updated = {
+          ...contract,
+          masterSignature: dataUrl,
+          masterSignedAt: nowIso,
+          updatedAt: nowIso,
+        };
+        showToast('Подпись мастера сохранена в договоре!');
+      } else {
+        const sealId = contract.digitalSealId || `ПЭП-RU-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+        updated = {
+          ...contract,
+          clientSignature: dataUrl,
+          clientSignedAt: nowIso,
+          clientSignMethod: 'onsite_finger',
+          digitalSealId: sealId,
+          status: contract.status === 'draft' ? 'active' : contract.status,
+          updatedAt: nowIso,
+        };
+        showToast('Подпись заказчика зафиксирована в договоре!');
+      }
     } else {
-      // Client onsite signing
-      const sealId = contract.digitalSealId || `ПЭП-RU-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-      updated = {
-        ...contract,
-        clientSignature: dataUrl,
-        clientSignedAt: nowIso,
-        clientSignMethod: 'onsite_finger',
-        digitalSealId: sealId,
-        status: contract.status === 'draft' ? 'active' : contract.status,
-        updatedAt: nowIso,
-      };
-      showToast('Подпись заказчика успешно зафиксирована на месте!');
+      // Signing the Acceptance Act (Акт сдачи-приёмки)
+      if (signingRole === 'master') {
+        updated = {
+          ...contract,
+          actDate: contract.actDate || new Date().toISOString().slice(0, 10),
+          actMasterSignature: dataUrl,
+          actSignedAt: nowIso,
+          warrantyCertificateNumber: certNum,
+          warrantyValidUntil: validUntil,
+          updatedAt: nowIso,
+        };
+        showToast('Подпись мастера поставлена в Акте сдачи!');
+      } else {
+        const sealId = contract.actSealId || contract.digitalSealId || `ПЭП-АКТ-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+        updated = {
+          ...contract,
+          actDate: contract.actDate || new Date().toISOString().slice(0, 10),
+          actClientSignature: dataUrl,
+          actClientSignedAt: nowIso,
+          actSealId: sealId,
+          actStatus: 'signed',
+          status: 'completed', // Work accepted! Contract completed!
+          warrantyCertificateNumber: certNum,
+          warrantyValidUntil: validUntil,
+          updatedAt: nowIso,
+        };
+        showToast('Акт подписан заказчиком! Работы приняты, гарантия активирована!');
+      }
+    }
+
+    // Save to server
+    try {
+      await fetch(`/api/contracts/${encodeURIComponent(updated.id)}/sign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated),
+      });
+    } catch (e) {
+      console.warn('Could not sync signature to server:', e);
     }
 
     if (onUpdateContract) onUpdateContract(updated);
     setSigningRole(null);
   };
 
-  const isMasterSigned = Boolean(contract.masterSignature);
-  const isClientSigned = Boolean(contract.clientSignature || contract.clientSignedAt);
+  // One-click Transition: Transition from Contract in progress to Handover Act & Warranty
+  const handleInitiateActHandover = () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const certNum = contract.warrantyCertificateNumber || `ГАР-${contract.contractNumber.replace(/\D/g, '') || '2026-01'}`;
+    const baseDate = new Date();
+    baseDate.setMonth(baseDate.getMonth() + warrantyMonths);
+    const validUntil = baseDate.toISOString().slice(0, 10);
+
+    const updated: PlumbingContract = {
+      ...contract,
+      actDate: contract.actDate || today,
+      warrantyCertificateNumber: certNum,
+      warrantyValidUntil: validUntil,
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (onUpdateContract) onUpdateContract(updated);
+    setActiveTab('act');
+    showToast('Сформирован Акт сдачи-приёмки и Гарантийный талон! Передайте заказчику для подписания.');
+  };
+
+  const isContractMasterSigned = Boolean(contract.masterSignature);
+  const isContractClientSigned = Boolean(contract.clientSignature || contract.clientSignedAt);
+  const isActMasterSigned = Boolean(contract.actMasterSignature);
+  const isActClientSigned = Boolean(contract.actClientSignature || contract.actClientSignedAt);
+
+  // Font scale class helper
+  const fontBodyClass = fontScale === 1 
+    ? 'text-xs sm:text-sm leading-relaxed' 
+    : fontScale === 2 
+    ? 'text-sm sm:text-base leading-relaxed' 
+    : 'text-base sm:text-lg leading-relaxed';
+
+  const fontTitleClass = fontScale === 1
+    ? 'text-sm sm:text-base font-black'
+    : fontScale === 2
+    ? 'text-base sm:text-xl font-black'
+    : 'text-lg sm:text-2xl font-black';
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-4xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[96vh]">
-        {/* Top Control Bar */}
-        <div className="p-3 sm:p-5 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3 bg-slate-900/95 sticky top-0 z-20">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center text-white shadow-md">
-              <FileCheck className="w-5 h-5 text-white" />
+    <div
+      className={`fixed inset-0 z-50 overflow-hidden bg-slate-950/85 backdrop-blur-sm flex items-center justify-center animate-in fade-in duration-150 ${
+        isFullscreen ? 'p-0 w-screen h-[100dvh]' : 'p-2 sm:p-4'
+      }`}
+    >
+      <div
+        className={`bg-white text-slate-900 flex flex-col shadow-2xl overflow-hidden transition-all duration-200 ${
+          isFullscreen
+            ? 'w-full h-full rounded-none'
+            : 'max-w-5xl w-full h-[96vh] rounded-3xl border border-slate-300'
+        }`}
+      >
+        {/* TOP BAR: Clean, Ultra-Compact 1-Row Toolbar */}
+        <div className="px-2.5 py-1.5 sm:px-4 sm:py-2 border-b border-slate-200 flex items-center justify-between gap-1.5 sm:gap-2 bg-white shrink-0 shadow-xs">
+          {/* Left: Contract number, client and sum */}
+          <div className="flex items-center space-x-2 min-w-0">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shrink-0 shadow-xs">
+              <FileCheck className="w-4 h-4 text-white" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm sm:text-base font-extrabold text-white">
-                  Договор № {contract.contractNumber}
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <h2 className="text-xs sm:text-sm font-black text-slate-900 truncate">
+                  {contract.contractNumber}
                 </h2>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  {contract.status === 'completed' ? 'Исполнен' : 'Действует'}
+                <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
+                  contract.status === 'completed'
+                    ? 'bg-purple-100 text-purple-800'
+                    : 'bg-emerald-100 text-emerald-800'
+                }`}>
+                  {contract.status === 'completed' ? 'Исполнен' : 'В работе'}
                 </span>
-                {isClientSigned && (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 flex items-center gap-1">
-                    <ShieldCheck className="w-3 h-3 text-blue-400" /> Подписан (ПЭП)
+                {isContractClientSigned && (
+                  <span className="hidden sm:inline-flex px-1.5 py-0.2 rounded text-[10px] font-bold bg-blue-100 text-blue-800 items-center gap-0.5">
+                    <ShieldCheck className="w-3 h-3 text-blue-600" /> ПЭП
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-400">
-                Заказчик: <span className="text-white font-semibold">{contract.clientName}</span> • Сумма:{' '}
-                <span className="text-amber-400 font-bold">{contract.totalPrice.toLocaleString('ru-RU')} ₽</span>
+              <p className="text-[11px] text-slate-600 truncate">
+                {contract.clientName} • <b className="text-blue-700">{contract.totalPrice.toLocaleString('ru-RU')} ₽</b>
               </p>
             </div>
           </div>
 
-          {/* Action buttons */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Print button */}
+          {/* Right: Icon Buttons Toolbar */}
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+            {/* Share / Send to Customer */}
+            <button
+              type="button"
+              onClick={() => setIsShareModalOpen(true)}
+              className="px-2.5 py-1.5 rounded-lg sm:rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center gap-1 shadow-xs cursor-pointer active:scale-95"
+              title="Отправить договор заказчику (WhatsApp, Telegram, Ссылка)"
+            >
+              <Share2 className="w-4 h-4" />
+              <span className="hidden md:inline">Отправить</span>
+            </button>
+
+            {/* Print / PDF with Vector Fonts */}
             <button
               type="button"
               onClick={handlePrint}
-              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-blue-500/20 cursor-pointer"
-              title="Распечатать или сохранить в PDF"
+              className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg sm:rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition font-bold text-xs flex items-center gap-1 cursor-pointer active:scale-95"
+              title="Распечатать или сохранить как PDF"
             >
               <Printer className="w-4 h-4" />
-              <span>Печать / PDF</span>
+              <span className="hidden lg:inline">Печать / PDF</span>
             </button>
 
-            {/* WhatsApp with shareable link */}
-            <button
-              type="button"
-              onClick={handleShareWhatsApp}
-              className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-md cursor-pointer"
-              title="Отправить ссылку на согласование клиенту в WhatsApp"
-            >
-              <MessageCircle className="w-4 h-4" />
-              <span className="hidden sm:inline">WhatsApp</span>
-            </button>
-
-            {/* Copy remote approval link */}
-            <button
-              type="button"
-              onClick={handleCopyLink}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-sky-400 border border-slate-700/60 transition cursor-pointer"
-              title="Скопировать ссылку для согласования клиентом"
-            >
-              <Share2 className="w-4 h-4" />
-            </button>
-
-            {/* Download Word */}
+            {/* Download Word (.doc) with UTF-8 BOM Fix */}
             <button
               type="button"
               onClick={handleDownloadDoc}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer"
-              title="Скачать документ для Word (.doc)"
+              disabled={isDownloading}
+              className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg sm:rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition font-bold text-xs flex items-center gap-1 cursor-pointer disabled:opacity-50 active:scale-95"
+              title="Скачать Word (.doc) в кодировке UTF-8 (без кракозябр!)"
             >
               <Download className="w-4 h-4" />
+              <span className="hidden lg:inline">Word (.doc)</span>
             </button>
 
-            {/* Copy text */}
+            {/* Standalone HTML */}
+            <button
+              type="button"
+              onClick={handleDownloadHtml}
+              className="hidden sm:flex p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition cursor-pointer active:scale-95"
+              title="Скачать автономный файл (.html)"
+            >
+              <Globe className="w-4 h-4" />
+            </button>
+
+            {/* Copy full text */}
             <button
               type="button"
               onClick={handleCopyText}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer"
+              className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition cursor-pointer active:scale-95"
               title="Скопировать текст договора"
             >
-              {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+              {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
             </button>
 
-            {/* Edit */}
+            {/* Font Zoom Control */}
+            <div className="hidden sm:flex items-center rounded-xl bg-slate-100 border border-slate-200 p-0.5">
+              <button
+                type="button"
+                onClick={() => setFontScale((s) => (s > 1 ? (s - 1) as any : 1))}
+                disabled={fontScale === 1}
+                className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 disabled:opacity-30 cursor-pointer"
+                title="Уменьшить шрифт"
+              >
+                <ZoomOut className="w-3.5 h-3.5" />
+              </button>
+              <span className="text-[11px] font-bold px-1 text-slate-700 select-none">
+                {fontScale === 1 ? '100%' : fontScale === 2 ? '115%' : '130%'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setFontScale((s) => (s < 3 ? (s + 1) as any : 3))}
+                disabled={fontScale === 3}
+                className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 disabled:opacity-30 cursor-pointer"
+                title="Увеличить шрифт"
+              >
+                <ZoomIn className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Edit (if master) */}
             {onEdit && (
               <button
                 type="button"
                 onClick={() => onEdit(contract)}
-                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer"
-                title="Редактировать данные договора"
+                className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition cursor-pointer active:scale-95"
+                title="Редактировать договор"
               >
                 <Edit2 className="w-4 h-4" />
               </button>
             )}
 
+            {/* Fullscreen Toggle */}
+            <button
+              type="button"
+              onClick={handleToggleFullscreen}
+              className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl border transition cursor-pointer active:scale-95 ${
+                isFullscreen
+                  ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                  : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+              }`}
+              title={isFullscreen ? 'Свернуть в окно' : 'Развернуть на весь экран'}
+            >
+              {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            </button>
+
             {/* Close */}
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer ml-1"
+              className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer ml-0.5 active:scale-95"
+              title="Закрыть"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* Toast message */}
-        {toastMessage && (
-          <div className="p-3 bg-emerald-950/80 border-b border-emerald-500/30 text-emerald-200 text-xs flex items-center justify-between px-6 animate-in slide-in-from-top duration-300">
-            <div className="flex items-center space-x-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span className="font-semibold">{toastMessage}</span>
+        {/* WORKFLOW STEPPER RIBBON: Visual Progress of Contract Lifecycle */}
+        <div className="bg-slate-900 text-white px-3 py-1.5 sm:px-4 sm:py-2 flex flex-wrap items-center justify-between gap-2 shrink-0 text-xs">
+          <div className="flex items-center space-x-1 sm:space-x-3 text-[11px] sm:text-xs">
+            {/* Step 1: Contract */}
+            <div className={`flex items-center gap-1 ${isContractClientSigned ? 'text-emerald-400 font-bold' : 'text-amber-300 font-bold'}`}>
+              <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${isContractClientSigned ? 'bg-emerald-500 text-white' : 'bg-amber-400 text-slate-950 font-black'}`}>
+                1
+              </span>
+              <span>Договор {isContractClientSigned ? '✓' : '(Подписание)'}</span>
             </div>
+
+            <ArrowRight className="w-3 h-3 text-slate-600" />
+
+            {/* Step 2: Installation */}
+            <div className={`flex items-center gap-1 ${contract.status === 'completed' ? 'text-emerald-400 font-bold' : 'text-blue-300 font-bold'}`}>
+              <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${contract.status === 'completed' ? 'bg-emerald-500 text-white' : 'bg-blue-500 text-white'}`}>
+                2
+              </span>
+              <span>Монтаж и опрессовка</span>
+            </div>
+
+            <ArrowRight className="w-3 h-3 text-slate-600" />
+
+            {/* Step 3: Act & Warranty */}
+            <div className={`flex items-center gap-1 ${isActClientSigned ? 'text-purple-400 font-bold' : 'text-slate-400'}`}>
+              <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${isActClientSigned ? 'bg-purple-500 text-white' : 'bg-slate-800 text-slate-400'}`}>
+                3
+              </span>
+              <span>Акт и Гарантия {isActClientSigned ? '✓' : ''}</span>
+            </div>
+          </div>
+
+          {/* Quick Workflow Action Button */}
+          {contract.status !== 'completed' && (
             <button
               type="button"
-              onClick={() => setToastMessage('')}
-              className="text-emerald-400 hover:text-white"
+              onClick={handleInitiateActHandover}
+              className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-extrabold text-[11px] flex items-center gap-1 shadow-sm cursor-pointer active:scale-95 ml-auto"
             >
-              ✕
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>Сдать объект (Акт и Гарантия)</span>
             </button>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* Tab switch between Contract and Act */}
-        <div className="bg-slate-950/80 px-4 sm:px-6 py-2 border-b border-slate-800 flex items-center justify-between text-xs font-bold print:hidden">
-          <div className="flex items-center gap-2">
+        {/* SUB-HEADER: 3 Clear Tabs + Quick Signatures */}
+        <div className="bg-slate-100 px-2.5 py-1.5 sm:px-4 sm:py-2 border-b border-slate-200 flex flex-wrap items-center justify-between gap-1.5 shrink-0">
+          {/* Segmented Document Tabs */}
+          <div className="inline-flex p-0.5 rounded-lg sm:rounded-xl bg-slate-200 text-xs font-bold">
             <button
               type="button"
               onClick={() => setActiveTab('contract')}
-              className={`px-4 py-1.5 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
+              className={`px-2.5 py-1 rounded-md sm:rounded-lg transition flex items-center gap-1.5 cursor-pointer text-xs ${
                 activeTab === 'contract'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                  ? 'bg-white text-blue-700 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <FileText className="w-3.5 h-3.5" />
@@ -432,472 +499,470 @@ ${contract.worksList}
             <button
               type="button"
               onClick={() => setActiveTab('act')}
-              className={`px-4 py-1.5 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
+              className={`px-2.5 py-1 rounded-md sm:rounded-lg transition flex items-center gap-1.5 cursor-pointer text-xs ${
                 activeTab === 'act'
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                  ? 'bg-white text-emerald-700 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <FileCheck className="w-3.5 h-3.5" />
-              <span>2. Акт сдачи-приёмки и гарантия</span>
+              <span>2. Акт сдачи-приёмки</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('warranty')}
+              className={`px-2.5 py-1 rounded-md sm:rounded-lg transition flex items-center gap-1.5 cursor-pointer text-xs ${
+                activeTab === 'warranty'
+                  ? 'bg-white text-purple-700 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Award className="w-3.5 h-3.5" />
+              <span>3. Гарантийный талон</span>
             </button>
           </div>
 
-          {/* Quick Onsite Signature Action buttons in Toolbar */}
-          <div className="flex items-center gap-2">
+          {/* Quick Hybrid Signatures */}
+          <div className="flex items-center gap-1 sm:gap-1.5">
             <button
               type="button"
-              onClick={() => setSigningRole('master')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1 cursor-pointer border ${
-                isMasterSigned
-                  ? 'bg-blue-950/60 text-blue-300 border-blue-800/60'
-                  : 'bg-blue-600 text-white border-blue-500 shadow-sm'
-              }`}
-              title="Поставить подпись мастера пальцем"
+              onClick={() => {
+                setSigningTarget(activeTab === 'act' ? 'act' : 'contract');
+                setSigningRole('master');
+              }}
+              className="px-2 sm:px-2.5 py-1 rounded-lg text-[11px] sm:text-xs font-bold transition flex items-center gap-1 cursor-pointer bg-blue-600 hover:bg-blue-700 text-white shadow-xs active:scale-95"
+              title="Поставить подпись мастера пальцем на экране"
             >
-              <PenTool className="w-3.5 h-3.5" />
-              <span>{isMasterSigned ? 'Переподписать мастеру' : 'Подпись мастера'}</span>
+              <PenTool className="w-3 h-3" />
+              <span>+ Подпись мастера</span>
             </button>
 
             <button
               type="button"
-              onClick={() => setSigningRole('client')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1 cursor-pointer border ${
-                isClientSigned
-                  ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800/60'
-                  : 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
-              }`}
+              onClick={() => {
+                setSigningTarget(activeTab === 'act' ? 'act' : 'contract');
+                setSigningRole('client');
+              }}
+              className="px-2 sm:px-2.5 py-1 rounded-lg text-[11px] sm:text-xs font-bold transition flex items-center gap-1 cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs active:scale-95"
               title="Передать телефон заказчику для подписи пальцем на месте"
             >
-              <PenTool className="w-3.5 h-3.5" />
-              <span>{isClientSigned ? 'Подписано заказчиком' : 'Подпись заказчика на месте'}</span>
+              <PenTool className="w-3 h-3" />
+              <span>+ Подпись заказчика</span>
+            </button>
+
+            {/* Mobile Font Size Toggle */}
+            <button
+              type="button"
+              onClick={() => setFontScale((s) => (s === 1 ? 2 : s === 2 ? 3 : 1))}
+              className="sm:hidden p-1 rounded-lg bg-slate-200 text-slate-700 text-[11px] font-bold flex items-center gap-0.5"
+              title="Масштаб текста"
+            >
+              <Type className="w-3.5 h-3.5" />
+              <span>{fontScale === 1 ? '1x' : fontScale === 2 ? '1.2x' : '1.4x'}</span>
             </button>
           </div>
         </div>
 
-        {/* Paper Document Preview (White Background Sheet) */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-8 bg-slate-950/90 flex justify-center">
+        {/* Toast Alert */}
+        {toastMessage && (
+          <div className="p-2 bg-blue-50 border-b border-blue-200 text-blue-900 text-xs flex items-center justify-between px-4 sm:px-6 animate-in slide-in-from-top duration-200 shrink-0">
+            <div className="flex items-center space-x-2">
+              <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0" />
+              <span className="font-semibold">{toastMessage}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setToastMessage('')}
+              className="text-blue-600 hover:text-blue-900 font-bold ml-2 cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* MAIN DOCUMENT SHEET */}
+        <div className="flex-1 overflow-y-auto bg-slate-100 p-2 sm:p-6 lg:p-8 flex justify-center">
           <div
             id="printable-contract-sheet"
-            className="w-full max-w-3xl bg-white text-slate-900 rounded-xl sm:rounded-2xl shadow-2xl p-6 sm:p-12 space-y-6 text-sm leading-relaxed font-sans"
-            style={{ minHeight: '800px' }}
+            className={`w-full max-w-4xl bg-white text-slate-900 p-4 sm:p-10 lg:p-12 shadow-sm rounded-xl sm:rounded-2xl border border-slate-200 space-y-6 ${fontBodyClass} font-sans`}
           >
             {/* Printable Official Header */}
-            <div className="border-b-2 border-slate-900/80 pb-4 flex items-start justify-between gap-4">
+            <div className="border-b-2 border-slate-900 pb-4 flex items-start justify-between gap-4">
               <div className="space-y-1">
                 <div className="flex items-center space-x-2">
                   <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-blue-600 flex items-center justify-center text-white shrink-0">
                     <Wrench className="w-4 h-4 text-white" />
                   </div>
-                  <span className="text-xl font-black tracking-tight">
+                  <span className="text-xl sm:text-2xl font-black tracking-tight">
                     <span className="text-red-600">Сантех</span>
                     <span className="text-blue-600">Про</span>
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-500 font-semibold tracking-wide">
+                <p className="text-xs sm:text-sm text-slate-500 font-semibold tracking-wide">
                   Официальный сервис сантехнических услуг • santehpro.info
                 </p>
               </div>
 
               <div className="text-right">
-                <div className="text-xs font-mono font-bold text-slate-800">
+                <div className="text-sm sm:text-base font-mono font-bold text-slate-900">
                   {contract.contractNumber}
                 </div>
-                <div className="text-[11px] text-slate-500">
-                  г. {contract.specialistCity || 'Москва'}, от {formatDate(contract.contractDate)}
+                <div className="text-xs sm:text-sm text-slate-600">
+                  г. {contract.specialistCity || 'Москва'}, от {formatDateRu(contract.contractDate)}
                 </div>
               </div>
             </div>
 
-            {/* Document Body: Tab 1 = Contract */}
+            {/* TAB 1: CONTRACT */}
             {activeTab === 'contract' && (
-              <div className="space-y-5 text-slate-800 text-xs sm:text-sm">
-                <div className="text-center space-y-1">
-                  <h1 className="text-base sm:text-lg font-black uppercase tracking-tight text-slate-900">
+              <div className="space-y-6 text-slate-900">
+                <div className="text-center space-y-1 py-1">
+                  <h1 className={`${fontTitleClass} uppercase tracking-tight text-slate-950`}>
                     ДОГОВОР ПОДРЯДА № {contract.contractNumber}
                   </h1>
-                  <p className="text-xs font-medium text-slate-600">
+                  <p className="text-xs sm:text-sm font-semibold text-slate-600">
                     на выполнение сантехнических и монтажных работ
                   </p>
                 </div>
 
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1.5 leading-normal">
+                <div className="p-4 sm:p-5 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5 text-slate-900">
                   <p>
-                    <b>Исполнитель:</b> {contract.specialistName}, юридический статус: {statusLabel}
+                    <b>Исполнитель:</b> {contract.specialistName}, статус: {statusLabel}
                     {contract.specialistInn ? `, ИНН: ${contract.specialistInn}` : ''}, телефон: {contract.specialistPhone}, с одной стороны, и
                   </p>
                   <p>
                     <b>Заказчик:</b> {contract.clientName}
-                    {contract.clientPassport ? `, паспортные данные: ${contract.clientPassport}` : ''}, телефон: {contract.clientPhone || '—'}, объект по адресу: <b>{contract.clientAddress}</b>, с другой стороны,
+                    {contract.clientPassport ? `, паспорт: ${contract.clientPassport}` : ''}, телефон: {contract.clientPhone || '—'}, адрес объекта: <b>{contract.clientAddress}</b>, с другой стороны,
                   </p>
-                  <p className="text-slate-500 italic">
-                    вместе именуемые «Стороны», заключили настоящий Договор о нижеследующем:
+                  <p className="text-slate-600 italic text-xs sm:text-sm">
+                    заключили настоящий Договор о нижеследующем:
                   </p>
                 </div>
 
-                {/* Section 1 */}
-                <div className="space-y-1.5">
-                  <h3 className="font-bold text-slate-900 uppercase text-xs tracking-wider">
+                <div className="space-y-2">
+                  <h3 className="font-bold text-slate-950 uppercase text-xs sm:text-sm">
                     1. ПРЕДМЕТ ДОГОВОРА
                   </h3>
                   <p>
                     1.1. Заказчик поручает, а Исполнитель принимает на себя обязательства собственными силами и квалифицированным инструментом выполнить комплекс сантехнических работ по объекту: <b>{contract.clientAddress}</b>.
                   </p>
-                  <p>
-                    1.2. Наименование объекта и работ: <b>{contract.title}</b>.
-                  </p>
+                  <p>1.2. Наименование объекта и работ: <b>{contract.title}</b>.</p>
                   <p>1.3. Перечень выполняемых работ:</p>
-                  <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 font-mono text-xs whitespace-pre-wrap text-slate-800">
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 font-mono text-xs sm:text-sm whitespace-pre-wrap text-slate-900 leading-relaxed shadow-2xs">
                     {contract.worksList}
                   </div>
                 </div>
 
-                {/* Section 2 */}
-                <div className="space-y-1.5">
-                  <h3 className="font-bold text-slate-900 uppercase text-xs tracking-wider">
+                <div className="space-y-2">
+                  <h3 className="font-bold text-slate-950 uppercase text-xs sm:text-sm">
                     2. СРОКИ ВЫПОЛНЕНИЯ РАБОТ
                   </h3>
                   <p>
-                    2.1. Дата начала работ: <b>«{formatDate(contract.startDate)}»</b>.
+                    2.1. Дата начала работ: <b>«{formatDateRu(contract.startDate)}»</b>.
                   </p>
                   <p>
-                    2.2. Плановая дата завершения работ: <b>«{formatDate(contract.endDate)}»</b>.
+                    2.2. Плановая дата завершения: <b>«{formatDateRu(contract.endDate)}»</b>.
                   </p>
                   <p>
-                    2.3. Сроки могут быть продлены на соразмерный период в случае отсутствия воды/электричества на объекте по независящим от Исполнителя причинам или задержки поставки чистовых сантехприборов Заказчиком.
+                    2.3. Сроки могут быть скорректированы при задержке подачи воды/электричества на объекте или задержке поставки материалов Заказчиком.
                   </p>
                 </div>
 
-                {/* Section 3 */}
-                <div className="space-y-1.5">
-                  <h3 className="font-bold text-slate-900 uppercase text-xs tracking-wider">
-                    3. СТОИМОСТЬ РАБОТ И ПОРЯДОК РАСЧЁТОВ
+                <div className="space-y-2">
+                  <h3 className="font-bold text-slate-950 uppercase text-xs sm:text-sm">
+                    3. СТОИМОСТЬ И ПОРЯДОК РАСЧЁТОВ
                   </h3>
                   <p>
-                    3.1. Общая стоимость работ по настоящему Договору составляет: <b>{contract.totalPrice.toLocaleString('ru-RU')} (рублей)</b>.
+                    3.1. Общая стоимость работ: <b className="text-blue-700 text-base">{contract.totalPrice.toLocaleString('ru-RU')} рублей</b>.
                   </p>
                   {contract.advancePayment > 0 ? (
                     <p>
-                      3.2. Заказчик вносит авансовый платёж в размере <b>{contract.advancePayment.toLocaleString('ru-RU')} рублей</b> до начала монтажных работ.
+                      3.2. Сумма аванса: <b>{contract.advancePayment.toLocaleString('ru-RU')} рублей</b> (выплачивается до начала монтажа).
                     </p>
                   ) : (
-                    <p>3.2. Работы производятся без предварительного аванса.</p>
+                    <p>3.2. Работы выполняются без предварительного аванса.</p>
                   )}
                   <p>
-                    3.3. Окончательный расчёт в размере <b>{contract.remainingPayment.toLocaleString('ru-RU')} рублей</b> производится Заказчиком в день завершения работ после проведения гидравлических испытаний и подписания Акта сдачи-приёмки (Приложение № 1).
+                    3.3. Окончательный расчёт в размере <b>{contract.remainingPayment.toLocaleString('ru-RU')} рублей</b> производится Заказчиком в день завершения работ после проведения опрессовки и подписания Акта сдачи-приёмки.
                   </p>
-                  <p>
-                    3.4. Условия поставки материалов: <i>{materialsLabel}</i>.
-                  </p>
+                  <p>3.4. Условие по материалам: <i>{materialsLabel}</i>.</p>
                 </div>
 
-                {/* Section 4 */}
-                <div className="space-y-1.5">
-                  <h3 className="font-bold text-slate-900 uppercase text-xs tracking-wider">
+                <div className="space-y-2">
+                  <h3 className="font-bold text-slate-950 uppercase text-xs sm:text-sm">
                     4. КАЧЕСТВО, ПРИЁМКА И ГАРАНТИЯ
                   </h3>
                   <p>
-                    4.1. Исполнитель гарантирует соответствие выполненных работ действующим строительным нормативам (СП 73.13330 / СНиП 3.05.01-85).
+                    4.1. Исполнитель гарантирует соблюдение действующих строительных нормативов (СП 73.13330 / СНиП 3.05.01-85).
                   </p>
                   <p>
-                    4.2. До зашивки труб в короба Исполнитель обязан провести опрессовку смонтированной системы избыточным рабочим давлением в присутствии Заказчика.
+                    4.2. До зашивки труб Исполнитель обязан провести опрессовку смонтированной системы избыточным давлением в присутствии Заказчика.
                   </p>
                   <p>
-                    4.3. На выполненные монтажные соединения Исполнитель предоставляет гарантию сроком <b>{contract.warrantyMonths} месяцев</b>.
-                  </p>
-                  <p>
-                    4.4. Гарантия не распространяется на механические повреждения третьими лицами и заводские дефекты сантехники, приобретенной Заказчиком самостоятельно.
+                    4.3. На выполненные монтажные узлы предоставляется гарантия сроком <b className="text-emerald-700">{warrantyMonths} месяцев</b>.
                   </p>
                 </div>
 
-                {/* Section 5: Legal PEP Clause */}
-                <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl text-xs space-y-1">
-                  <p className="font-bold text-blue-900 flex items-center gap-1.5">
-                    <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                {/* Legal PEP info */}
+                <div className="p-3.5 bg-blue-50/80 border border-blue-200 rounded-xl space-y-1 text-xs">
+                  <p className="font-bold text-blue-950 flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-blue-600" />
                     ЮРИДИЧЕСКАЯ СИЛА ЭЛЕКТРОННОЙ ПОДПИСИ (ст. 434 ГК РФ):
                   </p>
-                  <p className="text-slate-700 leading-relaxed text-[11px]">
-                    Стороны признают юридическую силу документов, подписанных простой электронной подписью (ПЭП) или факсимиле на платформе «СантехПро». Подтверждение условий через защищённую персональную ссылку признаётся равнозначным собственноручной подписи на бумажном носителе (в соответствии с Федеральным законом № 63-ФЗ «Об электронной подписи»).
+                  <p className="text-slate-700">
+                    Документ, подписанный простой электронной подписью (ПЭП) или факсимиле на платформе «СантехПро», имеет полную юридическую силу и признаётся равнозначным бумажному договору (в соответствии с Федеральным законом № 63-ФЗ).
                   </p>
                 </div>
 
-                {/* Signatures with Interactive Drawings & Official Stamps */}
-                <div className="pt-6 border-t-2 border-slate-300 grid grid-cols-1 sm:grid-cols-2 gap-8 text-xs">
-                  {/* Master Signature Box */}
-                  <div className="space-y-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                    <p className="font-bold uppercase text-slate-900">ИСПОЛНИТЕЛЬ:</p>
-                    <div className="space-y-1">
-                      <p className="font-semibold">{contract.specialistName}</p>
-                      <p>Телефон: {contract.specialistPhone}</p>
-                      {contract.specialistInn && <p>ИНН: {contract.specialistInn}</p>}
-                    </div>
-
+                {/* Signatures Row */}
+                <div className="pt-6 border-t-2 border-slate-300 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Master box */}
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                    <p className="font-bold uppercase text-slate-950 text-xs">ИСПОЛНИТЕЛЬ:</p>
+                    <p className="font-bold">{contract.specialistName}</p>
+                    <p className="text-xs text-slate-600">Тел: {contract.specialistPhone}</p>
                     {contract.masterSignature ? (
-                      <div className="pt-2 space-y-1">
-                        <div className="h-16 flex items-center">
-                          <img
-                            src={contract.masterSignature}
-                            alt="Подпись мастера"
-                            className="max-h-16 w-auto object-contain"
-                          />
-                        </div>
-                        <div className="p-1.5 rounded-lg bg-blue-50 border border-blue-200 text-[10px] text-blue-800 font-semibold flex items-center gap-1">
-                          <Check className="w-3 h-3 text-blue-600" />
-                          <span>Подписано мастером ({formatDate(contract.masterSignedAt || contract.contractDate)})</span>
-                        </div>
+                      <div className="pt-2">
+                        <img src={contract.masterSignature} alt="Подпись мастера" className="max-h-12 w-auto object-contain" />
+                        <p className="text-[11px] text-blue-700 font-semibold mt-1">✓ Подписано мастером ({formatDateRu(contract.masterSignedAt || contract.contractDate)})</p>
                       </div>
                     ) : (
-                      <div className="pt-8 flex items-end justify-between border-b border-slate-400">
-                        <span className="text-[10px] text-slate-500">Подпись / М.П.</span>
-                        <span className="font-semibold">{contract.specialistName}</span>
-                      </div>
+                      <div className="pt-4 border-b border-slate-400 text-xs text-slate-500">Подпись: ____________ / М.П.</div>
                     )}
                   </div>
 
-                  {/* Client Signature Box */}
-                  <div className="space-y-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                    <p className="font-bold uppercase text-slate-900">ЗАКАЗЧИК:</p>
-                    <div className="space-y-1">
-                      <p className="font-semibold">{contract.clientName}</p>
-                      <p>Телефон: {contract.clientPhone || '—'}</p>
-                      <p>Адрес: {contract.clientAddress}</p>
-                    </div>
-
-                    {isClientSigned ? (
-                      <div className="pt-2 space-y-1.5">
+                  {/* Client box */}
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                    <p className="font-bold uppercase text-slate-950 text-xs">ЗАКАЗЧИК:</p>
+                    <p className="font-bold">{contract.clientName}</p>
+                    <p className="text-xs text-slate-600">Тел: {contract.clientPhone || '—'}</p>
+                    {isContractClientSigned ? (
+                      <div className="pt-2 space-y-1">
                         {contract.clientSignature && (
-                          <div className="h-16 flex items-center">
-                            <img
-                              src={contract.clientSignature}
-                              alt="Подпись заказчика"
-                              className="max-h-16 w-auto object-contain"
-                            />
-                          </div>
+                          <img src={contract.clientSignature} alt="Подпись заказчика" className="max-h-12 w-auto object-contain" />
                         )}
-                        {/* Official Russian Digital Signature Blue Stamp */}
-                        <div className="p-2 rounded-lg bg-blue-50/90 border-2 border-blue-500/80 text-[10px] text-blue-900 space-y-0.5 shadow-sm">
-                          <div className="font-extrabold flex items-center gap-1 text-blue-700 tracking-tight">
+                        <div className="p-2 rounded-lg bg-blue-50 border-2 border-blue-500 text-xs text-blue-950 space-y-0.5">
+                          <div className="font-bold flex items-center gap-1 text-blue-800">
                             <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-                            ДОКУМЕНТ ПОДПИСАН ЭЛЕКТРОННОЙ ПОДПИСЬЮ
+                            ПОДПИСАНО ЭЛЕКТРОННОЙ ПОДПИСЬЮ (ПЭП)
                           </div>
                           <div>Сертификат: <b>{contract.digitalSealId || 'ПЭП-RU-2026-8812'}</b></div>
-                          <div>Владелец: <b>{contract.clientName}</b></div>
-                          <div>Дата и время: {formatDate(contract.clientSignedAt || contract.contractDate)}</div>
-                          <div className="text-[9px] text-blue-600">Сервис «СантехПро» • santehpro.info</div>
+                          <div>Дата: {formatDateRu(contract.clientSignedAt || contract.contractDate)}</div>
                         </div>
                       </div>
                     ) : (
-                      <div className="pt-8 flex items-end justify-between border-b border-slate-400">
-                        <span className="text-[10px] text-slate-500">Подпись</span>
-                        <span className="font-semibold">{contract.clientName}</span>
-                      </div>
+                      <div className="pt-4 border-b border-slate-400 text-xs text-slate-500">Подпись: ____________</div>
                     )}
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Document Body: Tab 2 = Acceptance Act */}
+            {/* TAB 2: ACCEPTANCE ACT */}
             {activeTab === 'act' && (
-              <div className="space-y-5 text-slate-800 text-xs sm:text-sm">
-                <div className="text-center space-y-1">
-                  <h1 className="text-base sm:text-lg font-black uppercase tracking-tight text-slate-900">
+              <div className="space-y-6 text-slate-900">
+                <div className="text-center space-y-1 py-1">
+                  <h1 className={`${fontTitleClass} uppercase tracking-tight text-slate-950`}>
                     АКТ СДАЧИ-ПРИЁМКИ ВЫПОЛНЕННЫХ РАБОТ
                   </h1>
-                  <p className="text-xs font-semibold text-slate-600">
+                  <p className="text-xs sm:text-sm font-semibold text-slate-600">
                     Приложение № 1 к Договору подряда № {contract.contractNumber}
                   </p>
                 </div>
 
-                <div className="flex items-center justify-between text-xs text-slate-600 border-b border-slate-200 pb-2">
+                <div className="flex items-center justify-between text-xs sm:text-sm text-slate-700 border-b border-slate-200 pb-2">
                   <span>г. {contract.specialistCity || 'Москва'}</span>
-                  <span>«___» _____________ 202_ г.</span>
+                  <span>«{formatDateRu(contract.actDate || contract.endDate || contract.contractDate)}»</span>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-3.5 text-slate-900 leading-relaxed">
                   <p>
                     Мы, нижеподписавшиеся, Исполнитель <b>{contract.specialistName}</b>, с одной стороны, и Заказчик <b>{contract.clientName}</b>, с другой стороны, составили настоящий Акт о следующем:
                   </p>
                   <p>
                     1. Исполнителем в полном объёме выполнены работы по Договору подряда № <b>{contract.contractNumber}</b> на объекте по адресу: <b>{contract.clientAddress}</b>.
                   </p>
-                  <p>
-                    2. <b>Перечень фактически выполненных работ:</b>
-                  </p>
-                  <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 font-mono text-xs whitespace-pre-wrap text-slate-800">
+                  <p>2. Перечень фактически выполненных работ:</p>
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 font-mono text-xs sm:text-sm whitespace-pre-wrap text-slate-900 leading-relaxed shadow-2xs">
                     {contract.worksList}
                   </div>
                   <p>
-                    3. <b>Результаты гидравлических испытаний:</b> система проверена под рабочим давлением. Протечек, подтёков и дефектов монтажа не обнаружено. Приборы установлены строго по уровню, герметичность узлов подтверждена.
+                    3. <b>Результаты гидравлических испытаний (опрессовки):</b> система проверена под рабочим давлением. Протечек, подтёков и дефектов монтажа не обнаружено.
                   </p>
                   <p>
                     4. Заказчик подтверждает, что работы выполнены в полном объёме, в установленный срок и с надлежащим качеством. <b>Претензий по объёму, качеству и срокам выполненных работ Заказчик к Исполнителю не имеет.</b>
                   </p>
                   <p>
-                    5. Общая стоимость фактически выполненных работ составляет: <b>{contract.totalPrice.toLocaleString('ru-RU')} (рублей)</b>. Оплата произведена Заказчиком полностью.
+                    5. Стоимость фактически выполненных работ: <b className="text-blue-700">{contract.totalPrice.toLocaleString('ru-RU')} рублей</b>. Расчёт произведён полностью.
                   </p>
-                  <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs flex items-center space-x-2.5">
-                    <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
-                    <div>
-                      <b>ГАРАНТИЙНЫЙ ТАЛОН АКТИВИРОВАН:</b> Настоящий Акт подтверждает вступление в силу гарантийных обязательств сроком на <b>{contract.warrantyMonths} месяцев</b> со дня подписания.
-                    </div>
-                  </div>
+                  <p>
+                    6. С даты подписания настоящего Акта вступает в силу Гарантийный талон сроком на <b className="text-emerald-700">{warrantyMonths} месяцев</b>.
+                  </p>
                 </div>
 
-                {/* Signatures for Act */}
-                <div className="pt-8 border-t-2 border-slate-300 grid grid-cols-1 sm:grid-cols-2 gap-8 text-xs">
-                  <div className="space-y-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                    <p className="font-bold uppercase text-slate-900">РАБОТУ СДАЛ (Исполнитель):</p>
-                    <p className="font-semibold">{contract.specialistName}</p>
-
-                    {contract.masterSignature ? (
+                {/* Act Signatures */}
+                <div className="pt-6 border-t-2 border-slate-300 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                    <p className="font-bold uppercase text-slate-950 text-xs">РАБОТУ СДАЛ (Исполнитель):</p>
+                    <p className="font-bold">{contract.specialistName}</p>
+                    {contract.actMasterSignature ? (
                       <div className="pt-2">
-                        <img
-                          src={contract.masterSignature}
-                          alt="Подпись мастера"
-                          className="h-14 w-auto object-contain"
-                        />
+                        <img src={contract.actMasterSignature} alt="Подпись мастера" className="max-h-12 w-auto object-contain" />
+                        <p className="text-[11px] text-blue-700 font-semibold mt-1">✓ Работа сдана мастером</p>
                       </div>
                     ) : (
-                      <div className="pt-10 flex items-end justify-between border-b border-slate-400">
-                        <span className="text-[10px] text-slate-500">Подпись / М.П.</span>
-                        <span className="font-semibold">{contract.specialistName}</span>
-                      </div>
+                      <div className="pt-4 border-b border-slate-400 text-xs text-slate-500">Подпись: ____________ / М.П.</div>
                     )}
                   </div>
 
-                  <div className="space-y-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                    <p className="font-bold uppercase text-slate-900">РАБОТУ ПРИНЯЛ (Заказчик):</p>
-                    <p className="font-semibold">{contract.clientName}</p>
-
-                    {isClientSigned ? (
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                    <p className="font-bold uppercase text-slate-950 text-xs">РАБОТУ ПРИНЯЛ (Заказчик):</p>
+                    <p className="font-bold">{contract.clientName}</p>
+                    {isActClientSigned ? (
                       <div className="pt-2 space-y-1">
-                        {contract.clientSignature && (
-                          <img
-                            src={contract.clientSignature}
-                            alt="Подпись заказчика"
-                            className="h-14 w-auto object-contain"
-                          />
+                        {contract.actClientSignature && (
+                          <img src={contract.actClientSignature} alt="Подпись заказчика" className="max-h-12 w-auto object-contain" />
                         )}
-                        <div className="p-2 rounded-lg bg-blue-50 border border-blue-400 text-[10px] text-blue-900 font-semibold flex items-center gap-1">
-                          <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-                          <span>Подписано ПЭП • Сертификат: {contract.digitalSealId || 'ПЭП-RU-2026-8812'}</span>
+                        <div className="p-2 rounded-lg bg-emerald-50 border-2 border-emerald-500 text-xs text-emerald-950">
+                          <div className="font-bold text-emerald-800 flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            РАБОТА ПРИНЯТА ЗАКАЗЧИКОМ (ПЭП)
+                          </div>
+                          <div>Дата приёмки: {formatDateRu(contract.actClientSignedAt || contract.actDate || new Date().toISOString())}</div>
                         </div>
                       </div>
                     ) : (
-                      <div className="pt-10 flex items-end justify-between border-b border-slate-400">
-                        <span className="text-[10px] text-slate-500">Подпись</span>
-                        <span className="font-semibold">{contract.clientName}</span>
-                      </div>
+                      <div className="pt-4 border-b border-slate-400 text-xs text-slate-500">Подпись: ____________</div>
                     )}
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Verification Footer watermark */}
-            <div className="pt-6 border-t border-slate-200 text-center space-y-0.5 text-[10px] text-slate-400">
-              <p>
-                Официальный типовой бланк сантехнических услуг сервиса <b>СантехПро</b> (Россия и СНГ)
-              </p>
-              <p>
-                Проверка подлинности и поиск мастеров:{' '}
-                <span className="text-blue-600 font-semibold">https://santehpro.info</span>
-              </p>
-            </div>
+            {/* TAB 3: WARRANTY CERTIFICATE */}
+            {activeTab === 'warranty' && (
+              <div className="space-y-6 text-slate-900">
+                <div className="text-center space-y-1 py-1">
+                  <h1 className={`${fontTitleClass} uppercase tracking-tight text-slate-950`}>
+                    ГАРАНТИЙНЫЙ СЕРТИФИКАТ (ТАЛОН)
+                  </h1>
+                  <p className="text-xs sm:text-sm font-semibold text-slate-600">
+                    Приложение № 2 к Договору подряда № {contract.contractNumber}
+                  </p>
+                </div>
+
+                <div className="p-6 rounded-2xl border-2 border-blue-500/80 bg-gradient-to-br from-blue-50/50 via-white to-slate-50 space-y-4 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between border-b border-slate-200 pb-3 gap-2">
+                    <div>
+                      <span className="text-xs text-slate-500">Номер сертификата:</span>
+                      <div className="font-mono font-black text-blue-700 text-base">
+                        {contract.warrantyCertificateNumber || `ГАР-${contract.contractNumber.replace(/\D/g, '') || '2026-01'}`}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xs text-slate-500">Срок официальной гарантии:</span>
+                      <div className="font-black text-emerald-700 text-base">
+                        {warrantyMonths} месяцев
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 text-xs sm:text-sm">
+                    <p><b>Объект гарантии:</b> {contract.clientAddress}</p>
+                    <p><b>Заказчик:</b> {contract.clientName} (тел: {contract.clientPhone || '—'})</p>
+                    <p><b>Исполнитель:</b> {contract.specialistName} (тел: {contract.specialistPhone})</p>
+                    <p><b>Основание:</b> Договор № {contract.contractNumber} и Акт сдачи-приёмки выполненных работ</p>
+                  </div>
+
+                  <hr className="border-slate-200" />
+
+                  <div className="space-y-2 text-xs text-slate-700 leading-relaxed">
+                    <p className="font-bold text-slate-900">УСЛОВИЯ ГАРАНТИЙНОГО ОБСЛУЖИВАНИЯ:</p>
+                    <ul className="list-disc pl-5 space-y-1">
+                      <li>Гарантия покрывает герметичность всех смонтированных трубных соединений (пресс-фитинги, резьбы, пайка).</li>
+                      <li>При выявлении дефекта монтажа Исполнитель обязан прибыть и устранить недостаток <b>бесплатно</b>.</li>
+                      <li>Гарантия не распространяется на механические повреждения третьими лицами и заводской брак приборов Заказчика.</li>
+                    </ul>
+                  </div>
+
+                  <div className="pt-2 flex flex-wrap items-center justify-between gap-3">
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-900 font-extrabold text-xs border border-emerald-300">
+                      <ShieldCheck className="w-4 h-4 text-emerald-700" />
+                      <span>ГАРАНТИЯ АКТИВИРОВАНА В СЕРВИСЕ САНТЕХПРО</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handlePrint}
+                      className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      <span>Распечатать сертификат</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Bottom Bar: Status toggling & Remote link sharing */}
-        <div className="p-3 sm:p-4 bg-slate-900 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="flex items-center space-x-2">
-            <span className="text-slate-400 font-semibold">Статус:</span>
-            {contract.status === 'completed' ? (
-              <span className="px-2.5 py-1 rounded-lg bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold">
-                Работы завершены и приняты
-              </span>
-            ) : (
-              <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">
-                В процессе выполнения
-              </span>
-            )}
+        {/* BOTTOM ACTION BAR */}
+        <div className="px-3 py-2 sm:px-5 sm:py-2.5 bg-white border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs shrink-0 shadow-xs">
+          <div className="flex items-center space-x-2 text-slate-600">
+            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+            <span className="font-medium text-[11px] sm:text-xs">
+              Защищено ст. 434 ГК РФ и 63-ФЗ • 1 экземпляр Word/PDF
+            </span>
           </div>
 
           <div className="flex items-center gap-2">
-            {/* WhatsApp Link button */}
             <button
               type="button"
-              onClick={handleShareWhatsApp}
-              className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm"
-              title="Отправить ссылку на согласование клиенту в WhatsApp"
+              onClick={handlePrint}
+              className="px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs border border-blue-200 transition cursor-pointer active:scale-95 flex items-center gap-1"
             >
-              <MessageCircle className="w-3.5 h-3.5" />
-              <span>Ссылка клиенту в WhatsApp</span>
+              <Printer className="w-3.5 h-3.5" />
+              <span>Печать / PDF</span>
             </button>
-
-            {onStatusChange && (
-              <>
-                {contract.status !== 'completed' ? (
-                  <button
-                    type="button"
-                    onClick={() => onStatusChange('completed')}
-                    className="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold transition flex items-center gap-1 cursor-pointer"
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                    <span>Отметить как выполненный</span>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => onStatusChange('active')}
-                    className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold transition cursor-pointer"
-                  >
-                    Вернуть в статус «В работе»
-                  </button>
-                )}
-              </>
-            )}
+            <button
+              type="button"
+              onClick={() => setIsShareModalOpen(true)}
+              className="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs transition cursor-pointer active:scale-95 flex items-center gap-1 shadow-xs"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span>Отправить заказчику</span>
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Signature Pad Modal for Onsite signing */}
+      {/* Signature Pad Modal */}
       {signingRole && (
         <SignaturePadModal
           isOpen={Boolean(signingRole)}
           onClose={() => setSigningRole(null)}
           onSave={handleSignatureCaptured}
-          title={signingRole === 'master' ? 'Подпись мастера' : 'Подпись заказчика на месте'}
+          title={
+            signingRole === 'master'
+              ? `Подпись Мастера (${signingTarget === 'contract' ? 'Договор' : 'Акт сдачи'})`
+              : `Подпись Заказчика (${signingTarget === 'contract' ? 'Договор' : 'Акт приёмки'})`
+          }
           signerName={signingRole === 'master' ? contract.specialistName : contract.clientName}
           role={signingRole}
         />
       )}
 
-      {/* Scoped Print Styles: Hide all modal controls and show full page white sheet */}
-      <style>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          #printable-contract-sheet, #printable-contract-sheet * {
-            visibility: visible;
-          }
-          #printable-contract-sheet {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100% !important;
-            max-width: 100% !important;
-            padding: 15mm !important;
-            box-shadow: none !important;
-            border-radius: 0 !important;
-            font-size: 11pt !important;
-            line-height: 1.4 !important;
-            background: #ffffff !important;
-            color: #000000 !important;
-          }
-        }
-      `}</style>
+      {/* Share Contract Modal */}
+      {isShareModalOpen && (
+        <ShareContractModal
+          contract={contract}
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+          shareUrl={getContractShareUrl(contract.id)}
+          onDownloadDoc={handleDownloadDoc}
+          onPrint={handlePrint}
+        />
+      )}
     </div>
   );
 };

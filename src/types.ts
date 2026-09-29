@@ -440,6 +440,17 @@ export interface PlumbingContract {
   clientSignedPhone?: string;
   digitalSealId?: string; // e.g. ПЭП-RU-2026-XXXX
   verificationCode?: string; // Verification token/code
+
+  // Acceptance Act (Акт сдачи-приёмки) & Warranty Certificate (Гарантийный талон)
+  actDate?: string;
+  actSignedAt?: string;
+  actMasterSignature?: string;
+  actClientSignature?: string;
+  actClientSignedAt?: string;
+  actSealId?: string;
+  actStatus?: 'pending' | 'signed';
+  warrantyCertificateNumber?: string;
+  warrantyValidUntil?: string;
 }
 
 

@@ -2301,6 +2301,16 @@ app.post('/api/contracts/:id/sign', (req, res) => {
       masterSignature,
       masterSignedAt,
       digitalSealId,
+      status,
+      actDate,
+      actSignedAt,
+      actMasterSignature,
+      actClientSignature,
+      actClientSignedAt,
+      actSealId,
+      actStatus,
+      warrantyCertificateNumber,
+      warrantyValidUntil,
     } = req.body;
 
     const nowIso = new Date().toISOString();
@@ -2311,8 +2321,17 @@ app.post('/api/contracts/:id/sign', (req, res) => {
       ...(clientSignMethod !== undefined ? { clientSignMethod } : {}),
       ...(masterSignature !== undefined ? { masterSignature } : {}),
       ...(masterSignedAt !== undefined ? { masterSignedAt } : {}),
+      ...(actDate !== undefined ? { actDate } : {}),
+      ...(actSignedAt !== undefined ? { actSignedAt } : {}),
+      ...(actMasterSignature !== undefined ? { actMasterSignature } : {}),
+      ...(actClientSignature !== undefined ? { actClientSignature } : {}),
+      ...(actClientSignedAt !== undefined ? { actClientSignedAt } : {}),
+      ...(actSealId !== undefined ? { actSealId } : {}),
+      ...(actStatus !== undefined ? { actStatus } : {}),
+      ...(warrantyCertificateNumber !== undefined ? { warrantyCertificateNumber } : {}),
+      ...(warrantyValidUntil !== undefined ? { warrantyValidUntil } : {}),
       digitalSealId: digitalSealId || existing.digitalSealId || `ПЭП-RU-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
-      status: existing.status === 'draft' ? 'active' : existing.status,
+      status: status || (actClientSignature || actClientSignedAt ? 'completed' : existing.status === 'draft' ? 'active' : existing.status),
       updatedAt: nowIso,
     };
 
