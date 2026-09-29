@@ -400,5 +400,47 @@ export interface DiagnosticSession {
   createdAt: number;
 }
 
+export type SpecialistContractStatus = 'draft' | 'active' | 'completed' | 'terminated';
+export type SpecialistLegalType = 'self_employed' | 'individual' | 'ip' | 'company';
+
+export interface PlumbingContract {
+  id: string;
+  specialistId: string;
+  specialistName: string;
+  specialistPhone: string;
+  specialistStatus: SpecialistLegalType; // Самозанятый / Физлицо / ИП / ООО
+  specialistInn?: string;
+  specialistCity?: string;
+  clientName: string;
+  clientPhone: string;
+  clientPassport?: string; // Паспорт (серия, номер, кем выдан)
+  clientAddress: string; // Адрес объекта
+  contractNumber: string; // Номер договора (например: СП-2026/09-001)
+  contractDate: string; // Дата заключения (YYYY-MM-DD)
+  startDate: string; // Дата начала работ
+  endDate: string; // Дата завершения работ
+  title: string; // Например: «Монтаж водоснабжения и отопления в новостройке»
+  worksList: string; // Список работ
+  totalPrice: number; // Общая сумма договора
+  advancePayment: number; // Сумма аванса
+  remainingPayment: number; // Остаток при приемке
+  warrantyMonths: number; // Срок гарантии (12, 24, 36 мес.)
+  materialsResponsibility: 'contractor' | 'client' | 'mixed'; // Кто закупает материалы
+  estimateId?: string; // Привязка к смете
+  status: SpecialistContractStatus;
+  createdAt: string;
+  updatedAt: string;
+
+  // Hybrid Digital Signature fields (Простая Электронная Подпись & Факсимиле)
+  masterSignature?: string; // Base64 data URL
+  masterSignedAt?: string; // ISO date
+  clientSignature?: string; // Base64 data URL
+  clientSignedAt?: string; // ISO date
+  clientSignMethod?: 'onsite_finger' | 'remote_link' | 'paper';
+  clientSignedPhone?: string;
+  digitalSealId?: string; // e.g. ПЭП-RU-2026-XXXX
+  verificationCode?: string; // Verification token/code
+}
+
 
 

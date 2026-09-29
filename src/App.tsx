@@ -27,7 +27,8 @@ import { CityConfirmationBanner } from './components/CityConfirmationBanner';
 import { BetaDevelopmentBanner } from './components/BetaDevelopmentBanner';
 import { CitySelectModal } from './components/CitySelectModal';
 import { ClientEstimateModal } from './components/ClientEstimateModal';
-import { MasterPlumbingEstimate } from './types';
+import { ClientContractModal } from './components/ClientContractModal';
+import { MasterPlumbingEstimate, PlumbingContract } from './types';
 import { DonationModal } from './components/DonationModal';
 import { triggerNativeShare } from './utils/shareApp';
 
@@ -107,6 +108,7 @@ function AppContent() {
   const [diagnosticPrompt, setDiagnosticPrompt] = useState<string>('');
   const [cabinetInitialTab, setCabinetInitialTab] = useState<'favorites' | 'purchases' | 'requests' | 'profile' | 'master' | undefined>(undefined);
   const [viewingEstimate, setViewingEstimate] = useState<MasterPlumbingEstimate | null>(null);
+  const [viewingContractForApproval, setViewingContractForApproval] = useState<PlumbingContract | null>(null);
 
   const { currentUser, openAuthModal, authNotice, dismissAuthNotice, refreshPurchases, updateProfile } = useAuth();
 
@@ -354,6 +356,48 @@ function AppContent() {
           try {
             const local = localStorage.getItem(`santehpro_estimate_${estimateId}`);
             if (local) setViewingEstimate(JSON.parse(local));
+          } catch (e) {}
+        });
+    }
+
+    // Listen to ?contractId= / ?contract= parameter for client remote approval
+    const contractParam = params.get('contractId') || params.get('contract');
+    if (contractParam) {
+      fetch(`/api/contracts/${encodeURIComponent(contractParam)}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data && data.id) {
+            setViewingContractForApproval(data);
+          } else {
+            // Check in local storage
+            try {
+              for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('santehpro_master_contracts_')) {
+                  const arr = JSON.parse(localStorage.getItem(key) || '[]');
+                  const found = arr.find((c: any) => c.id === contractParam);
+                  if (found) {
+                    setViewingContractForApproval(found);
+                    break;
+                  }
+                }
+              }
+            } catch (e) {}
+          }
+        })
+        .catch(() => {
+          try {
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i);
+              if (key && key.startsWith('santehpro_master_contracts_')) {
+                const arr = JSON.parse(localStorage.getItem(key) || '[]');
+                const found = arr.find((c: any) => c.id === contractParam);
+                if (found) {
+                  setViewingContractForApproval(found);
+                  break;
+                }
+              }
+            }
           } catch (e) {}
         });
     }
@@ -1128,6 +1172,26 @@ function AppContent() {
               url.searchParams.delete('estimate');
               window.history.replaceState({}, '', url.toString());
             } catch (e) {}
+          }}
+        />
+      )}
+
+      {/* Shared Client Contract Approval Modal */}
+      {viewingContractForApproval && (
+        <ClientContractModal
+          contract={viewingContractForApproval}
+          isOpen={Boolean(viewingContractForApproval)}
+          onClose={() => {
+            setViewingContractForApproval(null);
+            try {
+              const url = new URL(window.location.href);
+              url.searchParams.delete('contractId');
+              url.searchParams.delete('contract');
+              window.history.replaceState({}, '', url.toString());
+            } catch (e) {}
+          }}
+          onSigned={(updatedContract) => {
+            setViewingContractForApproval(updatedContract);
           }}
         />
       )}

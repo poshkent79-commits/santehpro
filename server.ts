@@ -2176,6 +2176,175 @@ app.delete('/api/estimates/:id', async (req, res) => {
   }
 });
 
+// ---------------- B2B CONTRACTS & ACCEPTANCE ACTS (PEP DIGITAL SIGNATURE) ----------------
+const CONTRACTS_FILE = path.join(process.cwd(), 'data', 'contracts.json');
+const contractsMap = new Map<string, any>();
+
+function saveContractsToDisk(): void {
+  try {
+    const dir = path.dirname(CONTRACTS_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const arr = Array.from(contractsMap.values());
+    fs.writeFileSync(CONTRACTS_FILE, JSON.stringify(arr, null, 2), 'utf-8');
+  } catch (err) {
+    console.warn('Failed to save contracts to disk:', err);
+  }
+}
+
+function loadContractsFromDisk(): void {
+  try {
+    if (fs.existsSync(CONTRACTS_FILE)) {
+      const raw = fs.readFileSync(CONTRACTS_FILE, 'utf-8');
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) {
+        for (const c of arr) {
+          if (c && c.id) contractsMap.set(c.id, c);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to load contracts from disk:', err);
+  }
+}
+
+loadContractsFromDisk();
+
+// GET all contracts
+app.get('/api/contracts', (req, res) => {
+  const { specialistId, clientPhone } = req.query;
+  let list = Array.from(contractsMap.values());
+  if (specialistId) {
+    list = list.filter((c) => c.specialistId === specialistId);
+  }
+  if (clientPhone) {
+    const digits = String(clientPhone).replace(/\D/g, '');
+    list = list.filter((c) => c.clientPhone && c.clientPhone.replace(/\D/g, '').includes(digits));
+  }
+  list.sort((a, b) => new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime());
+  res.json(list);
+});
+
+// GET single contract by id (for remote client approval)
+app.get('/api/contracts/:id', (req, res) => {
+  const { id } = req.params;
+  const contract = contractsMap.get(id);
+  if (!contract) {
+    return res.status(404).json({ error: 'Договор не найден' });
+  }
+  res.json(contract);
+});
+
+// POST create contract
+app.post('/api/contracts', (req, res) => {
+  try {
+    const contract = req.body;
+    if (!contract || !contract.id) {
+      return res.status(400).json({ error: 'Параметр id обязателен' });
+    }
+    contract.updatedAt = new Date().toISOString();
+    contractsMap.set(contract.id, contract);
+    saveContractsToDisk();
+
+    broadcastRealtimeEvent({
+      type: 'contract:created',
+      data: contract,
+    });
+
+    res.status(201).json(contract);
+  } catch (error) {
+    console.error('Failed to create contract:', error);
+    res.status(500).json({ error: 'Failed to create contract' });
+  }
+});
+
+// PUT update contract
+app.put('/api/contracts/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const existing = contractsMap.get(id);
+    if (!existing) {
+      return res.status(404).json({ error: 'Договор не найден' });
+    }
+    const updated = {
+      ...existing,
+      ...req.body,
+      id,
+      updatedAt: new Date().toISOString(),
+    };
+    contractsMap.set(id, updated);
+    saveContractsToDisk();
+
+    broadcastRealtimeEvent({
+      type: 'contract:updated',
+      data: updated,
+    });
+
+    res.json(updated);
+  } catch (error) {
+    console.error('Failed to update contract:', error);
+    res.status(500).json({ error: 'Failed to update contract' });
+  }
+});
+
+// POST sign contract (Client or Master digital sign)
+app.post('/api/contracts/:id/sign', (req, res) => {
+  try {
+    const { id } = req.params;
+    const existing = contractsMap.get(id);
+    if (!existing) {
+      return res.status(404).json({ error: 'Договор не найден' });
+    }
+    const {
+      clientSignature,
+      clientSignedAt,
+      clientSignMethod,
+      masterSignature,
+      masterSignedAt,
+      digitalSealId,
+    } = req.body;
+
+    const nowIso = new Date().toISOString();
+    const updated = {
+      ...existing,
+      ...(clientSignature !== undefined ? { clientSignature } : {}),
+      ...(clientSignedAt !== undefined ? { clientSignedAt } : {}),
+      ...(clientSignMethod !== undefined ? { clientSignMethod } : {}),
+      ...(masterSignature !== undefined ? { masterSignature } : {}),
+      ...(masterSignedAt !== undefined ? { masterSignedAt } : {}),
+      digitalSealId: digitalSealId || existing.digitalSealId || `ПЭП-RU-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+      status: existing.status === 'draft' ? 'active' : existing.status,
+      updatedAt: nowIso,
+    };
+
+    contractsMap.set(id, updated);
+    saveContractsToDisk();
+
+    broadcastRealtimeEvent({
+      type: 'contract:signed',
+      data: updated,
+    });
+
+    res.json(updated);
+  } catch (error) {
+    console.error('Failed to sign contract:', error);
+    res.status(500).json({ error: 'Failed to sign contract' });
+  }
+});
+
+// DELETE contract
+app.delete('/api/contracts/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    contractsMap.delete(id);
+    saveContractsToDisk();
+    res.json({ success: true, id });
+  } catch (error) {
+    console.error('Failed to delete contract:', error);
+    res.status(500).json({ error: 'Failed to delete contract' });
+  }
+});
+
+
 // ---------------- USER SYNC (FIREBASE AUTH & CLOUD SQL) ----------------
 
 // GET Users

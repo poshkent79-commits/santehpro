@@ -48,3 +48,31 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 );
+
+// Smooth dismissal of the splash screen once app is mounted
+if (typeof window !== 'undefined') {
+  const dismissSplash = () => {
+    const splash = document.getElementById('initial-splash');
+    if (splash && splash.style.opacity !== '0') {
+      splash.style.opacity = '0';
+      splash.style.transform = 'scale(1.02)';
+      splash.style.pointerEvents = 'none';
+      setTimeout(() => {
+        try {
+          if (splash.parentNode) {
+            splash.parentNode.removeChild(splash);
+          }
+        } catch (e) {}
+      }, 500);
+    }
+  };
+
+  // Provide a minimum smooth duration (~300ms) so splash renders smoothly, then dissolves
+  if (document.readyState === 'complete') {
+    setTimeout(dismissSplash, 300);
+  } else {
+    window.addEventListener('load', () => setTimeout(dismissSplash, 300));
+    // Failsafe timeout
+    setTimeout(dismissSplash, 1200);
+  }
+}

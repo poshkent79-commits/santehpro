@@ -39,13 +39,15 @@ import {
   Search,
   Droplets,
   Flame,
-  Bath
+  Bath,
+  FileCheck
 } from 'lucide-react';
-import { PlumbingSpecialist, MasterWork, ServiceCallRequest, Article } from '../types';
+import { PlumbingSpecialist, MasterWork, ServiceCallRequest, Article, MasterPlumbingEstimate } from '../types';
 import { WorkGalleryModal } from './WorkGalleryModal';
 import { compressImageFile } from '../utils/imageCompressor';
 import { MasterEstimatesTab } from './MasterEstimatesTab';
 import { MasterEstimateBuilderModal } from './MasterEstimateBuilderModal';
+import { MasterContractsTab } from './MasterContractsTab';
 import { RequestReviewModal } from './RequestReviewModal';
 import { ENGINEERING_SERVICE_GROUPS, ALL_ENGINEERING_SERVICES, EngineeringServiceItem } from '../data/engineeringServices';
 
@@ -60,7 +62,18 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
   onRefreshSpecialist,
   onOpenArticle,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'services' | 'works' | 'messages' | 'estimates' | 'articles'>('services');
+  const [activeSubTab, setActiveSubTab] = useState<'services' | 'works' | 'messages' | 'estimates' | 'contracts' | 'articles'>('services');
+
+  // Master estimates state for contracts linking
+  const [estimates, setEstimates] = useState<MasterPlumbingEstimate[]>(() => {
+    try {
+      const key = `santehpro_master_estimates_${specialist.id}`;
+      const saved = localStorage.getItem(key);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
   // Master Profile, Services & Pricing management state
   const [masterName, setMasterName] = useState<string>(specialist.name || '');
@@ -1019,6 +1032,22 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
           >
             <Calculator className="w-4 h-4 text-amber-400" />
             <span>Сметы клиентам</span>
+          </button>
+
+          <button
+            id="master-tab-contracts-btn"
+            onClick={() => setActiveSubTab('contracts')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all shrink-0 cursor-pointer ${
+              activeSubTab === 'contracts'
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <FileCheck className="w-4 h-4 text-emerald-400" />
+            <span>Договоры и акты</span>
+            <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              B2B
+            </span>
           </button>
 
           <button
@@ -2497,7 +2526,18 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
 
       {/* TAB 4: ESTIMATES FOR CLIENTS */}
       {activeSubTab === 'estimates' && (
-        <MasterEstimatesTab specialist={specialist} />
+        <MasterEstimatesTab
+          specialist={specialist}
+          onOpenContractsTab={() => setActiveSubTab('contracts')}
+        />
+      )}
+
+      {/* TAB 5: OFFICIAL CONTRACTS & ACTS (B2B MAGNET) */}
+      {activeSubTab === 'contracts' && (
+        <MasterContractsTab
+          specialist={specialist}
+          availableEstimates={estimates}
+        />
       )}
 
       {/* Estimate Builder Modal (when launched directly from a request) */}

@@ -23,22 +23,27 @@ import {
   Layers,
   FileSpreadsheet,
   Check,
-  AlertCircle
+  AlertCircle,
+  FileCheck
 } from 'lucide-react';
-import { MasterPlumbingEstimate, PlumbingSpecialist, ServiceCallRequest } from '../types';
+import { MasterPlumbingEstimate, PlumbingSpecialist, ServiceCallRequest, PlumbingContract } from '../types';
 import { MasterEstimateBuilderModal } from './MasterEstimateBuilderModal';
 import { ClientEstimateModal, getEstimateShareUrl } from './ClientEstimateModal';
+import { ContractBuilderModal } from './ContractBuilderModal';
+import { ContractViewerModal } from './ContractViewerModal';
 
 interface MasterEstimatesTabProps {
   specialist: PlumbingSpecialist;
   serviceRequests?: ServiceCallRequest[];
   onOpenDirectChat?: (req: ServiceCallRequest) => void;
+  onOpenContractsTab?: () => void;
 }
 
 export const MasterEstimatesTab: React.FC<MasterEstimatesTabProps> = ({
   specialist,
   serviceRequests = [],
   onOpenDirectChat,
+  onOpenContractsTab,
 }) => {
   const [estimates, setEstimates] = useState<MasterPlumbingEstimate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -52,6 +57,11 @@ export const MasterEstimatesTab: React.FC<MasterEstimatesTabProps> = ({
 
   const [activePreviewEstimate, setActivePreviewEstimate] = useState<MasterPlumbingEstimate | null>(null);
   const [toastMessage, setToastMessage] = useState<string>('');
+
+  // Contract builder integration
+  const [isContractBuilderOpen, setIsContractBuilderOpen] = useState(false);
+  const [contractToEdit, setContractToEdit] = useState<PlumbingContract | null>(null);
+  const [viewingContract, setViewingContract] = useState<PlumbingContract | null>(null);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -626,6 +636,55 @@ export const MasterEstimatesTab: React.FC<MasterEstimatesTabProps> = ({
                       <span>Предложить</span>
                     </button>
 
+                    {/* Generate Official Contract & Act from this estimate */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const workItems = est.items.filter((i) => i.type === 'work');
+                        const worksText =
+                          workItems.length > 0
+                            ? workItems
+                                .map((w, idx) => `${idx + 1}. ${w.name} (${w.quantity} ${w.unit || 'шт.'}) — ${w.total.toLocaleString('ru-RU')} ₽`)
+                                .join('\n')
+                            : est.title;
+
+                        const generatedContract: PlumbingContract = {
+                          id: `contract_est_${est.id}_${Date.now()}`,
+                          specialistId: specialist.id,
+                          specialistName: specialist.name,
+                          specialistPhone: specialist.phone,
+                          specialistStatus: 'self_employed',
+                          specialistCity: specialist.city || 'Москва',
+                          clientName: est.clientName || 'Заказчик',
+                          clientPhone: est.clientPhone || '',
+                          clientAddress: est.clientAddress || '',
+                          contractNumber: `СП-${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`,
+                          contractDate: new Date().toISOString().slice(0, 10),
+                          startDate: new Date().toISOString().slice(0, 10),
+                          endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+                          title: est.title,
+                          worksList: worksText,
+                          totalPrice: est.grandTotal,
+                          advancePayment: est.advancePayment || 0,
+                          remainingPayment: Math.max(0, est.grandTotal - (est.advancePayment || 0)),
+                          warrantyMonths: est.warrantyMonths || 24,
+                          materialsResponsibility: 'mixed',
+                          estimateId: est.id,
+                          status: 'active',
+                          createdAt: new Date().toISOString(),
+                          updatedAt: new Date().toISOString(),
+                        };
+
+                        setContractToEdit(generatedContract);
+                        setIsContractBuilderOpen(true);
+                      }}
+                      className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-400 border border-slate-700/60 transition cursor-pointer flex items-center gap-1 text-xs font-semibold"
+                      title="Сформировать официальный договор и акт из этой сметы"
+                    >
+                      <FileCheck className="w-3.5 h-3.5 text-amber-400" />
+                      <span className="hidden sm:inline">Договор</span>
+                    </button>
+
                     {/* Quick copy santehpro.info link */}
                     <button
                       type="button"
@@ -708,6 +767,49 @@ export const MasterEstimatesTab: React.FC<MasterEstimatesTabProps> = ({
             setIsBuilderOpen(true);
           }}
           isMasterView={true}
+        />
+      )}
+
+      {/* Contract Builder from Estimate */}
+      {isContractBuilderOpen && (
+        <ContractBuilderModal
+          isOpen={isContractBuilderOpen}
+          onClose={() => {
+            setIsContractBuilderOpen(false);
+            setContractToEdit(null);
+          }}
+          onSave={(savedContract) => {
+            // Save to master's contracts storage
+            try {
+              const key = `santehpro_master_contracts_${specialist.id}`;
+              const existing = JSON.parse(localStorage.getItem(key) || '[]');
+              const updated = [savedContract, ...existing.filter((c: any) => c.id !== savedContract.id)];
+              localStorage.setItem(key, JSON.stringify(updated));
+            } catch (e) {
+              console.warn('Error saving contract to storage:', e);
+            }
+            setIsContractBuilderOpen(false);
+            setContractToEdit(null);
+            setViewingContract(savedContract);
+            showToast(`Официальный договор № ${savedContract.contractNumber} успешно создан!`);
+          }}
+          specialist={specialist}
+          initialContract={contractToEdit}
+          availableEstimates={estimates}
+        />
+      )}
+
+      {/* Contract Viewer Modal */}
+      {viewingContract && (
+        <ContractViewerModal
+          contract={viewingContract}
+          isOpen={Boolean(viewingContract)}
+          onClose={() => setViewingContract(null)}
+          onEdit={(contract) => {
+            setViewingContract(null);
+            setContractToEdit(contract);
+            setIsContractBuilderOpen(true);
+          }}
         />
       )}
     </div>
