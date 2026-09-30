@@ -3,81 +3,10 @@ import { masterWorks } from './schema.ts';
 import { eq, desc, and } from 'drizzle-orm';
 import { MasterWork } from '../types.ts';
 
-// Initial sample works for approved masters so portfolios have realistic photos from the start
-export const INITIAL_MASTER_WORKS: MasterWork[] = [
-  {
-    id: 'work-1',
-    specialistId: 'spec-1', // Александр Ковалев (Москва, рейтинг 4.9)
-    specialistName: 'Александр Ковалев',
-    title: 'Монтаж коллекторного узла водоснабжения Rehau и системы защиты от протечек Neptun',
-    description: 'Комплексный монтаж сантехнического узла в новостройке (ЖК «Сердце Столицы»). Установлены компенсаторы гидроударов FAR, самопромывные фильтры тонкой очистки с манометрами, коллекторы Oventrop, редукторы давления и система защиты от протечек Neptun ProW+. Разводка выполнена трубой Rehau Rautitan Stabil.',
-    category: 'water',
-    photos: [
-      'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1542013936693-884638332954?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=800&q=80'
-    ],
-    completedAt: '2026-03-12',
-    createdAt: '2026-03-13T10:00:00.000Z',
-    status: 'approved',
-  },
-  {
-    id: 'work-2',
-    specialistId: 'spec-1',
-    specialistName: 'Александр Ковалев',
-    title: 'Установка и скрытый монтаж инсталляции Geberit Duofix с гигиеническим душем',
-    description: 'Скрытый монтаж инсталляции для подвесного унитаза в капитальную стену. Точная выверка горизонта по лазерному уровню, шумоизоляция стояка канализации STP, подключение гигиенического душа со встроенным термостатом Grohe.',
-    category: 'bath',
-    photos: [
-      'https://images.unsplash.com/photo-1507652313519-d4e9174996dd?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?auto=format&fit=crop&w=800&q=80'
-    ],
-    completedAt: '2026-02-28',
-    createdAt: '2026-03-01T12:00:00.000Z',
-    status: 'approved',
-  },
-  {
-    id: 'work-3',
-    specialistId: 'spec-2', // Иван Петровский (СПб, рейтинг 4.8)
-    specialistName: 'Иван Петровский',
-    title: 'Разводка труб водоснабжения и канализации в ванной комнате под ключ',
-    description: 'Штробление стен без пыли с промышленным пылесосом. Прокладка труб PEX-a с гильзами надвижного типа, вывод водорозеток строго в проектных осях, опрессовка давлением 10 бар в течение суток перед укладкой плитки.',
-    category: 'water',
-    photos: [
-      'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1542013936693-884638332954?auto=format&fit=crop&w=800&q=80'
-    ],
-    completedAt: '2026-03-05',
-    createdAt: '2026-03-06T15:30:00.000Z',
-    status: 'approved',
-  },
-  {
-    id: 'work-4',
-    specialistId: 'spec-3', // Дмитрий Соколов (Новосибирск, рейтинг 5.0)
-    specialistName: 'Дмитрий Соколов',
-    title: 'Монтаж котельной и водяного теплого пола в загородном доме 220 кв.м',
-    description: 'Полная обвязка газового конденсационного котла Viessmann и резервного электрического котла Protherm. Коллекторный шкаф на 9 контуров теплого пола с сервоприводами и автоматическими комнатными термостатами.',
-    category: 'heating',
-    photos: [
-      'https://images.unsplash.com/photo-1518737083073-2287714856f9?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1544383835-bda2bc66a55d?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?auto=format&fit=crop&w=800&q=80'
-    ],
-    completedAt: '2026-02-20',
-    createdAt: '2026-02-21T09:00:00.000Z',
-    status: 'approved',
-  }
-];
+// Initial sample works
+export const INITIAL_MASTER_WORKS: MasterWork[] = [];
 
-let inMemoryMasterWorks: MasterWork[] = [...INITIAL_MASTER_WORKS];
+let inMemoryMasterWorks: MasterWork[] = [];
 
 export async function getDbMasterWorks(params?: {
   specialistId?: string;

@@ -20,7 +20,23 @@ export function getCachedArticles(): Article[] {
     if (fs.existsSync(ARTICLES_STORE_FILE)) {
       const data = JSON.parse(fs.readFileSync(ARTICLES_STORE_FILE, 'utf-8'));
       if (Array.isArray(data) && data.length > 0) {
-        return data;
+        return data.map((a: Article) => ({
+          ...a,
+          coverImage: (a.coverImage && !a.coverImage.includes('images.unsplash.com')) ? a.coverImage : undefined,
+          videoUrl: (a.videoUrl && !a.videoUrl.includes('dQw4w9WgXcQ') && !a.videoUrl.includes('732a3ea9c98cf85b244793f18e11a3ec')) ? a.videoUrl : undefined,
+          videoEmbed: (a.videoEmbed && !a.videoEmbed.includes('dQw4w9WgXcQ') && !a.videoEmbed.includes('732a3ea9c98cf85b244793f18e11a3ec')) ? a.videoEmbed : undefined,
+          rutubeUrl: (a.rutubeUrl && !a.rutubeUrl.includes('732a3ea9c98cf85b244793f18e11a3ec')) ? a.rutubeUrl : undefined,
+          youtubeUrl: (a.youtubeUrl && !a.youtubeUrl.includes('dQw4w9WgXcQ')) ? a.youtubeUrl : undefined,
+          audioUrl: (a.audioUrl && !a.audioUrl.includes('soundhelix.com')) ? a.audioUrl : undefined,
+          audioTitle: (a.audioUrl && !a.audioUrl.includes('soundhelix.com')) ? a.audioTitle : undefined,
+          galleryImages: (a.galleryImages && a.galleryImages.some((g: string) => typeof g === 'string' && g.includes('images.unsplash.com'))) ? undefined : a.galleryImages,
+          steps: Array.isArray(a.steps) ? a.steps.map((s: any) => ({
+            ...s,
+            imageUrl: (s.imageUrl && !s.imageUrl.includes('images.unsplash.com')) ? s.imageUrl : undefined,
+            videoUrl: (s.videoUrl && !s.videoUrl.includes('dQw4w9WgXcQ')) ? s.videoUrl : undefined,
+            audioUrl: (s.audioUrl && !s.audioUrl.includes('soundhelix.com')) ? s.audioUrl : undefined,
+          })) : a.steps,
+        }));
       }
     }
   } catch (err) {
@@ -170,18 +186,18 @@ function mapRowsToArticles(rows: any[]): Article[] {
       difficulty: r.difficulty as any,
       timeEst: r.timeEst,
       description: r.description,
-      coverImage: r.coverImage || 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80',
+      coverImage: (r.coverImage && !r.coverImage.includes('images.unsplash.com')) ? r.coverImage : undefined,
       imageTitle: r.imageTitle || (r.id ? HANDBOOK_IMAGE_TITLES[r.id] : undefined) || generateImageTitleFromTextTitle(r.title, r.id),
-      videoUrl: r.videoUrl || undefined,
-      videoEmbed: r.videoEmbed || undefined,
-      rutubeUrl: (r as any).rutubeUrl || undefined,
-      youtubeUrl: (r as any).youtubeUrl || undefined,
+      videoUrl: (r.videoUrl && !r.videoUrl.includes('dQw4w9WgXcQ') && !r.videoUrl.includes('732a3ea9c98cf85b244793f18e11a3ec')) ? r.videoUrl : undefined,
+      videoEmbed: (r.videoEmbed && !r.videoEmbed.includes('dQw4w9WgXcQ') && !r.videoEmbed.includes('732a3ea9c98cf85b244793f18e11a3ec')) ? r.videoEmbed : undefined,
+      rutubeUrl: (r.rutubeUrl && !r.rutubeUrl.includes('732a3ea9c98cf85b244793f18e11a3ec')) ? r.rutubeUrl : undefined,
+      youtubeUrl: (r.youtubeUrl && !r.youtubeUrl.includes('dQw4w9WgXcQ')) ? r.youtubeUrl : undefined,
       vkVideoUrl: (r as any).vkVideoUrl || undefined,
       videoTimestamps,
-      audioUrl: r.audioUrl || undefined,
-      audioTitle: r.audioTitle || undefined,
+      audioUrl: (r.audioUrl && !r.audioUrl.includes('soundhelix.com')) ? r.audioUrl : undefined,
+      audioTitle: (r.audioUrl && !r.audioUrl.includes('soundhelix.com')) ? r.audioTitle : undefined,
       authorAddress: r.authorAddress || undefined,
-      galleryImages,
+      galleryImages: (galleryImages && galleryImages.some((g: string) => typeof g === 'string' && g.includes('images.unsplash.com'))) ? undefined : galleryImages,
       studentsCount: r.studentsCount ?? 0,
       rating: r.rating ? Number(r.rating) : 5.0,
       certificate: r.certificate ?? false,

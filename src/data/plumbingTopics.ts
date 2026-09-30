@@ -12,7 +12,6 @@ export const PLUMBING_TOPICS: Article[] = [
     difficulty: 'Новичок',
     timeEst: '20-30 мин',
     description: 'Технология полифузионной диффузионной сварки ППР. Время нагрева, температура 260°C, глубины посадки, предотвращение запаивания просвета.',
-    coverImage: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=800&q=80',
     toolsRequired: ['Сварочный аппарат для ППР с насадками', 'Труборез (ножницы для пластика)', 'Обезжириватель (изопропиловый спирт)', 'Маркер и рулетка', 'Фаскосниматель / торцеватель'],
     materialsRequired: ['Трубы ППР 20/25/32 мм', 'Муфты, угольники 90° и 45°', 'Тройники и комбинаты'],
     steps: [
@@ -99,7 +98,6 @@ export const PLUMBING_TOPICS: Article[] = [
     difficulty: 'Продвинутый',
     timeEst: '25-35 мин',
     description: 'Монтаж труб PEX-A с эффектом молекулярной памяти. Работа с экспандером, надвижными аксиальными гильзами и тисками.',
-    coverImage: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=800&q=80',
     toolsRequired: ['Аккумуляторный или ручной экспандер (расширитель)', 'Аксиальные Пресс-клещи (запрессовщик)', 'Труборез для PEX', 'Маркер'],
     materialsRequired: ['Трубы PEX-a 16/20 мм', 'Латунные или PPSU фитинги', 'Надвижные латунные гильзы'],
     steps: [
@@ -162,7 +160,6 @@ export const PLUMBING_TOPICS: Article[] = [
     difficulty: 'Продвинутый',
     timeEst: '40-60 мин',
     description: 'Проектирование и сборка сантехшкафа с регулирующими коллекторами (гребенками) FAR/Valtec, гасителями гидроударов и запорной арматурой.',
-    coverImage: 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=800&q=80',
     toolsRequired: ['Ключ для коллекторных евроконусов', 'Труборез', 'Разводной ключ', 'Нивелир/уровень'],
     materialsRequired: ['Коллекторы с регулирующими вентилями 3/4"-1/2"', 'Кронштейны коллектора', 'Евроконусы 16х2.0', 'Гаситель гидроударов'],
     steps: [
@@ -212,7 +209,6 @@ export const PLUMBING_TOPICS: Article[] = [
     difficulty: 'Профи',
     timeEst: '30-45 мин',
     description: 'Технология капиллярной пайки медных труб газовой горелкой. Флюс, бессвинцовый припой, зачистка грата и контроль растекания.',
-    coverImage: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=800&q=80',
     toolsRequired: ['Газовая горелка (мапп-газ или пропан)', 'Гратосниматель/фаскосниматель', 'Зачистная губка Scotch-Brite', 'Труборез для меди'],
     materialsRequired: ['Медные трубы (Hard/Half-hard)', 'Медные фитинги (муфты, углы)', 'Паяльный флюс-паста', 'Припой мягкий (Sn97Cu3)'],
     steps: [
@@ -269,7 +265,6 @@ export const PLUMBING_TOPICS: Article[] = [
     difficulty: 'Новичок',
     timeEst: '15-25 мин',
     description: 'Сборка синих ПНД труб 32/25 мм для ввода воды из скважины или колодца. Расположение цанги, упорного кольца и резинового тора.',
-    coverImage: 'https://images.unsplash.com/photo-1542013936693-884638332954?auto=format&fit=crop&w=800&q=80',
     toolsRequired: ['Ключ для ПНД фитингов (пластиковый зажимной)', 'Труборез или ножовка с мелким зубом', 'Фаскосниматель'],
     materialsRequired: ['Труба ПНД ПЭ-100 32х3.0', 'Муфты ПНД компрессионные', 'Углы и отводы ПНД'],
     steps: [
@@ -313,7 +308,6 @@ export const PLUMBING_TOPICS: Article[] = [
     difficulty: 'Новичок',
     timeEst: '25-40 мин',
     description: 'Полная инструкция по снятию старого смесителя, установке полумесяца/шпилек или гайки-короны, подключению подводки.',
-    coverImage: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80',
     toolsRequired: ['Ключ рожковый 10/11 мм или трубчатый ключ 12/13 мм', 'Разводной ключ', 'Фонарик', 'Отвертка плоская и крестовая'],
     materialsRequired: ['Новый кухонный смеситель', 'Гибкая подводка 1/2" с длинной и короткой иглой', 'Уплотнительное кольцо под основание смесителя'],
     steps: [
@@ -371,7 +365,6 @@ export const PLUMBING_TOPICS: Article[] = [
     difficulty: 'Новичок',
     timeEst: '15-20 мин',
     description: 'Устранение капели и тугого хода рычага. Снятие заглушки, выкручивание фиксирующего винта шестигранником, демонтаж прижимной гайки.',
-    coverImage: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80',
     toolsRequired: ['Шестигранный ключ 2.5 мм или 3 мм', 'Разводной ключ до 32-36 мм', 'Отвертка с тонким шлицем', 'Вэдэшка (WD-40) при закисании'],
     materialsRequired: ['Новый картридж (35 мм или 40 мм с ножкой или без)', 'Сантехническая силиконовая смазка'],
     steps: [
@@ -413,7 +406,6 @@ export const PLUMBING_TOPICS: Article[] = [
     difficulty: 'Новичок',
     timeEst: '40-60 мин',
     description: 'Разметка отверстий перфоратором, посадка санфаянса на силикон, регулировка арматуры бачка и подключение к канализации.',
-    coverImage: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80',
     toolsRequired: ['Перфоратор со сверлом по кафелю и бетону 8/10 мм', 'Сантехнический силиконовый герметик', 'Пузырьковый уровень', 'Гаечный ключ 10/13 мм'],
     materialsRequired: ['Унитаз-компакт в комплекте', 'Гофра канализационная 110 мм с резиновой манжетой', 'Дюбели крепления к полу с пластиковыми шайбами'],
     steps: [
@@ -452,7 +444,6 @@ export const PLUMBING_TOPICS: Article[] = [
     difficulty: 'Продвинутый',
     timeEst: '60-90 мин',
     description: 'Выставление высоты чистового пола (метка 1 метр), крепление анкерами к стене и полу, подключение воды жесткой трубой, изоляция бачка.',
-    coverImage: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80',
     toolsRequired: ['Лазерный или пузырьковый уровень', 'Перфоратор с буром 12 мм', 'Ключ трещотка с головками 13/17/19 мм', 'Рулетка'],
     materialsRequired: ['Рама инсталляции с бачком', 'Анкерные болты и стеновые крепежи', 'Фановый отвод 90/110', 'Защитные заглушки и шпильки'],
     steps: [
@@ -494,7 +485,6 @@ export const PLUMBING_TOPICS: Article[] = [
     difficulty: 'Продвинутый',
     timeEst: '25-35 мин',
     description: 'Защита от ожогов при скачках давления. Обязательное соблюдение подключения ГВС слева и ХВС справа, проверка обратных клапанов.',
-    coverImage: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80',
     toolsRequired: ['Разводной ключ с мягкими губками', 'Термометр для воды', 'Шестигранник 2 мм'],
     materialsRequired: ['Термостатический смеситель', 'Эксцентрики с фильтрами-сетками'],
     steps: [
@@ -531,7 +521,6 @@ export const PLUMBING_TOPICS: Article[] = [
     difficulty: 'Новичок',
     timeEst: '25-30 мин',
     description: 'Смена водосчётчиков по истечению межповерочного интервала. Направление стрелки потока, замена паронитовых/силиконовых прокладок, обратный клапан.',
-    coverImage: 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=800&q=80',
     toolsRequired: ['Ключ рожковый 27/30 мм или разводной', 'Щетка по металлу', 'Фонарик'],
     materialsRequired: ['Счётчики воды с паспортом (110 мм, 3/4" - 1/2")', 'Прокладки силиконовые или паронитовые 3/4"', 'Обратный клапан'],
     steps: [
@@ -590,7 +579,6 @@ export const PLUMBING_TOPICS: Article[] = [
     difficulty: 'Новичок',
     timeEst: '15-20 мин',
     description: 'Сравнительный практический разбор способов уплотнения сантехнической резьбы. Технология правильной намотки льна, нанесения анаэроба и нити.',
-    coverImage: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=800&q=80',
     toolsRequired: ['Плашка или полотно ножовки для насечек на резьбе', 'Рожковые ключи', 'Сухая ветошь'],
     materialsRequired: ['Сантехнический лен чесаный + паста Unipak', 'Анаэробный гель (синий/зеленый)', 'ФУМ-лента 0.1 мм', 'Нить Тангит Унилок'],
     steps: [
@@ -653,7 +641,6 @@ export const PLUMBING_TOPICS: Article[] = [
     difficulty: 'Новичок',
     timeEst: '20-30 мин',
     description: 'Правильный вывод сливного шланга с высотой петли 50-80 см, установка трехходового крана 1/2"-3/4"-1/2" и проверка фильтра-сетки.',
-    coverImage: 'https://images.unsplash.com/photo-1542013936693-884638332954?auto=format&fit=crop&w=800&q=80',
     toolsRequired: ['Разводной ключ', 'Пассатижи для хомута', 'Уровень'],
     materialsRequired: ['Трехходовой кран для стиралки 1/2"x3/4"x1/2"', 'Сифон раковины с штуцером для слива', 'Обратный клапан слива'],
     steps: [
@@ -688,7 +675,6 @@ export const PLUMBING_TOPICS: Article[] = [
     difficulty: 'Продвинутый',
     timeEst: '45-60 мин',
     description: 'Установка обратно-предохранительного клапана 6 бар, сливного тройника, заземления и подводка PEX/ППР труб.',
-    coverImage: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80',
     toolsRequired: ['Перфоратор с буром 12/14 мм', 'Разводной ключ', 'Уровень', 'Тестер напряжения'],
     materialsRequired: ['Водонагреватель накопительный 50-100л', 'Крюки-анкеры L-образные 12 мм', 'Предохранительный клапан', 'Сливной тройник и шаровой кран'],
     steps: [
@@ -728,7 +714,6 @@ export const PLUMBING_TOPICS: Article[] = [
     difficulty: 'Продвинутый',
     timeEst: '50-70 мин',
     description: 'Сборка комплекта пробок 1", установка крана Маевского, шаровых кранов с американкой, расчёт количества секций.',
-    coverImage: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=800&q=80',
     toolsRequired: ['Ключ для радиаторных пробок', 'Нивелир', 'Перфоратор', 'Разводные ключи'],
     materialsRequired: ['Биметаллический радиатор', 'Монтажный комплект пробок 3/4" или 1/2"', 'Кран Маевского', 'Краны с американкой 2 шт'],
     steps: [
@@ -786,7 +771,6 @@ export const PLUMBING_TOPICS: Article[] = [
     difficulty: 'Новичок',
     timeEst: '15-20 мин',
     description: 'Почему нельзя делать слишком большой или слишком маленький уклон. Нормы уклона: 2 см/м для 110 мм, 3 см/м для 50 мм.',
-    coverImage: 'https://images.unsplash.com/photo-1542013936693-884638332954?auto=format&fit=crop&w=800&q=80',
     toolsRequired: ['Строительный пузырьковый уровень с метками уклона (2%)', 'Лазерный нивелир', 'Рулетка'],
     materialsRequired: ['Канализационные трубы 50/110 мм', 'Хомуты с резиновым виброгасителем'],
     steps: [
@@ -842,7 +826,6 @@ export const PLUMBING_TOPICS: Article[] = [
     difficulty: 'Новичок',
     timeEst: '20-30 мин',
     description: 'Прочистка волосяных и жировых пробок. Пружинные тросы с ершом, техника вращения по часовой стрелке, промывка горячей водой.',
-    coverImage: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80',
     toolsRequired: ['Сантехнический пружинный трос 3-5 метров', 'Перчатки защитные плотные', 'Ведро и тряпка'],
     materialsRequired: ['Средство для растворения жира', 'Горячая вода'],
     steps: [
@@ -1044,8 +1027,7 @@ TOPIC_TEMPLATES.forEach((tpl) => {
     difficulty: tpl.diff as any,
     timeEst: tpl.time,
     description: `Подробное практическое руководство с пошаговым алгоритмом: ${tpl.title}. Инструменты, порядок действий, наглядное сравнение монтажных поворотов и соединений.`,
-    coverImage: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80',
-    imageTitle: HANDBOOK_IMAGE_TITLES[artId] || generateImageTitleFromTextTitle(tpl.title, artId),
+    imageTitle: HANDBOOK_IMAGE_TITLES?.[artId] || generateImageTitleFromTextTitle(tpl.title, artId),
     toolsRequired: ['Разводной ключ', 'Труборез', 'Уровень', 'Уплотнительные материалы', 'Защитные перчатки'],
     materialsRequired: ['Фитинги подходящего диаметра', 'Трубы или запорная арматура', 'Сантехнический лен/гель'],
     steps: steps,

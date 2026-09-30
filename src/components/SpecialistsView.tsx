@@ -439,9 +439,13 @@ export const SpecialistsView: React.FC<SpecialistsViewProps> = ({
             <MapPin className="w-6 h-6 text-slate-500" />
           </div>
           <div className="space-y-1">
-            <h3 className="text-base font-bold text-white">В городе {selectedCity} пока нет зарегистрированных мастеров</h3>
+            <h3 className="text-base font-bold text-white">
+              {selectedCity === 'Все города'
+                ? 'В каталоге пока нет зарегистрированных специалистов'
+                : `В городе ${selectedCity} пока нет зарегистрированных мастеров`}
+            </h3>
             <p className="text-xs text-slate-400 max-w-md mx-auto">
-              Вы можете переключиться на режим «Все города» для поиска по всей России или оставить заявку на вызов.
+              Станьте первым проверенным мастером сервиса — подайте анкету и получайте прямые заявки от заказчиков без комиссий и посредников!
             </p>
           </div>
 
@@ -467,7 +471,7 @@ export const SpecialistsView: React.FC<SpecialistsViewProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map((spec) => {
             const specWorks = masterWorks.filter(
-              (w) => (w.specialistId === spec.id || (!w.specialistId && spec.id === 'spec-1')) && w.status === 'approved'
+              (w) => w.specialistId === spec.id && w.status === 'approved'
             );
 
             return (

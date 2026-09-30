@@ -62,7 +62,7 @@ export interface Article {
   difficulty: 'Новичок' | 'Продвинутый' | 'Профи';
   timeEst: string;
   description: string;
-  coverImage: string;
+  coverImage?: string;
   imageTitle?: string;
   videoUrl?: string;
   videoEmbed?: string;

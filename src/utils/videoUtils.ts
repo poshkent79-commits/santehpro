@@ -173,10 +173,6 @@ export function resolveDualPlatformVideos(data: {
     }
   }
 
-  // Fallbacks: If an educational material has video content, provide reliable RuTube/YouTube channels
-  const defaultRuTubeEmbed = rt || 'https://rutube.ru/play/embed/e5428a1ce74328325a7a972c3d5964bb';
-  const defaultYouTubeEmbed = yt || 'https://www.youtube.com/embed/dQw4w9WgXcQ?rel=0';
-
   const hasExplicitRuTube = Boolean(rt);
   const hasExplicitVk = Boolean(vk);
   const hasExplicitYouTube = Boolean(yt);
@@ -195,12 +191,12 @@ export function resolveDualPlatformVideos(data: {
   }
 
   return {
-    youtubeEmbed: yt || defaultYouTubeEmbed,
-    rutubeEmbed: rt || defaultRuTubeEmbed,
+    youtubeEmbed: yt || null,
+    rutubeEmbed: rt || null,
     vkEmbed: vk,
     directVideoUrl: direct,
-    hasYouTube: hasExplicitYouTube || Boolean(yt),
-    hasRuTube: hasExplicitRuTube || Boolean(rt),
+    hasYouTube: hasExplicitYouTube,
+    hasRuTube: hasExplicitRuTube,
     hasVk: hasExplicitVk,
     hasDirect,
     defaultPlatform,

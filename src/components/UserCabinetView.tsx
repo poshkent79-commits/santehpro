@@ -339,8 +339,8 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
           status: 'completed',
           emergency: false,
           preferredTime: 'Работы успешно выполнены',
-          preferredMasterId: targetSpecialist?.id || 'spec-1',
-          preferredMasterName: targetSpecialist?.name || 'Михаил Ковалев',
+          preferredMasterId: targetSpecialist?.id || undefined,
+          preferredMasterName: targetSpecialist?.name || undefined,
         }),
       });
       if (res.ok) {

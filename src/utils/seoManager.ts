@@ -45,7 +45,7 @@ export function updatePageSeoMetadata(config: SeoPageConfig): void {
   setMetaTag('property', 'og:description', config.description);
   setMetaTag('property', 'og:url', fullCanonical);
   setMetaTag('property', 'og:type', config.ogType || 'website');
-  setMetaTag('property', 'og:image', config.ogImage || `${origin}/pwa-512x512.png`);
+  setMetaTag('property', 'og:image', config.ogImage || `${origin}/og-image.jpg`);
   setMetaTag('property', 'og:site_name', 'СантехПро');
   setMetaTag('property', 'og:locale', 'ru_RU');
 
@@ -53,7 +53,7 @@ export function updatePageSeoMetadata(config: SeoPageConfig): void {
   setMetaTag('name', 'twitter:card', 'summary_large_image');
   setMetaTag('name', 'twitter:title', config.title);
   setMetaTag('name', 'twitter:description', config.description);
-  setMetaTag('name', 'twitter:image', config.ogImage || `${origin}/pwa-512x512.png`);
+  setMetaTag('name', 'twitter:image', config.ogImage || `${origin}/og-image.jpg`);
 
   // 6. Inject / Update Schema.org JSON-LD
   if (config.structuredData) {

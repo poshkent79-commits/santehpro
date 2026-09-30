@@ -855,8 +855,7 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
           timeEst: articleTimeEst,
           description: articleDescription.trim(),
           coverImage:
-            articleCover.trim() ||
-            'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80',
+            (articleCover.trim() && !articleCover.includes('images.unsplash.com')) ? articleCover.trim() : undefined,
           author: specialist.name,
           authorMasterId: specialist.id,
           authorAddress: specialist.city ? `г. ${specialist.city}, Мастерская СантехПро` : undefined,

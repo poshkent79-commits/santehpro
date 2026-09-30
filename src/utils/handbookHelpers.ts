@@ -5,292 +5,33 @@ import { Article } from '../types';
  * illustrative photograph corresponding directly to its sanitary/engineering topic.
  */
 export const getInstructionImage = (art: { id?: string; title: string; category?: string; coverImage?: string }): string => {
-  // 1. If an explicit, updated, or custom coverImage is present:
+  // If an explicit, updated, or custom coverImage is present:
   if (art && art.coverImage && typeof art.coverImage === 'string') {
     const trimmed = art.coverImage.trim();
     if (trimmed.length > 0) {
-      // Prioritize uploaded data URLs (base64 image uploads), local uploads (/uploads/...), blob URLs, or relative paths
       if (
-        trimmed.startsWith('data:') ||
+        (trimmed.startsWith('data:') ||
         trimmed.startsWith('/uploads/') ||
         trimmed.startsWith('blob:') ||
-        trimmed.startsWith('/')
-      ) {
-        return trimmed;
-      }
-
-      // Prioritize any custom web URL that is not the generic unedited template placeholder photo-1584622650111-993a426fbf0a
-      if (
-        (trimmed.startsWith('http://') || trimmed.startsWith('https://')) &&
-        !trimmed.includes('photo-1584622650111-993a426fbf0a')
+        trimmed.startsWith('/') ||
+        trimmed.startsWith('http://') ||
+        trimmed.startsWith('https://')) &&
+        !trimmed.includes('images.unsplash.com')
       ) {
         return trimmed;
       }
     }
   }
-
-  const text = (((art?.id || '') + ' ' + (art?.title || '') + ' ' + (art?.category || ''))).toLowerCase();
-
-  // 1. Пайка полипропиленовых труб (ППР) - сварочный аппарат, насадки, диффузия
-  if (text.includes('ppr') || text.includes('полипропилен') || text.includes('пайка ппр') || text.includes('диффузион')) {
-    return 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=600&q=80';
-  }
-
-  // 2. Сшитый полиэтилен PEX-a (Rehau, Stout, аксиальная запрессовка)
-  if (text.includes('pex') || text.includes('сшит') || text.includes('гильз') || text.includes('rehau') || text.includes('stout')) {
-    return 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=600&q=80';
-  }
-
-  // 3. Коллекторная (лучевая) разводка водоснабжения - гребенка, распределитель
-  if (text.includes('коллектор') || text.includes('лучев') || text.includes('шкаф') || text.includes('гребенк')) {
-    return 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?auto=format&fit=crop&w=600&q=80';
-  }
-
-  // 4. Пайка медных труб капиллярным способом
-  if (text.includes('медн') || text.includes('copper') || text.includes('припоем')) {
-    return 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=600&q=80';
-  }
-
-  // 5. Трубы ПНД компрессионные
-  if (text.includes('пнд') || text.includes('компрессион')) {
-    return 'https://images.unsplash.com/photo-1542013936693-884638332954?auto=format&fit=crop&w=600&q=80';
-  }
-
-  // 6. Керамический картридж смесителя
-  if (text.includes('картридж')) {
-    return 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?auto=format&fit=crop&w=600&q=80';
-  }
-
-  // 7. Смесители (кухонный, для раковины, настенный в ванной)
-  if (text.includes('кухонн') || text.includes('смесител') || text.includes('кран') || text.includes('мойк')) {
-    return 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=600&q=80';
-  }
-
-  // 8. Термостатический смеситель для душа
-  if (text.includes('термостат') || text.includes('38°c') || text.includes('душа')) {
-    return 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=600&q=80';
-  }
-
-  // 9. Напольный унитаз и сливной бачок
-  if (text.includes('напольн') || text.includes('арматур') || text.includes('бачк') || (text.includes('унитаз') && !text.includes('инсталляц'))) {
-    return 'https://images.unsplash.com/photo-1564540586988-aa4e53c3d799?auto=format&fit=crop&w=600&q=80';
-  }
-
-  // 10. Монтаж силовой инсталляции подвесного унитаза
-  if (text.includes('инсталляц') || text.includes('подвесн') || text.includes('geberit') || text.includes('grohe')) {
-    return 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=600&q=80';
-  }
-
-  // 11. Счётчики воды (водомеры ХВС и ГВС)
-  if (text.includes('счётчик') || text.includes('счетчик') || text.includes('водомер')) {
-    return 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=600&q=80';
-  }
-
-  // 12. Герметизация резьбовых соединений (лен, паста, фум, нить, гель)
-  if (text.includes('герметизац') || text.includes('лен') || text.includes('фу-лент') || text.includes('резьб') || text.includes('unipak')) {
-    return 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=600&q=80';
-  }
-
-  // 13. Подключение стиральной и посудомоечной машины
-  if (text.includes('стиральн') || text.includes('посудомоечн')) {
-    return 'https://images.unsplash.com/photo-1610557892470-55d9e80c0bce?auto=format&fit=crop&w=600&q=80';
-  }
-
-  // 14. Водонагреватель (накопительный бойлер)
-  if (text.includes('водонагреват') || text.includes('бойлер')) {
-    return 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?auto=format&fit=crop&w=600&q=80';
-  }
-
-  // 15. Радиаторы и батареи отопления, байпас, кран Маевского
-  if (text.includes('радиатор') || text.includes('батаре') || text.includes('отоплен') || text.includes('маевск')) {
-    return 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=600&q=80';
-  }
-
-  // 16. Уклон канализационных труб (110, 50, 40 мм)
-  if (text.includes('уклон') || text.includes('канализац') || text.includes('фанов')) {
-    return 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=600&q=80';
-  }
-
-  // 17. Прочистка засоров, сантехнический трос, вантуз
-  if (text.includes('засор') || text.includes('трос') || text.includes('прочистк')) {
-    return 'https://images.unsplash.com/photo-1530124566582-a618bc2615dc?auto=format&fit=crop&w=600&q=80';
-  }
-
-  // 18. Сборка и прочистка сифона (бутылочный, гофрированный)
-  if (text.includes('сифон')) {
-    return 'https://images.unsplash.com/photo-1584622781564-1d987f7333c1?auto=format&fit=crop&w=600&q=80';
-  }
-
-  // Default fallback to existing coverImage or generic reliable plumbing image
-  if (art && art.coverImage && typeof art.coverImage === 'string' && art.coverImage.trim().length > 0) {
-    return art.coverImage.trim();
-  }
-  return 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=600&q=80';
+  return '';
 };
 
-/**
- * Curated map of image headers / titles for all 133 handbook sections.
- * Generated specifically based on corresponding text titles.
- */
-export const HANDBOOK_IMAGE_TITLES: Record<string, string> = {
-  // 1-17: Core flagship engineering topics
-  'top-1-ppr-soldering': 'Пайка труб ППР 20-32 мм',
-  'top-2-pex-press': 'Монтаж сшитого полиэтилена PEX-a',
-  'top-3-collector-wiring': 'Коллекторная разводка водопровода',
-  'top-4-copper-soldering': 'Капиллярная пайка медных труб',
-  'top-5-pnd-compression': 'Монтаж труб ПНД компрессионными фитингами',
-  'top-6-mixer-kitchen-replace': 'Замена смесителя на мойке',
-  'top-7-cartridge-replace': 'Замена картриджа смесителя 35/40 мм',
-  'top-8-toilet-installation': 'Монтаж напольного унитаза и гофры',
-  'top-9-installation-frame': 'Монтаж силовой рамы инсталляции',
-  'top-10-thermostat-shower': 'Термостатический смеситель для душа',
-  'top-11-water-meter-replace': 'Установка счётчиков ХВС и ГВС',
-  'top-12-thread-sealing-methods': 'Герметизация резьбовых соединений',
-  'top-13-washing-machine-connect': 'Подключение стиральной и посудомоечной машин',
-  'top-14-boiler-installation': 'Обвязка накопительного бойлера',
-  'top-15-radiator-replace': 'Замена радиатора отопления с байпасом',
-  'top-16-sewer-pipe-slope': 'Уклон канализационных труб 110/50 мм',
-  'top-17-clog-removal-cable': 'Прочистка канализации сантехническим тросом',
-
-  // 18-37: Water distribution & pipes (20 items)
-  'top-101-water': 'Сдвижные гильзы PEX-a на коллекторе ГВС',
-  'top-102-water': 'Компенсатор гидроударов пружинного типа',
-  'top-103-water': 'Байпас на главном стояке ХВС',
-  'top-104-water': 'Безрезьбовая муфта Gebo на стояке',
-  'top-105-water': 'Теплоизоляция труб каучуком K-Flex',
-  'top-106-water': 'Греющий кабель на вводе трубы ХВС',
-  'top-107-water': 'Обвязка насосной станции и гидроаккумулятора',
-  'top-108-water': 'Разводка труб PEX-b с пуш-фитингами',
-  'top-109-water': 'Торцевание и сварка труб ППР',
-  'top-110-water': 'Опрессовка водопровода насосом 16 бар',
-  'top-111-water': 'Изгиб металлопластиковых труб пружиной',
-  'top-112-water': 'Шаровой кран с американкой Bugatti 3/4"',
-  'top-113-water': 'Мембранный расширительный бак ГВС',
-  'top-114-water': 'Промывка и дезинфекция водопровода',
-  'top-115-water': 'Сливной кран для зимней консервации',
-  'top-116-water': 'Нарезка резьбы клуппом на стальной трубе',
-  'top-117-water': 'Разметка и штробление стен под трубы',
-  'top-118-water': 'Переход со стали на сшитый полиэтилен',
-  'top-119-water': 'Манометры с выносными датчиками давления',
-  'top-120-water': 'Монтаж водорозеток под гигиенический душ',
-
-  // 38-57: Sanitary fixtures & mixers (20 items)
-  'top-121-fixtures': 'Смеситель скрытого монтажа iBox',
-  'top-122-fixtures': 'Гигиенический душ с термостатом',
-  'top-123-fixtures': 'Замена керамических кран-букс',
-  'top-124-fixtures': 'Очистка аэратора смесителя от солей',
-  'top-125-fixtures': 'Сильфонная подводка из нержавейки',
-  'top-126-fixtures': 'Сенсорный бесконтактный смеситель',
-  'top-127-fixtures': 'Сливная арматура бачка унитаза',
-  'top-128-fixtures': 'Прокладка между бачком и чашей унитаза',
-  'top-129-fixtures': 'Жесткий фановый отвод унитаза',
-  'top-130-fixtures': 'Сиденье унитаза с микролифтом Soft-Close',
-  'top-131-fixtures': 'Раковина над стиральной машиной с сифоном',
-  'top-132-fixtures': 'Накладная раковина-чаша на столешнице',
-  'top-133-fixtures': 'Бутылочный сифон с клапаном Click-Clack',
-  'top-134-fixtures': 'Монтаж акриловой ванны на каркасе',
-  'top-135-fixtures': 'Установка чугунной ванны по уровню',
-  'top-136-fixtures': 'Сборка душевого уголка со стеклом',
-  'top-137-fixtures': 'Душевой трап с сухим затвором',
-  'top-138-fixtures': 'Врезной смеситель на борт ванны',
-  'top-139-fixtures': 'Герметизация примыкания ванны к стене',
-  'top-140-fixtures': 'Душевой шланг Anti-Twist и лейка',
-
-  // 58-77: Valves, emergency & filters (20 items)
-  'top-141-emergency': 'Замена шарового крана на стояке под давлением',
-  'top-142-emergency': 'Комбинированный фильтр-редуктор КФРД',
-  'top-143-emergency': 'Самопромывной фильтр 100 мкм с манометром',
-  'top-144-emergency': 'Магистральный фильтр Big Blue BB20',
-  'top-145-emergency': 'Пружинный обратный клапан с латунным седлом',
-  'top-146-emergency': 'Система защиты от протечек Neptun',
-  'top-147-emergency': 'Герметизация резьб анаэробным гелем',
-  'top-148-emergency': 'Намотка уплотнительной нити Tangit Unilok',
-  'top-149-emergency': 'ФУМ-лента на пластиковых резьбах',
-  'top-150-emergency': 'Разблокировка закисшего шарового крана',
-  'top-151-emergency': 'Ремонтный хомут Gebo на пробитой трубе',
-  'top-152-emergency': 'Заделка свища на стояке холодной сваркой',
-  'top-153-emergency': 'Врезка в трубу хомутом-вампиром',
-  'top-154-emergency': 'Замена уплотнения накидной гайки-американки',
-  'top-155-emergency': 'Угловой кран для стиральной машины',
-  'top-156-emergency': 'Регулировка редуктора давления Honeywell / FAR',
-  'top-157-emergency': 'Замена прокладки в гайке водомера',
-  'top-158-emergency': 'Устранение шума в шаровом кране',
-  'top-159-emergency': 'Электромагнитный клапан перекрытия воды',
-  'top-160-emergency': 'Замена цанги в фитинге металлопластика',
-
-  // 78-96: Domestic appliances & boilers (19 items)
-  'top-161-appliances': 'Петля антисифона для посудомоечной машины',
-  'top-162-appliances': 'Проточный водонагреватель 7 кВт',
-  'top-163-appliances': 'Подключение газовой колонки к воде и вытяжке',
-  'top-164-appliances': 'Трехступенчатый фильтр воды под мойку',
-  'top-165-appliances': 'Система обратного осмоса с баком 8 л',
-  'top-166-appliances': 'Измельчитель отходов InSinkErator',
-  'top-167-appliances': 'Обвязка настенного газового котла',
-  'top-168-appliances': 'Подключение ледогенератора холодильника к воде',
-  'top-169-appliances': 'Полифосфатный солевой фильтр-умягчитель',
-  'top-170-appliances': 'Дренажная помпа кондиционера в канализацию',
-  'top-171-appliances': 'Защитный клапан AquaStop на шланге',
-  'top-172-appliances': 'Замена магниевого анода в бойлере',
-  'top-173-appliances': 'Сбросной предохранительный клапан 6 бар',
-  'top-174-appliances': 'Бойлер косвенного нагрева с рециркуляцией',
-  'top-175-appliances': 'Канализационная насосная станция Sololift',
-  'top-176-appliances': 'Слив сушильной машины в канализацию',
-  'top-177-appliances': 'Группа безопасности водонагревателя Watts',
-  'top-178-appliances': 'Очистка ТЭНа водонагревателя от накипи',
-  'top-179-appliances': 'Расширительный бак для бойлера ГВС',
-
-  // 97-115: Heating & radiators (19 items)
-  'top-180-heating': 'Термостатическая головка Danfoss на радиаторе',
-  'top-181-heating': 'Спуск воздуха краном Маевского на батарее',
-  'top-182-heating': 'Балансировочный клапан радиаторной сети',
-  'top-183-heating': 'Смесительный узел и коллектор теплого пола',
-  'top-184-heating': 'Раскладка труб теплого пола «улиткой»',
-  'top-185-heating': 'Наращивание секций радиатора ниппелями',
-  'top-186-heating': 'Водяной полотенцесушитель с байпасом',
-  'top-187-heating': 'Электрический полотенцесушитель со скрытым монтажом',
-  'top-188-heating': 'Внутрипольный конвектор с вентилятором',
-  'top-189-heating': 'Закачка теплоносителя-антифриза в систему',
-  'top-190-heating': 'Химическая промывка радиаторов от шлама',
-  'top-191-heating': 'Автоматический воздухоотводчик на коллекторе',
-  'top-192-heating': 'Гидравлический разделитель (гидрострелка)',
-  'top-193-heating': 'Автоматический клапан подпитки отопления',
-  'top-194-heating': 'Устранение гидроударов в стояках отопления',
-  'top-195-heating': 'Нижнее подключение радиатора через Мультифлекс',
-  'top-196-heating': 'Теплоизоляция труб отопления трубками Тилит',
-  'top-197-heating': 'Межсекционные прокладки радиатора отопления',
-  'top-198-heating': 'Погодозависимый датчик температуры котла',
-
-  // 116-120: Drainage & sewer (5 items)
-  'top-199-drainage': 'Замена чугунного стояка на пластик PP 110',
-  'top-200-drainage': 'Вакуумный аэратор (фановый клапан 110/50)',
-  'top-201-drainage': 'Обратный клапан канализации 110 мм',
-  'top-202-drainage': 'Жироуловитель под кухонную мойку',
-  'top-203-drainage': 'Водяной гидрозатвор и защита от запахов',
-
-  // 121-125: Specialized tools (5 items)
-  'top-204-tools': 'Сантехнические клещи Knipex Cobra и трубный ключ',
-  'top-205-tools': 'Пресс-клещи для металлопластиковых фитингов',
-  'top-206-tools': 'Фаскосниматель и калибратор для труб',
-  'top-207-tools': 'Лазерный нивелир при трассировке труб',
-  'top-208-tools': 'Тепловизор для поиска скрытых утечек и контуров',
-
-  // 126-133: Emergency maintenance & exterior (8 items)
-  'top-209-emergency': 'Манжета раструба чугун-пластик 110 мм',
-  'top-210-emergency': 'Ремонт пробитой трубы PEX надвижными гильзами',
-  'top-211-emergency': 'Очистка внутренних стенок труб от отложений',
-  'top-212-emergency': 'Гидроизоляционная лента и мастика в санузле',
-  'top-213-emergency': 'Потайной ревизионный люк под плитку',
-  'top-214-emergency': 'Слив и консервация дачного водопровода на зиму',
-  'top-215-emergency': 'Дренажный погружной насос с поплавком',
-  'top-216-emergency': 'Локальный септик и дренажный колодец'
-};
+export const HANDBOOK_IMAGE_TITLES: Record<string, string> = {};
 
 /**
- * Generates a concise, high-visibility image header/title based on article text title.
- * Used for all 133 handbook sections and any custom articles.
+ * Generates calibrated title
  */
 export const generateImageTitleFromTextTitle = (title: string, id?: string): string => {
-  if (id && HANDBOOK_IMAGE_TITLES[id]) {
+  if (id && HANDBOOK_IMAGE_TITLES && HANDBOOK_IMAGE_TITLES[id]) {
     return HANDBOOK_IMAGE_TITLES[id];
   }
 

@@ -55,9 +55,7 @@ export const SpecialistProfileModal: React.FC<SpecialistProfileModalProps> = ({
 
   // Find works belonging to this specialist
   const works = masterWorks.filter(
-    (w) =>
-      (w.specialistId === specialist.id || (!w.specialistId && specialist.id === 'spec-1')) &&
-      w.status === 'approved'
+    (w) => w.specialistId === specialist.id && w.status === 'approved'
   );
 
   return (

@@ -161,12 +161,31 @@ app.use('/uploads', express.static(uploadsDir, {
   }
 }));
 
+const DEMO_SPECIALIST_IDS = new Set([
+  'spec-1', 'spec-2', 'spec-3', 'spec-4', 'spec-5', 'spec-6',
+  'spec-7', 'spec-8', 'spec-9', 'spec-10', 'spec-11', 'spec-12',
+  'spec-tj-1', 'spec-tj-2', 'spec-kz-1', 'spec-kz-2',
+  'spec-uz-1', 'spec-uz-2', 'spec-kg-1', 'spec-kg-2'
+]);
+
 // In-memory persistent data store during server runtime (backed by persistent disk & Cloud SQL)
 let articlesStore: Article[] = getCachedArticles();
-let specialistsStore: PlumbingSpecialist[] = [...INITIAL_SPECIALISTS];
+let specialistsStore: PlumbingSpecialist[] = [];
 let questionsStore: CommunityQuestion[] = [...INITIAL_QUESTIONS];
 let serviceRequestsStore: ServiceCallRequest[] = [];
 let diagnosticSessionsStore: DiagnosticSession[] = [...INITIAL_DIAGNOSTIC_SESSIONS];
+
+// Asynchronously sync specialists from DB on startup
+getDbSpecialists()
+  .then((dbSpecs) => {
+    if (Array.isArray(dbSpecs)) {
+      specialistsStore = dbSpecs.filter(s => !DEMO_SPECIALIST_IDS.has(s.id));
+      console.log(`[Specialists] Synced ${specialistsStore.length} real specialists from DB.`);
+    }
+  })
+  .catch((err) => {
+    console.warn('[Specialists] Initial database load error:', err);
+  });
 
 // Asynchronously sync service requests from DB on startup
 getDbServiceRequests()
@@ -260,6 +279,93 @@ app.get('/api/articles/:id', async (req, res) => {
   res.json(art);
 });
 
+// Debounce timer for saving articles to disk without disk hammering
+let articlesSaveDebounceTimer: NodeJS.Timeout | null = null;
+function scheduleArticlesSave() {
+  if (articlesSaveDebounceTimer) return;
+  articlesSaveDebounceTimer = setTimeout(() => {
+    articlesSaveDebounceTimer = null;
+    try {
+      saveCachedArticles(articlesStore);
+    } catch (err) {
+      console.warn('[Articles] Failed to save debounced articles to disk:', err);
+    }
+  }, 3000);
+}
+
+// In-memory sliding window rate-limit for views to prevent bot/spam abuse (IP + articleId -> timestamp)
+const articleViewsRateLimitMap = new Map<string, number>();
+
+// POST Increment View count (Real visitor view tracking)
+app.post('/api/articles/:id/view', (req, res) => {
+  const { id } = req.params;
+  const ip = ((req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown').split(',')[0].trim();
+  const rateKey = `${ip}:${id}`;
+  const now = Date.now();
+  const lastViewTime = articleViewsRateLimitMap.get(rateKey) || 0;
+
+  let art = articlesStore.find((a) => a.id === id);
+  if (!art) {
+    const diskArts = getCachedArticles();
+    art = diskArts.find((a) => a.id === id);
+    if (art) articlesStore.push(art);
+  }
+
+  if (!art) {
+    return res.status(404).json({ error: 'Статья не найдена' });
+  }
+
+  // Deduplicate: allow only 1 view per IP per article every 15 minutes
+  if (now - lastViewTime > 15 * 60 * 1000) {
+    articleViewsRateLimitMap.set(rateKey, now);
+    art.views = (art.views || 0) + 1;
+    scheduleArticlesSave();
+  }
+
+  // Cleanup old rate limit keys periodically
+  if (articleViewsRateLimitMap.size > 5000) {
+    for (const [key, timestamp] of articleViewsRateLimitMap.entries()) {
+      if (now - timestamp > 30 * 60 * 1000) {
+        articleViewsRateLimitMap.delete(key);
+      }
+    }
+  }
+
+  res.json({ success: true, views: art.views || 0 });
+});
+
+// In-memory rate-limit for likes (IP + articleId)
+const articleLikesRateLimitMap = new Map<string, number>();
+
+// POST Increment Like count (Real visitor like tracking)
+app.post('/api/articles/:id/like', (req, res) => {
+  const { id } = req.params;
+  const ip = ((req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown').split(',')[0].trim();
+  const rateKey = `${ip}:${id}`;
+  const now = Date.now();
+  const lastLikeTime = articleLikesRateLimitMap.get(rateKey) || 0;
+
+  let art = articlesStore.find((a) => a.id === id);
+  if (!art) {
+    const diskArts = getCachedArticles();
+    art = diskArts.find((a) => a.id === id);
+    if (art) articlesStore.push(art);
+  }
+
+  if (!art) {
+    return res.status(404).json({ error: 'Статья не найдена' });
+  }
+
+  // Deduplicate: 1 like per IP per article every 24 hours
+  if (now - lastLikeTime > 24 * 60 * 60 * 1000) {
+    articleLikesRateLimitMap.set(rateKey, now);
+    art.likes = (art.likes || 0) + 1;
+    scheduleArticlesSave();
+  }
+
+  res.json({ success: true, likes: art.likes || 0 });
+});
+
 // POST New Article (Admin or Verified Master with high rating)
 app.post('/api/articles', async (req, res) => {
   try {
@@ -276,7 +382,7 @@ app.post('/api/articles', async (req, res) => {
       difficulty: req.body.difficulty || 'Новичок',
       timeEst: req.body.timeEst || '20 мин',
       description: req.body.description || '',
-      coverImage: req.body.coverImage || 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80',
+      coverImage: req.body.coverImage || undefined,
       imageTitle: req.body.imageTitle || undefined,
       videoUrl: req.body.videoUrl || undefined,
       videoEmbed: req.body.videoEmbed || undefined,
@@ -1191,7 +1297,7 @@ app.get('/api/specialists', async (req, res) => {
 
   try {
     const all = await getDbSpecialists();
-    let filtered = [...all];
+    let filtered = all.filter(s => !DEMO_SPECIALIST_IDS.has(s.id));
 
     if (!showPending) {
       filtered = filtered.filter(s => s.status === 'approved');
@@ -1528,6 +1634,7 @@ app.put('/api/specialists/:id/status', async (req, res) => {
 app.delete('/api/specialists/:id', async (req, res) => {
   const { id } = req.params;
   try {
+    specialistsStore = specialistsStore.filter(s => s.id !== id);
     const auditRecord = await deleteDbSpecialist(id);
     broadcastRealtimeEvent({
       type: 'specialist:deleted',
@@ -4135,6 +4242,59 @@ ${publishedArticles
   const hasDistFolder = fs.existsSync(distIndex);
   const isProduction = (process.env.NODE_ENV === 'production' || isDistBundle) && hasDistFolder;
 
+  // Social Crawler Interceptor (Telegram, WhatsApp, VK, Twitter, Facebook, etc.)
+  app.use((req, res, next) => {
+    const userAgent = (req.headers['user-agent'] || '').toLowerCase();
+    const isSocialCrawler = /telegrambot|whatsapp|vkshare|twitterbot|facebookexternalhit|discordbot|slackbot/i.test(userAgent);
+    if (!isSocialCrawler) return next();
+
+    const htmlFile = isProduction && fs.existsSync(distIndex) ? distIndex : path.join(process.cwd(), 'index.html');
+    const contractId = (req.query.contractId || req.query.contract) as string | undefined;
+    const estimateId = (req.query.estimate || req.query.estimateId) as string | undefined;
+    const articleId = req.query.article as string | undefined;
+    const masterId = (req.query.master || req.query.specialistId) as string | undefined;
+
+    try {
+      let html = fs.readFileSync(htmlFile, 'utf-8');
+      let customTitle = 'СантехПро — Твой карманный помощник по сантехнике';
+      let customDesc = 'Поиск проверенных мастеров по России и СНГ, электронные сметы, калькулятор материалов, 100+ пошаговых инструкций, видеообучение и диагностика сантехники';
+
+      if (estimateId) {
+        customTitle = 'Электронная смета на сантехнические работы — СантехПро';
+        customDesc = 'Детальная смета на работы и материалы от проверенного мастера. Прозрачный расчёт стоимости, спецификация оборудования и гарантии.';
+      } else if (contractId) {
+        customTitle = 'Договор подряда на сантехнические работы — СантехПро';
+        customDesc = 'Официальный электронный договор подряда с актом приема-передачи и сметой. Проверка условий и гарантий мастера.';
+      } else if (articleId) {
+        const foundArt = articlesStore.find((a) => a.id === articleId);
+        if (foundArt) {
+          customTitle = `${foundArt.title} — СантехПро`;
+          customDesc = foundArt.description || customDesc;
+        }
+      } else if (masterId) {
+        customTitle = 'Профиль мастера — СантехПро';
+        customDesc = 'Проверенный специалист по сантехническим работам. Отзывы, примеры выполненных объектов и прямой вызов без посредников.';
+      }
+
+      html = html.replace(/<title>.*?<\/title>/, `<title>${customTitle}</title>`);
+      html = html.replace(/<meta property="og:title" content=".*?" \/>/, `<meta property="og:title" content="${customTitle}" />`);
+      html = html.replace(/<meta property="og:description" content=".*?" \/>/, `<meta property="og:description" content="${customDesc}" />`);
+      html = html.replace(/<meta name="twitter:title" content=".*?" \/>/, `<meta name="twitter:title" content="${customTitle}" />`);
+      html = html.replace(/<meta name="twitter:description" content=".*?" \/>/, `<meta name="twitter:description" content="${customDesc}" />`);
+
+      html = html.replace(/<meta property="og:image" content=".*?" \/>/, '<meta property="og:image" content="https://santehpro.info/og-image.jpg" />');
+      html = html.replace(/<meta property="og:image:secure_url" content=".*?" \/>/, '<meta property="og:image:secure_url" content="https://santehpro.info/og-image.jpg" />');
+      html = html.replace(/<meta name="twitter:image" content=".*?" \/>/, '<meta name="twitter:image" content="https://santehpro.info/og-image.jpg" />');
+
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      return res.send(html);
+    } catch (e) {
+      console.warn('Crawler interceptor error:', e);
+      next();
+    }
+  });
+
   if (!isProduction) {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
@@ -4160,13 +4320,59 @@ ${publishedArticles
         }
       }
     }));
-    app.get('*', (_req, res) => {
+    app.get('*', (req, res) => {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      if (fs.existsSync(distIndex)) {
-        res.sendFile(distIndex);
-      } else {
-        res.sendFile(path.join(process.cwd(), 'index.html'));
+      const htmlFile = fs.existsSync(distIndex) ? distIndex : path.join(process.cwd(), 'index.html');
+
+      const userAgent = (req.headers['user-agent'] || '').toLowerCase();
+      const isSocialCrawler = /telegrambot|whatsapp|vkshare|twitterbot|facebookexternalhit|discordbot|slackbot/i.test(userAgent);
+      const contractId = (req.query.contractId || req.query.contract) as string | undefined;
+      const estimateId = (req.query.estimate || req.query.estimateId) as string | undefined;
+      const articleId = req.query.article as string | undefined;
+      const masterId = (req.query.master || req.query.specialistId) as string | undefined;
+
+      // If crawler or deep-linked contract / estimate / article, dynamically enrich OpenGraph tags
+      if (isSocialCrawler || contractId || estimateId || articleId || masterId) {
+        try {
+          let html = fs.readFileSync(htmlFile, 'utf-8');
+          let customTitle = 'СантехПро — Твой карманный помощник по сантехнике';
+          let customDesc = 'Поиск проверенных мастеров по России и СНГ, электронные сметы, калькулятор материалов, 100+ пошаговых инструкций, видеообучение и диагностика сантехники';
+
+          if (estimateId) {
+            customTitle = 'Электронная смета на сантехнические работы — СантехПро';
+            customDesc = 'Детальная смета на работы и материалы от проверенного мастера. Прозрачный расчёт стоимости, спецификация оборудования и гарантии.';
+          } else if (contractId) {
+            customTitle = 'Договор подряда на сантехнические работы — СантехПро';
+            customDesc = 'Официальный электронный договор подряда с актом приема-передачи и сметой. Проверка условий и гарантий мастера.';
+          } else if (articleId) {
+            const foundArt = articlesStore.find((a) => a.id === articleId);
+            if (foundArt) {
+              customTitle = `${foundArt.title} — СантехПро`;
+              customDesc = foundArt.description || customDesc;
+            }
+          } else if (masterId) {
+            customTitle = 'Профиль мастера — СантехПро';
+            customDesc = 'Проверенный специалист по сантехническим работам. Отзывы, примеры выполненных объектов и прямой вызов без посредников.';
+          }
+
+          html = html.replace(/<title>.*?<\/title>/, `<title>${customTitle}</title>`);
+          html = html.replace(/<meta property="og:title" content=".*?" \/>/, `<meta property="og:title" content="${customTitle}" />`);
+          html = html.replace(/<meta property="og:description" content=".*?" \/>/, `<meta property="og:description" content="${customDesc}" />`);
+          html = html.replace(/<meta name="twitter:title" content=".*?" \/>/, `<meta name="twitter:title" content="${customTitle}" />`);
+          html = html.replace(/<meta name="twitter:description" content=".*?" \/>/, `<meta name="twitter:description" content="${customDesc}" />`);
+
+          // Ensure OpenGraph images always point to the new branding logo
+          html = html.replace(/<meta property="og:image" content=".*?" \/>/, '<meta property="og:image" content="https://santehpro.info/og-image.jpg" />');
+          html = html.replace(/<meta property="og:image:secure_url" content=".*?" \/>/, '<meta property="og:image:secure_url" content="https://santehpro.info/og-image.jpg" />');
+          html = html.replace(/<meta name="twitter:image" content=".*?" \/>/, '<meta name="twitter:image" content="https://santehpro.info/og-image.jpg" />');
+
+          return res.send(html);
+        } catch (e) {
+          console.warn('Failed to inject dynamic OG tags:', e);
+        }
       }
+
+      res.sendFile(htmlFile);
     });
   }
 

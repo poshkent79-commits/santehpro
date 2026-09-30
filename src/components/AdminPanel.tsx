@@ -32,6 +32,7 @@ import {
   Send,
   Copy,
   PlusCircle,
+  ThumbsUp,
   BarChart3,
   Star,
   Award,
@@ -415,7 +416,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [newDifficulty, setNewDifficulty] = useState<'Новичок' | 'Продвинутый' | 'Профи'>('Новичок');
   const [newTimeEst, setNewTimeEst] = useState('20 мин');
   const [newDesc, setNewDesc] = useState('');
-  const [newCover, setNewCover] = useState('https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80');
+  const [newCover, setNewCover] = useState('');
   const [newVideoUrl, setNewVideoUrl] = useState('');
   const [newTools, setNewTools] = useState('Разводной ключ, ФУМ-лента');
   const [newMaterials, setNewMaterials] = useState('Прокладки, Герметик');
@@ -868,7 +869,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     setNewDifficulty(article.difficulty);
     setNewTimeEst(article.timeEst);
     setNewDesc(article.description);
-    setNewCover(article.coverImage || 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80');
+    setNewCover((article.coverImage && !article.coverImage.includes('images.unsplash.com')) ? article.coverImage : '');
     setNewVideoUrl(article.videoUrl || '');
     setNewTools(article.toolsRequired?.join(', ') || '');
     setNewMaterials(article.materialsRequired?.join(', ') || '');
@@ -904,7 +905,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     setNewDifficulty('Новичок');
     setNewTimeEst('20 мин');
     setNewDesc('');
-    setNewCover('https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80');
+    setNewCover('');
     setNewVideoUrl('');
     setNewTools('Разводной ключ, ФУМ-лента');
     setNewMaterials('Прокладки, Герметик');
@@ -2363,15 +2364,32 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   className="p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-slate-700 transition flex flex-col justify-between space-y-3"
                 >
                   <div className="space-y-2">
-                    <img
-                      src={art.coverImage}
-                      alt={art.title}
-                      className="w-full h-28 rounded-xl object-cover border border-slate-800"
-                    />
+                    {art.coverImage ? (
+                      <img
+                        src={art.coverImage}
+                        alt={art.title}
+                        className="w-full h-28 rounded-xl object-cover border border-slate-800"
+                      />
+                    ) : (
+                      <div className="w-full h-20 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center space-x-2 text-slate-400 text-xs font-semibold">
+                        <span className="text-xl">
+                          {art.category === 'water' ? '💧' : art.category === 'heating' ? '🔥' : art.category === 'drainage' ? '🚰' : art.category === 'fixtures' ? '🚽' : '🔧'}
+                        </span>
+                        <span>{art.category === 'water' ? 'Водопровод' : art.category === 'heating' ? 'Отопление' : art.category === 'drainage' ? 'Канализация' : 'Сантехника'}</span>
+                      </div>
+                    )}
                     <div className="space-y-1">
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2 flex-wrap gap-y-1">
                         <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-500/15 text-amber-300 border border-amber-500/30">
                           {art.category}
+                        </span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-900 text-slate-300 border border-slate-800 flex items-center space-x-1" title="Просмотры">
+                          <Eye className="w-3 h-3 text-cyan-400" />
+                          <span>{art.views || 0}</span>
+                        </span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-900 text-slate-300 border border-slate-800 flex items-center space-x-1" title="Отметки Полезно">
+                          <ThumbsUp className="w-3 h-3 text-rose-400" />
+                          <span>{art.likes || 0}</span>
                         </span>
                         {art.accessType === 'paid' && (
                           <span className="px-2 py-0.5 rounded text-[10px] font-black bg-amber-500 text-slate-950">

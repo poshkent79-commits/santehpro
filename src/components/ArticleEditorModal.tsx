@@ -69,9 +69,7 @@ export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
   const [difficulty, setDifficulty] = useState<'Новичок' | 'Продвинутый' | 'Профи'>('Новичок');
   const [timeEst, setTimeEst] = useState('45 мин');
   const [description, setDescription] = useState('');
-  const [coverImage, setCoverImage] = useState(
-    'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80'
-  );
+  const [coverImage, setCoverImage] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
   const [rutubeUrl, setRutubeUrl] = useState('');
   const [youtubeUrl, setYoutubeUrl] = useState('');
@@ -122,7 +120,7 @@ export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
       setDifficulty(effectiveArticle.difficulty || 'Новичок');
       setTimeEst(effectiveArticle.timeEst || '45 мин');
       setDescription(effectiveArticle.description || '');
-      setCoverImage(effectiveArticle.coverImage || 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80');
+      setCoverImage((effectiveArticle.coverImage && !effectiveArticle.coverImage.includes('images.unsplash.com')) ? effectiveArticle.coverImage : '');
       setVideoUrl(effectiveArticle.videoUrl || '');
       setRutubeUrl(effectiveArticle.rutubeUrl || (effectiveArticle.videoUrl?.includes('rutube') ? effectiveArticle.videoUrl : ''));
       setYoutubeUrl(effectiveArticle.youtubeUrl || (effectiveArticle.videoUrl?.includes('youtu') ? effectiveArticle.videoUrl : ''));
@@ -168,7 +166,7 @@ export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
       setDifficulty('Новичок');
       setTimeEst('45 мин');
       setDescription('');
-      setCoverImage('https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80');
+      setCoverImage('');
       setVideoUrl('');
       setRutubeUrl('');
       setYoutubeUrl('');
@@ -443,7 +441,7 @@ export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
                   </span>
                 </div>
                 <p className="text-slate-300 leading-relaxed text-[11px] sm:text-xs">
-                  Вы можете размещать ссылки на внешние видеохостинги (VK Видео, RuTube / Restore, YouTube), аудиолекции и полезные файлы с пошаговыми инструкциями. Обучающий материал будет направлен на рассмотрение администратора и опубликован в разделе «Курсы» сразу после одобрения со знаком проверенного специалиста.
+                  Вы можете размещать ссылки на внешние видеохостинги (VK Видео, RuTube, YouTube), аудиолекции и полезные файлы с пошаговыми инструкциями. Обучающий материал будет направлен на рассмотрение администратора и опубликован в разделе «Курсы» сразу после одобрения со знаком проверенного специалиста.
                 </p>
               </div>
             </div>
@@ -713,14 +711,14 @@ export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
             <div className="flex items-center justify-between flex-wrap gap-2">
               <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center space-x-2">
                 <Video className="w-4 h-4 text-rose-400" />
-                <span>Внешние видео- и аудиоресурсы (VK Видео, RuTube / Restore, YouTube, Аудиогид)</span>
+                <span>Внешние видео- и аудиоресурсы (VK Видео, RuTube, YouTube, Аудиогид)</span>
               </h3>
               <span className="text-[11px] text-slate-400">
                 Трансляция объемного видео без ограничений по размеру
               </span>
             </div>
 
-            {/* Tri-Platform Inputs: VK Video, RuTube / Restore, YouTube */}
+            {/* Tri-Platform Inputs: VK Video, RuTube, YouTube */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
               {/* VK Video */}
               <div className="p-3.5 rounded-xl bg-slate-900/90 border border-blue-500/30 space-y-2">
@@ -745,12 +743,12 @@ export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
                 </p>
               </div>
 
-              {/* RuTube / Restore */}
+              {/* RuTube */}
               <div className="p-3.5 rounded-xl bg-slate-900/90 border border-red-500/30 space-y-2">
                 <label className="block text-[11px] font-bold text-slate-200 flex items-center justify-between">
                   <span className="flex items-center space-x-1.5 text-red-400">
                     <Video className="w-3.5 h-3.5" />
-                    <span>🇷🇺 RuTube / Restore</span>
+                    <span>🇷🇺 RuTube</span>
                   </span>
                   <span className="px-1.5 py-0.5 rounded bg-red-950/80 text-[10px] text-red-300 font-medium border border-red-500/30">
                     РФ без VPN
@@ -764,7 +762,7 @@ export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:border-red-500 focus:outline-none placeholder-slate-600"
                 />
                 <p className="text-[10px] text-slate-400">
-                  Ссылка на видеоролик, трансляцию Restore или ID из RuTube
+                  Ссылка на видеоролик или ID из RuTube
                 </p>
               </div>
 

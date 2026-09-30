@@ -18,6 +18,7 @@ import {
   MapPin,
   Award,
   Users,
+  GraduationCap,
   Image as ImageIcon,
   ArrowRightLeft,
   Check,
@@ -70,9 +71,39 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
   const [favoriteToast, setFavoriteToast] = useState<string | null>(null);
   const [completedSteps, setCompletedSteps] = useState<Record<number, boolean>>({});
   const [checkedTools, setCheckedTools] = useState<Record<string, boolean>>({});
-  const [liked, setLiked] = useState(false);
-  const [likesCount, setLikesCount] = useState(article.likes);
+  const [liked, setLiked] = useState(() => {
+    try {
+      return localStorage.getItem(`liked_art_${article.id}`) === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [likesCount, setLikesCount] = useState(article.likes || 0);
+  const [viewsCount, setViewsCount] = useState(article.views || 0);
   const [activeComparisonTab, setActiveComparisonTab] = useState<'turns' | 'joints' | 'sealing'>('turns');
+
+  // Real visitor view tracking (with session deduplication to prevent server overload)
+  React.useEffect(() => {
+    const sessionKey = `viewed_art_${article.id}`;
+    let isViewed = false;
+    try {
+      isViewed = Boolean(sessionStorage.getItem(sessionKey));
+    } catch {}
+
+    if (!isViewed) {
+      try {
+        sessionStorage.setItem(sessionKey, '1');
+      } catch {}
+      fetch(`/api/articles/${article.id}/view`, { method: 'POST' })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data && typeof data.views === 'number') {
+            setViewsCount(data.views);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [article.id]);
 
   // Dynamic SEO indexing and Schema.org HowTo rich snippet injection
   React.useEffect(() => {
@@ -87,7 +118,12 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
   }, [article, selectedCity]);
 
   const dualVideo = resolveDualPlatformVideos(article);
-  const hasVideo = Boolean(article.type === 'video' || article.videoEmbed || article.videoUrl || article.rutubeUrl || article.youtubeUrl || article.vkVideoUrl);
+  const hasRealVideo = Boolean(
+    dualVideo.rutubeEmbed ||
+    dualVideo.vkEmbed ||
+    dualVideo.youtubeEmbed ||
+    dualVideo.directVideoUrl
+  );
   const [selectedVideoPlatform, setSelectedVideoPlatform] = useState<'rutube' | 'vk' | 'youtube' | 'direct'>(dualVideo.defaultPlatform);
 
   React.useEffect(() => {
@@ -102,68 +138,31 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
     setCheckedTools((prev) => ({ ...prev, [tool]: !prev[tool] }));
   };
 
-  const getStepImage = (step: ArticleStep, idx: number): string => {
-    if (step.imageUrl) return step.imageUrl;
-
-    const text = (step.title + ' ' + step.text).toLowerCase();
-
-    const imageBank = {
-      soldering: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=600&q=80',
-      cutting: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=600&q=80',
-      mixer: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=600&q=80',
-      meter: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=600&q=80',
-      valves: 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=600&q=80',
-      tools: 'https://images.unsplash.com/photo-1530124566582-a618bc2615dc?auto=format&fit=crop&w=600&q=80',
-      toilet: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=600&q=80',
-      heating: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=600&q=80',
-      drains: 'https://images.unsplash.com/photo-1542013936693-884638332954?auto=format&fit=crop&w=600&q=80',
-    };
-
-    if (text.includes('пайк') || text.includes('нагрев') || text.includes('паяльн') || text.includes('свар')) {
-      return imageBank.soldering;
+  const getStepImage = (step: ArticleStep, _idx: number): string => {
+    if (step.imageUrl && typeof step.imageUrl === 'string') {
+      const trimmed = step.imageUrl.trim();
+      if (trimmed.length > 0 && !trimmed.includes('images.unsplash.com')) {
+        return trimmed;
+      }
     }
-    if (text.includes('отрез') || text.includes('нарез') || text.includes('ножниц') || text.includes('труборез') || text.includes('фаск')) {
-      return imageBank.cutting;
-    }
-    if (text.includes('смесител') || text.includes('излив') || text.includes('картридж') || text.includes('мойк') || text.includes('раковин')) {
-      return imageBank.mixer;
-    }
-    if (text.includes('счётчик') || text.includes('счетчик') || text.includes('водомер') || text.includes('давлен') || text.includes('манометр')) {
-      return imageBank.meter;
-    }
-    if (text.includes('коллектор') || text.includes('гребенк') || text.includes('кран') || text.includes('вентил') || text.includes('фитинг')) {
-      return imageBank.valves;
-    }
-    if (text.includes('унитаз') || text.includes('инсталляц') || text.includes('бачок') || text.includes('ванн') || text.includes('душ')) {
-      return imageBank.toilet;
-    }
-    if (text.includes('батаре') || text.includes('радиатор') || text.includes('отоплен')) {
-      return imageBank.heating;
-    }
-    if (text.includes('сифон') || text.includes('слив') || text.includes('канализац') || text.includes('засор')) {
-      return imageBank.drains;
-    }
-    if (text.includes('ключ') || text.includes('перфоратор') || text.includes('отвертк') || text.includes('инструмент')) {
-      return imageBank.tools;
-    }
-
-    const fallbacks = [
-      article.coverImage || imageBank.valves,
-      imageBank.cutting,
-      imageBank.tools,
-      imageBank.valves,
-      imageBank.soldering,
-    ];
-
-    return fallbacks[idx % fallbacks.length];
+    return '';
   };
 
-  const handleLikeClick = () => {
-    if (!liked) {
-      setLiked(true);
-      setLikesCount((prev) => prev + 1);
-      onLike(article.id);
+  const handleLikeClick = async () => {
+    if (liked) return;
+    setLiked(true);
+    setLikesCount((prev) => prev + 1);
+    try {
+      localStorage.setItem(`liked_art_${article.id}`, 'true');
+      const res = await fetch(`/api/articles/${article.id}/like`, { method: 'POST' });
+      const data = await res.json();
+      if (data && typeof data.likes === 'number') {
+        setLikesCount(data.likes);
+      }
+    } catch (e) {
+      console.warn('Failed to submit like:', e);
     }
+    onLike(article.id);
   };
 
   const handleToggleFavorite = async () => {
@@ -257,7 +256,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
         {/* Modal Scrollable Content */}
         <div className="p-6 overflow-y-auto space-y-6">
           {/* Cover / Dual Video Player (RuTube & YouTube) & Header */}
-          {hasVideo ? (
+          {hasRealVideo ? (
             <div className="space-y-3">
               {/* Dual Video Platform Switcher */}
               <div className="p-2.5 rounded-2xl bg-slate-900/90 border border-slate-800 flex items-center justify-between flex-wrap gap-2 shadow-sm">
@@ -412,7 +411,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
               </div>
 
               {/* Compact Image: neat, reduced size, completely separated from text */}
-              {article.coverImage && (
+              {article.coverImage && article.coverImage.trim() && !article.coverImage.includes('images.unsplash.com') && (
                 <div className="w-full sm:w-56 md:w-64 lg:w-72 h-36 sm:h-40 shrink-0 rounded-xl overflow-hidden border border-slate-800/90 bg-slate-900 shadow-md relative group">
                   <img
                     src={article.coverImage}
@@ -422,6 +421,14 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                   />
                 </div>
               )}
+            </div>
+          )}
+
+          {/* If course material has no video published yet */}
+          {(article.adminSection === 'courses' || article.type === 'video') && !hasRealVideo && (
+            <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800 text-slate-300 text-xs flex items-center space-x-2.5">
+              <GraduationCap className="w-4 h-4 text-rose-400 shrink-0" />
+              <span>Медиаматериалы курса (видео / аудио) готовятся автором к публикации. Ниже доступны пошаговые уроки и практический регламент.</span>
             </div>
           )}
 
@@ -453,7 +460,14 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                 <div className="flex items-center space-x-1.5">
                   <User className="w-4 h-4 text-cyan-400" />
                   <span className="font-semibold text-slate-200">
-                    {article.author && !article.author.includes('Смирнов') && !article.author.includes('Мастеровой') && !article.author.includes('Волков') && !article.author.includes('Кузнецов') && article.author !== 'Администратор Справочника'
+                    {article.author &&
+                    !article.author.includes('Смирнов') &&
+                    !article.author.includes('Мастеровой') &&
+                    !article.author.includes('Волков') &&
+                    !article.author.includes('Кузнецов') &&
+                    !article.author.includes('Алексей') &&
+                    !article.author.includes('Сантех-Ремонт') &&
+                    article.author !== 'Администратор Справочника'
                       ? article.author
                       : 'Достонджон Туйчиев'}
                   </span>
@@ -462,7 +476,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                   <Clock className="w-4 h-4 text-amber-400" />
                   <span>Время: {article.timeEst}</span>
                 </div>
-                {article.studentsCount !== undefined && (
+                {article.adminSection === 'courses' && (article.studentsCount || 0) > 0 && (
                   <div className="flex items-center space-x-1.5 text-cyan-300">
                     <Users className="w-4 h-4 text-cyan-400" />
                     <span>Учеников: {article.studentsCount}</span>
@@ -473,7 +487,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-1 text-slate-400">
                   <Eye className="w-4 h-4" />
-                  <span>{article.views + 1} просмотров</span>
+                  <span>{viewsCount} просмотров</span>
                 </div>
                 <button
                   onClick={handleLikeClick}
@@ -687,7 +701,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                     <div className="flex items-center space-x-2.5">
                       <span className="text-base">🇷🇺</span>
                       <div>
-                        <div className="text-xs font-bold text-white group-hover:text-red-300 transition">RuTube / Restore</div>
+                        <div className="text-xs font-bold text-white group-hover:text-red-300 transition">RuTube</div>
                         <div className="text-[10px] text-red-400/80">Трансляция без VPN</div>
                       </div>
                     </div>

@@ -90,7 +90,7 @@ export const SpecialistCabinetView: React.FC<SpecialistCabinetViewProps> = ({
   const [artCategory, setArtCategory] = useState<CategoryId>('water');
   const [artShortDesc, setArtShortDesc] = useState('');
   const [artContent, setArtContent] = useState('');
-  const [artCover, setArtCover] = useState('https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80');
+  const [artCover, setArtCover] = useState('');
   const [artDifficulty, setArtDifficulty] = useState<'Новичок' | 'Продвинутый' | 'Профи'>('Новичок');
   const [artTimeEst, setArtTimeEst] = useState('15 мин');
   const [artTools, setArtTools] = useState('Разводной ключ, лента ФУМ, отвертка');

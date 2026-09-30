@@ -69,6 +69,8 @@ export const RequestReviewModal: React.FC<RequestReviewModalProps> = ({
 
   const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(reviewUrl)}&text=${encodeURIComponent(`Мастер ${specialist.name} просит оставить отзыв о выполненной сантехнической работе`)}`;
 
+  const maxUrl = `https://max.ru/:share?text=${encodeURIComponent(messageText)}`;
+
   const smsUrl = cleanPhone.length >= 10
     ? `sms:${cleanPhone}?body=${encodeURIComponent(messageText)}`
     : `sms:?body=${encodeURIComponent(messageText)}`;
@@ -174,7 +176,7 @@ export const RequestReviewModal: React.FC<RequestReviewModalProps> = ({
             Отправить клиенту в один клик:
           </span>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             {/* WhatsApp */}
             <a
               href={whatsappUrl}
@@ -207,6 +209,22 @@ export const RequestReviewModal: React.FC<RequestReviewModalProps> = ({
               </div>
               <div>
                 <div className="text-xs font-bold text-white group-hover:text-sky-300">Telegram</div>
+                <div className="text-[10px] text-slate-400">В мессенджер</div>
+              </div>
+            </a>
+
+            {/* Max */}
+            <a
+              href={maxUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-3 rounded-2xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 hover:border-purple-500/50 transition flex items-center space-x-2.5 group cursor-pointer shadow-sm"
+            >
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#6320EE] via-[#7B2CBF] to-[#9D4EDD] text-white flex items-center justify-center shrink-0 font-black text-[11px] shadow-sm tracking-tight">
+                MAX
+              </div>
+              <div>
+                <div className="text-xs font-bold text-white group-hover:text-purple-300">Max</div>
                 <div className="text-[10px] text-slate-400">В мессенджер</div>
               </div>
             </a>

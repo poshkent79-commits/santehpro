@@ -71,6 +71,14 @@ export const ShareContractModal: React.FC<ShareContractModalProps> = ({
     window.open(tgUrl, '_blank');
   };
 
+  // Max (Российский мессенджер)
+  const handleSendMax = () => {
+    const maxUrl = `https://max.ru/:share?text=${encodeURIComponent(
+      `Договор подряда № ${contract.contractNumber} на сантехнические работы по адресу: ${contract.clientAddress}. Сумма: ${contract.totalPrice.toLocaleString('ru-RU')} ₽: ${shareUrl}`
+    )}`;
+    window.open(maxUrl, '_blank');
+  };
+
   // SMS
   const handleSendSMS = () => {
     const smsText = `Договор подряда № ${contract.contractNumber} (${contract.specialistName}): ${shareUrl}`;
@@ -218,6 +226,26 @@ export const ShareContractModal: React.FC<ShareContractModalProps> = ({
               </div>
             </div>
             <ExternalLink className="w-4 h-4 text-sky-100 shrink-0 ml-2" />
+          </button>
+
+          {/* Max */}
+          <button
+            type="button"
+            onClick={handleSendMax}
+            className="w-full p-3 rounded-2xl bg-gradient-to-r from-[#6320EE] via-[#7B2CBF] to-[#9D4EDD] hover:opacity-95 text-white font-bold transition flex items-center justify-between shadow-xs cursor-pointer active:scale-98"
+          >
+            <div className="flex items-center space-x-3 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0 font-black text-xs tracking-tight">
+                MAX
+              </div>
+              <div className="text-left min-w-0">
+                <div className="text-xs font-black truncate">Отправить в Max</div>
+                <div className="text-[10px] text-purple-100 font-normal truncate">
+                  Переслать ссылку через Max
+                </div>
+              </div>
+            </div>
+            <ExternalLink className="w-4 h-4 text-purple-100 shrink-0 ml-2" />
           </button>
 
           {/* SMS */}

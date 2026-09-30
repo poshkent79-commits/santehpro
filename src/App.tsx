@@ -55,7 +55,23 @@ function AppContent() {
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+          return parsed.map((a: Article) => ({
+            ...a,
+            coverImage: (a.coverImage && !a.coverImage.includes('images.unsplash.com')) ? a.coverImage : undefined,
+            videoUrl: (a.videoUrl && !a.videoUrl.includes('dQw4w9WgXcQ') && !a.videoUrl.includes('732a3ea9c98cf85b244793f18e11a3ec')) ? a.videoUrl : undefined,
+            videoEmbed: (a.videoEmbed && !a.videoEmbed.includes('dQw4w9WgXcQ') && !a.videoEmbed.includes('732a3ea9c98cf85b244793f18e11a3ec')) ? a.videoEmbed : undefined,
+            rutubeUrl: (a.rutubeUrl && !a.rutubeUrl.includes('732a3ea9c98cf85b244793f18e11a3ec')) ? a.rutubeUrl : undefined,
+            youtubeUrl: (a.youtubeUrl && !a.youtubeUrl.includes('dQw4w9WgXcQ')) ? a.youtubeUrl : undefined,
+            audioUrl: (a.audioUrl && !a.audioUrl.includes('soundhelix.com')) ? a.audioUrl : undefined,
+            audioTitle: (a.audioUrl && !a.audioUrl.includes('soundhelix.com')) ? a.audioTitle : undefined,
+            galleryImages: (a.galleryImages && a.galleryImages.some(g => typeof g === 'string' && g.includes('images.unsplash.com'))) ? undefined : a.galleryImages,
+            steps: Array.isArray(a.steps) ? a.steps.map(s => ({
+              ...s,
+              imageUrl: (s.imageUrl && !s.imageUrl.includes('images.unsplash.com')) ? s.imageUrl : undefined,
+              videoUrl: (s.videoUrl && !s.videoUrl.includes('dQw4w9WgXcQ')) ? s.videoUrl : undefined,
+              audioUrl: (s.audioUrl && !s.audioUrl.includes('soundhelix.com')) ? s.audioUrl : undefined,
+            })) : a.steps,
+          }));
         }
       }
     } catch (e) {
@@ -69,13 +85,15 @@ function AppContent() {
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+          // Filter out demo specialists with old short IDs (spec-1..12, spec-tj.., etc)
+          const real = parsed.filter(s => s.id && (!s.id.startsWith('spec-') || s.id.length > 10));
+          return real;
         }
       }
     } catch (e) {
       console.warn('Failed to load cached specialists:', e);
     }
-    return INITIAL_SPECIALISTS;
+    return [];
   });
   const [serviceRequests, setServiceRequests] = useState<ServiceCallRequest[]>(() => {
     try {
@@ -83,13 +101,15 @@ function AppContent() {
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+          // Filter out demo requests (req-101..req-108)
+          const real = parsed.filter(r => r.id && (!r.id.startsWith('req-10') || r.id.length > 10));
+          return real;
         }
       }
     } catch (e) {
       console.warn('Failed to load cached service requests:', e);
     }
-    return INITIAL_SERVICE_REQUESTS;
+    return [];
   });
   const [questions, setQuestions] = useState<CommunityQuestion[]>(INITIAL_QUESTIONS);
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);

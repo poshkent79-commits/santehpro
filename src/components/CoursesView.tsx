@@ -198,7 +198,7 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
                 Публикация контента для проверенных мастеров
               </span>
               <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-bold text-[10px] border border-emerald-500/30">
-                ✓ VK Видео • RuTube / Restore • YouTube
+                ✓ VK Видео • RuTube • YouTube
               </span>
             </div>
             <p className="text-slate-400 text-[11px] sm:text-xs mt-0.5">
@@ -316,13 +316,29 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
             >
               <div>
                 {/* Media Header / Cover */}
-                <div className="relative h-56 sm:h-64 overflow-hidden bg-slate-950">
-                  <img
-                    src={course.coverImage}
-                    alt={course.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent" />
+                <div className="relative h-56 sm:h-64 overflow-hidden bg-slate-950 flex items-center justify-center border-b border-slate-800/80">
+                  {course.coverImage && course.coverImage.trim() && !course.coverImage.includes('images.unsplash.com') ? (
+                    <>
+                      <img
+                        src={course.coverImage}
+                        alt={course.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent" />
+                    </>
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center space-y-2.5 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-800/50 via-slate-900 to-slate-950">
+                      <div className="w-16 h-16 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-center justify-center shadow-inner group-hover:scale-110 transition duration-300">
+                        {course.videoUrl ? <PlayCircle className="w-8 h-8" /> : <GraduationCap className="w-8 h-8" />}
+                      </div>
+                      <span className="text-xs font-bold text-slate-300 group-hover:text-rose-300 transition">
+                        {course.category === 'water' ? 'Водоснабжение и трубы' : course.category === 'heating' ? 'Отопление и котлы' : 'Сантехнический курс'}
+                      </span>
+                      <span className="text-[11px] text-slate-500 font-medium">
+                        Материалы курса в подготовке автором
+                      </span>
+                    </div>
+                  )}
 
                   {/* Top Badges */}
                   <div className="absolute top-3 left-3 flex items-center space-x-2 flex-wrap gap-y-1 z-10">

@@ -24,8 +24,7 @@ export const PRO_ALL_PLAN: Article = {
   createdAt: new Date().toISOString(),
   description:
     'Полный бессрочный доступ к закрытым курсам, готовым сметам закупки, чертежам узлов в высоком разрешении и статусной короне в личном кабинете.',
-  coverImage:
-    'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80',
+  coverImage: '',
   author: 'Достонджон Туйчиев',
   timeEst: 'Бессрочно',
   views: 3200,

@@ -368,32 +368,58 @@ export const HandbookView: React.FC<HandbookViewProps> = ({
                   }}
                   className="p-3.5 sm:p-4 rounded-3xl border transition cursor-pointer flex items-center space-x-3.5 sm:space-x-4 group shadow-md active:scale-[0.99] relative overflow-hidden bg-slate-900/95 hover:bg-slate-900 border-slate-800 hover:border-cyan-500/50 hover:shadow-cyan-500/10"
                 >
-                  {/* Left: Thumbnail with Steps Badge */}
-                  <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden bg-slate-950 shrink-0 border border-slate-800/80">
-                    <img
-                      key={art.coverImage || art.id}
-                      src={getInstructionImage(art)}
-                      alt={getInstructionShortTitle(art.title, art.id)}
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                      loading="lazy"
-                      referrerPolicy="no-referrer"
-                      onError={(e) => {
-                        const fallback = 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=600&q=80';
-                        if (e.currentTarget.src !== fallback) {
-                          e.currentTarget.src = fallback;
-                        }
-                      }}
-                    />
-                    <div className="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded-lg bg-slate-950/85 backdrop-blur-sm text-[11px] font-black text-white border border-slate-700/50 shadow">
-                      {art.steps?.length || 4} шагов
-                    </div>
+                  {/* Left: Thumbnail or Category Icon */}
+                  {(() => {
+                    const imgUrl = getInstructionImage(art);
+                    return (
+                      <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden bg-slate-950 shrink-0 border border-slate-800/80 flex items-center justify-center">
+                        {imgUrl ? (
+                          <img
+                            key={art.coverImage || art.id}
+                            src={imgUrl}
+                            alt={getInstructionShortTitle(art.title, art.id)}
+                            className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                            loading="lazy"
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-slate-900 to-slate-950 flex flex-col items-center justify-center p-2 text-center group-hover:from-slate-800/80 group-hover:to-slate-900 transition">
+                            <span className="text-2xl sm:text-3xl mb-1 filter drop-shadow">
+                              {art.category === 'water'
+                                ? '💧'
+                                : art.category === 'heating'
+                                ? '🔥'
+                                : art.category === 'drainage'
+                                ? '🚰'
+                                : art.category === 'fixtures'
+                                ? '🚽'
+                                : '🔧'}
+                            </span>
+                            <span className="text-[10px] font-bold text-slate-400 group-hover:text-cyan-300 transition line-clamp-1">
+                              {art.category === 'water'
+                                ? 'Водопровод'
+                                : art.category === 'heating'
+                                ? 'Отопление'
+                                : art.category === 'drainage'
+                                ? 'Канализация'
+                                : art.category === 'fixtures'
+                                ? 'Санфаянс'
+                                : 'Монтаж'}
+                            </span>
+                          </div>
+                        )}
+                        <div className="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded-lg bg-slate-950/85 backdrop-blur-sm text-[11px] font-black text-white border border-slate-700/50 shadow">
+                          {art.steps?.length || 4} шагов
+                        </div>
 
-                    {art.id.startsWith('art-') && (
-                      <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-md bg-cyan-500 text-slate-950 font-black text-[9px] uppercase tracking-wider shadow">
-                        Новое
+                        {art.id.startsWith('art-') && (
+                          <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-md bg-cyan-500 text-slate-950 font-black text-[9px] uppercase tracking-wider shadow">
+                            Новое
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
+                    );
+                  })()}
 
                   {/* Right: Info */}
                   <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5 space-y-1 sm:space-y-1.5">

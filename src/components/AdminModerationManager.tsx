@@ -992,7 +992,7 @@ export const AdminModerationManager: React.FC<AdminModerationManagerProps> = ({
                           )}
                           {art.rutubeUrl && (
                             <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-600/20 text-red-300 border border-red-500/30">
-                              🇷🇺 RuTube / Restore
+                              🇷🇺 RuTube
                             </span>
                           )}
                           {art.youtubeUrl && (
