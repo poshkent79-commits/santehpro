@@ -165,8 +165,20 @@ app.use('/uploads', express.static(uploadsDir, {
 let articlesStore: Article[] = getCachedArticles();
 let specialistsStore: PlumbingSpecialist[] = [...INITIAL_SPECIALISTS];
 let questionsStore: CommunityQuestion[] = [...INITIAL_QUESTIONS];
-let serviceRequestsStore: ServiceCallRequest[] = [...INITIAL_SERVICE_REQUESTS];
+let serviceRequestsStore: ServiceCallRequest[] = [];
 let diagnosticSessionsStore: DiagnosticSession[] = [...INITIAL_DIAGNOSTIC_SESSIONS];
+
+// Asynchronously sync service requests from DB on startup
+getDbServiceRequests()
+  .then((dbReqs) => {
+    if (Array.isArray(dbReqs)) {
+      serviceRequestsStore = dbReqs;
+      console.log(`[ServiceRequests] Synced ${serviceRequestsStore.length} real service requests from DB.`);
+    }
+  })
+  .catch((err) => {
+    console.warn('[ServiceRequests] Initial database load error:', err);
+  });
 
 // Asynchronously sync articles with Cloud SQL on startup without blocking
 getDbArticles()
@@ -1547,13 +1559,51 @@ app.get('/api/specialists/deleted', async (_req, res) => {
 
 // ---------------- SERVICE CALL REQUESTS (ЗАЯВКИ НА ВЫЗОВ МАСТЕРА) ----------------
 
+// Anti-spam sliding window rate limiter
+const serviceRequestIpRateMap = new Map<string, number[]>();
+
+function checkServiceRequestSpam(
+  ip: string,
+  body: any
+): { isSpam: boolean; reason?: string } {
+  // 1. Honeypot check (field that only automated bots fill out)
+  if (body.website_url_hp || body.bot_trap || body.fax_number || body.honeypot) {
+    return { isSpam: true, reason: 'Обнаружен автоматический спам-бот (сработала honeypot-ловушка)' };
+  }
+
+  // 2. Minimum form submission duration (humans need at least 1.2 seconds to fill a form)
+  if (typeof body.durationMs === 'number' && body.durationMs > 0 && body.durationMs < 1200) {
+    return { isSpam: true, reason: 'Слишком быстрое заполнение формы (автоматический скрипт)' };
+  }
+
+  // 3. IP Rate Limiting (max 5 requests per 10 minutes per IP)
+  const now = Date.now();
+  const windowMs = 10 * 60 * 1000;
+  const recent = (serviceRequestIpRateMap.get(ip) || []).filter(t => now - t < windowMs);
+  if (recent.length >= 5) {
+    return { isSpam: true, reason: 'Слишком много заявок с вашего IP адреса. Пожалуйста, подождите несколько минут перед следующей отправкой.' };
+  }
+  recent.push(now);
+  serviceRequestIpRateMap.set(ip, recent);
+
+  // 4. Basic phone number sanity check
+  const digits = (body.clientPhone || '').replace(/\D/g, '');
+  if (digits.length < 10) {
+    return { isSpam: true, reason: 'Некорректный номер телефона (требуется минимум 10 цифр)' };
+  }
+  if (/^(\d)\1{9,}$/.test(digits)) {
+    return { isSpam: true, reason: 'Фиктивный номер телефона (повторяющиеся цифры)' };
+  }
+
+  return { isSpam: false };
+}
+
 // GET All Service Call Requests (Admin)
 app.get('/api/service-requests', async (_req, res) => {
   try {
     const dbRequests = await getDbServiceRequests();
-    if (dbRequests.length > 0) {
-      serviceRequestsStore = dbRequests;
-    }
+    // Always sync with database: if DB is empty, memory is empty too (prevents deleted requests from respawning)
+    serviceRequestsStore = dbRequests;
     res.json(serviceRequestsStore);
   } catch (error) {
     console.error('Failed to fetch service requests from DB, using cache:', error);
@@ -1563,7 +1613,18 @@ app.get('/api/service-requests', async (_req, res) => {
 
 // POST New Service Call Request (Submitted by Client or Admin)
 app.post('/api/service-requests', async (req, res) => {
+  const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+
+  // Anti-spam validation
+  const spamCheck = checkServiceRequestSpam(clientIp, req.body);
+  if (spamCheck.isSpam) {
+    console.warn(`[AntiSpam] Blocked spam request from ${clientIp}: ${spamCheck.reason}`);
+    return res.status(400).json({ error: spamCheck.reason || 'Заявка отклонена защитой от спама' });
+  }
+
   const isDirectToMaster = Boolean(req.body.preferredMasterId || req.body.preferredMasterName);
+  
+  // Direct Routing: all real customer requests are routed DIRECTLY to masters without waiting for admin approval
   const newReq: ServiceCallRequest = {
     id: `req-${Date.now()}`,
     clientName: req.body.clientName || 'Заказчик',
@@ -1576,11 +1637,11 @@ app.post('/api/service-requests', async (req, res) => {
     preferredTime: req.body.preferredTime || 'Ближайшее время',
     preferredMasterId: req.body.preferredMasterId || undefined,
     preferredMasterName: req.body.preferredMasterName || undefined,
-    // When client selected a specific master, request is routed directly to the master's cabinet without admin moderation
-    status: req.body.status || (isDirectToMaster ? 'approved' : 'pending'),
+    // Status is 'approved' immediately so it appears directly in master's cabinet
+    status: req.body.status || 'approved',
     adminNotes: isDirectToMaster
-      ? 'Прямая заявка мастеру (доставлена в личный кабинет без задержек на модерацию администратором)'
-      : (req.body.adminNotes || undefined),
+      ? `Прямая заявка мастеру ${req.body.preferredMasterName || ''} (направлена в личный кабинет без задержки на модерацию)`
+      : `Прямая заявка в город ${req.body.city || ''} (направлена всем свободным мастерам города без задержки на модерацию)`,
     userUid: req.body.userUid || undefined,
     clientEmail: req.body.clientEmail || undefined,
     rating: req.body.rating !== undefined ? Number(req.body.rating) : undefined,
@@ -1607,8 +1668,8 @@ app.post('/api/service-requests', async (req, res) => {
 
   res.status(201).json({
     message: isDirectToMaster
-      ? 'Заявка напрямую направлена в личный кабинет мастера без модерации администратором!'
-      : 'Заявка на вызов мастера успешно принята!',
+      ? 'Заявка успешно направлена в личный кабинет мастера!'
+      : 'Заявка принята и направлена свободным мастерам вашего города!',
     request: newReq,
   });
 });

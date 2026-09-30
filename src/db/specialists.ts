@@ -14,18 +14,14 @@ export function getCachedSpecialists(): PlumbingSpecialist[] {
     if (fs.existsSync(SPECIALISTS_STORE_FILE)) {
       const data = fs.readFileSync(SPECIALISTS_STORE_FILE, 'utf-8');
       const parsed = JSON.parse(data);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         return parsed;
       }
     }
   } catch (err) {
     console.warn('Failed to read cached specialists from disk:', err);
   }
-  return INITIAL_SPECIALISTS.map((s) => ({
-    ...s,
-    dataConsent: true,
-    consentTimestamp: '2026-01-01T00:00:00.000Z',
-  }));
+  return [];
 }
 
 export function saveCachedSpecialists(list: PlumbingSpecialist[]): void {
@@ -271,19 +267,9 @@ export async function updateDbSpecialist(id: string, updates: Partial<PlumbingSp
     }
   }
 
-  // If still not found, check if it exists in INITIAL_SPECIALISTS
+  // If still not found
   if (existingIdx === -1) {
-    const initMatch = INITIAL_SPECIALISTS.find((s) => s.id === id);
-    if (initMatch) {
-      inMemorySpecialists.push({
-        ...initMatch,
-        dataConsent: true,
-        consentTimestamp: new Date().toISOString(),
-      });
-      existingIdx = inMemorySpecialists.length - 1;
-    } else {
-      return null;
-    }
+    return null;
   }
 
   const updated: PlumbingSpecialist = {

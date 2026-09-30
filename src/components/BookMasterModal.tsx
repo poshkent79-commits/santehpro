@@ -33,11 +33,19 @@ export const BookMasterModal: React.FC<BookMasterModalProps> = ({
 
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [formOpenedAt] = useState<number>(() => Date.now());
+  const [honeypot, setHoneypot] = useState<string>('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.clientName.trim() || !formData.clientPhone.trim() || !formData.problemDescription.trim()) {
       alert('Пожалуйста, укажите ваше имя, телефон и опишите проблему.');
+      return;
+    }
+
+    const digits = formData.clientPhone.replace(/\D/g, '');
+    if (digits.length < 10) {
+      alert('Пожалуйста, укажите корректный номер телефона (минимум 10 цифр).');
       return;
     }
 
@@ -53,7 +61,9 @@ export const BookMasterModal: React.FC<BookMasterModalProps> = ({
           clientEmail: currentUser?.email,
           preferredMasterId: specialist?.id,
           preferredMasterName: specialist?.name,
-          status: specialist ? 'approved' : 'pending',
+          status: 'approved',
+          website_url_hp: honeypot, // Honeypot field for bot protection
+          durationMs: Date.now() - formOpenedAt,
         }),
       });
 
@@ -63,7 +73,8 @@ export const BookMasterModal: React.FC<BookMasterModalProps> = ({
           onSuccess();
         }, 3200);
       } else {
-        alert('Ошибка при отправке заявки. Попробуйте снова.');
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'Ошибка при отправке заявки. Попробуйте снова.');
       }
     } catch (err) {
       console.error(err);
@@ -143,6 +154,18 @@ export const BookMasterModal: React.FC<BookMasterModalProps> = ({
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Anti-spam Honeypot (invisible to humans, traps automated spam bots) */}
+              <div className="hidden" aria-hidden="true" style={{ display: 'none' }}>
+                <input
+                  type="text"
+                  name="website_url_hp"
+                  value={honeypot}
+                  onChange={(e) => setHoneypot(e.target.value)}
+                  tabIndex={-1}
+                  autoComplete="off"
+                />
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">

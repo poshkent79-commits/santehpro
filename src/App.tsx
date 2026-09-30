@@ -237,6 +237,12 @@ function AppContent() {
     }
   };
 
+  // Deeplink state for review request links (?reviewMaster=... or ?specialist=...)
+  const [deeplinkReviewMasterId, setDeeplinkReviewMasterId] = useState<string | null>(null);
+  const [deeplinkMasterId, setDeeplinkMasterId] = useState<string | null>(null);
+  const [deeplinkClientName, setDeeplinkClientName] = useState<string | null>(null);
+  const [deeplinkRequestId, setDeeplinkRequestId] = useState<string | null>(null);
+
   // Confirm city selection, persist in localStorage and sync into user profile
   const handleConfirmAndSaveCity = async (cityToSave: string) => {
     setSelectedCity(cityToSave);
@@ -413,10 +419,19 @@ function AppContent() {
       const articleParam = urlParams.get('article');
       const queryParam = urlParams.get('query') || urlParams.get('search');
       const categoryParam = urlParams.get('category');
+      const reviewMasterParam = urlParams.get('reviewMaster') || urlParams.get('review');
       const masterParam = urlParams.get('master') || urlParams.get('specialist');
+      const clientParam = urlParams.get('client');
+      const reqIdParam = urlParams.get('reqId');
 
-      if (masterParam) {
+      if (reviewMasterParam) {
         setActiveTab('specialists');
+        setDeeplinkReviewMasterId(reviewMasterParam);
+        if (clientParam) setDeeplinkClientName(clientParam);
+        if (reqIdParam) setDeeplinkRequestId(reqIdParam);
+      } else if (masterParam) {
+        setActiveTab('specialists');
+        setDeeplinkMasterId(masterParam);
       } else if (tabParam && ['handbook', 'courses', 'calculator', 'specialists', 'diagnostic', 'admin', 'cabinet'].includes(tabParam)) {
         setActiveTab(tabParam as any);
       }
@@ -974,6 +989,10 @@ function AppContent() {
             detectedCityInfo={detectedCityInfo}
             isDetectingCity={isDetectingCity}
             onDetectCity={() => runCityDetection(true)}
+            initialReviewMasterId={deeplinkReviewMasterId}
+            initialOpenSpecialistId={deeplinkMasterId}
+            initialReviewClientName={deeplinkClientName}
+            initialReviewRequestId={deeplinkRequestId}
           />
         )}
 

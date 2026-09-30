@@ -164,7 +164,7 @@ export const SpecialistReviewsModal: React.FC<SpecialistReviewsModalProps> = ({
         body: JSON.stringify({
           rating,
           comment: comment.trim(),
-          clientName: clientName.trim() || 'Клиент сервиса',
+          clientName: clientName.trim() || (currentUser ? currentUser.name : 'Гость'),
           clientCity: clientCity.trim() || specialist.city,
           serviceRequestId: selectedRequestId || undefined,
           userUid: currentUser?.uid,
@@ -451,12 +451,19 @@ export const SpecialistReviewsModal: React.FC<SpecialistReviewsModalProps> = ({
               {/* Name and City */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-semibold text-slate-300">Ваше имя:</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-semibold text-slate-300">Ваше имя:</label>
+                    {!currentUser && (
+                      <span className="text-[10px] text-amber-400 font-medium">
+                        без регистрации (гость)
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="text"
                     value={clientName}
                     onChange={(e) => setClientName(e.target.value)}
-                    placeholder="Например: Иван П."
+                    placeholder={currentUser?.name || "Гость (или введите ваше имя)"}
                     className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
                   />
                 </div>
@@ -583,8 +590,16 @@ export const SpecialistReviewsModal: React.FC<SpecialistReviewsModalProps> = ({
                         {rev.clientName ? rev.clientName.charAt(0).toUpperCase() : 'К'}
                       </div>
                       <div>
-                        <div className="flex items-center space-x-2">
-                          <span className="text-xs font-bold text-white">{rev.clientName}</span>
+                        <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+                          <span className="text-xs font-bold text-white">{rev.clientName || 'Гость'}</span>
+                          {!rev.userUid && (
+                            <span
+                              className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-medium bg-slate-800 text-slate-400 border border-slate-700/80"
+                              title="Отзыв оставлен без регистрации в системе"
+                            >
+                              Гость
+                            </span>
+                          )}
                           {rev.verifiedBooking && (
                             <span
                               className="inline-flex items-center space-x-1 px-1.5 py-0.2 rounded text-[10px] font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"

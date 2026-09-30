@@ -1,5 +1,13 @@
 [
   {
+    "id": "log_1790723551220_9nx80",
+    "timestamp": "2026-09-29T23:12:31.221Z",
+    "to": "poshkent79@gmail.com",
+    "subject": "Код восстановления пароля",
+    "code": "TEST-FAIL",
+    "status": "test_fail: Invalid login: 535-5.7.8 Username and Password not accepted. For more information, go to\n535 5.7.8  https://support.google.com/mail/?p=BadCredentials 5b1f17b1804b1-4a017468b10sm4103665e9.0 - gsmtp"
+  },
+  {
     "timestamp": "2026-09-16T23:25:11.295Z",
     "to": "sommoni@bk.ru",
     "subject": "Код восстановления пароля",

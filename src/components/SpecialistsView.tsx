@@ -39,6 +39,10 @@ interface SpecialistsViewProps {
   detectedCityInfo?: DetectedCityResult | null;
   isDetectingCity?: boolean;
   onDetectCity?: () => Promise<void>;
+  initialReviewMasterId?: string | null;
+  initialOpenSpecialistId?: string | null;
+  initialReviewClientName?: string | null;
+  initialReviewRequestId?: string | null;
 }
 
 export const SpecialistsView: React.FC<SpecialistsViewProps> = ({
@@ -56,6 +60,10 @@ export const SpecialistsView: React.FC<SpecialistsViewProps> = ({
   detectedCityInfo,
   isDetectingCity = false,
   onDetectCity,
+  initialReviewMasterId,
+  initialOpenSpecialistId,
+  initialReviewClientName,
+  initialReviewRequestId,
 }) => {
   const [localSearchQuery, setLocalSearchQuery] = useState('');
   const searchQuery = propSearchQuery !== undefined ? propSearchQuery : localSearchQuery;
@@ -128,6 +136,30 @@ export const SpecialistsView: React.FC<SpecialistsViewProps> = ({
       }
     }
   };
+
+  // Auto-open master profile or review modal if deeplink reviewMaster is passed
+  useEffect(() => {
+    if (!specialists || specialists.length === 0) return;
+
+    if (initialReviewMasterId) {
+      const found = specialists.find((s) => s.id === initialReviewMasterId);
+      if (found) {
+        if (found.city && selectedCity !== found.city && selectedCity !== 'Все города') {
+          setSelectedCity(found.city);
+        }
+        setSelectedProfileSpecialist(found);
+        setSelectedReviewsSpecialist(found);
+      }
+    } else if (initialOpenSpecialistId) {
+      const found = specialists.find((s) => s.id === initialOpenSpecialistId);
+      if (found) {
+        if (found.city && selectedCity !== found.city && selectedCity !== 'Все города') {
+          setSelectedCity(found.city);
+        }
+        setSelectedProfileSpecialist(found);
+      }
+    }
+  }, [initialReviewMasterId, initialOpenSpecialistId, specialists]);
 
   const handleDetect = async () => {
     if (onDetectCity) {
@@ -761,6 +793,9 @@ export const SpecialistsView: React.FC<SpecialistsViewProps> = ({
           onClose={() => setSelectedReviewsSpecialist(null)}
           onRefresh={onRefresh}
           onOpenAuthModal={onOpenAuthModal}
+          initialOpenForm={Boolean(initialReviewMasterId && initialReviewMasterId === selectedReviewsSpecialist.id)}
+          prefilledClientName={initialReviewClientName || undefined}
+          prefilledRequestId={initialReviewRequestId || undefined}
         />
       )}
 
