@@ -126,6 +126,52 @@ function AppContent() {
     setFooterLegalDoc(doc);
     setIsFooterLegalModalOpen(true);
   };
+
+  // Auto-detect direct legal URLs (/donation-offer, /oferta, /offer, /privacy, /terms or ?legal=...)
+  useEffect(() => {
+    try {
+      const path = window.location.pathname.toLowerCase().replace(/\/+$/, '');
+      const search = new URLSearchParams(window.location.search);
+      const legalQuery = search.get('legal')?.toLowerCase();
+      const tabQuery = search.get('tab')?.toLowerCase();
+
+      if (
+        path === '/donation-offer' ||
+        path === '/oferta' ||
+        path === '/offer' ||
+        path === '/terms-offer' ||
+        path === '/oferta-donation' ||
+        path.startsWith('/donation-offer') ||
+        path.startsWith('/oferta') ||
+        legalQuery === 'offer' ||
+        legalQuery === 'oferta' ||
+        legalQuery === 'donation-offer' ||
+        tabQuery === 'offer' ||
+        tabQuery === 'donation-offer' ||
+        tabQuery === 'oferta'
+      ) {
+        setFooterLegalDoc('offer');
+        setIsFooterLegalModalOpen(true);
+      } else if (
+        path === '/privacy' ||
+        path === '/politika' ||
+        legalQuery === 'privacy' ||
+        tabQuery === 'privacy'
+      ) {
+        setFooterLegalDoc('privacy');
+        setIsFooterLegalModalOpen(true);
+      } else if (
+        path === '/terms' ||
+        legalQuery === 'terms' ||
+        tabQuery === 'terms'
+      ) {
+        setFooterLegalDoc('terms');
+        setIsFooterLegalModalOpen(true);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
   const [diagnosticPrompt, setDiagnosticPrompt] = useState<string>('');
   const [cabinetInitialTab, setCabinetInitialTab] = useState<'favorites' | 'purchases' | 'requests' | 'profile' | 'master' | undefined>(undefined);
   const [viewingEstimate, setViewingEstimate] = useState<MasterPlumbingEstimate | null>(null);

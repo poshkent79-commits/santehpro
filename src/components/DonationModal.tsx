@@ -8,7 +8,6 @@ import {
   Check,
   CheckCircle2,
   Gift,
-  Smartphone,
   Mail,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -39,7 +38,6 @@ export const DonationModal: React.FC<DonationModalProps> = ({
   const [selectedAmount, setSelectedAmount] = useState<number>(initialAmount);
   const [customAmount, setCustomAmount] = useState<string>('');
   const [isCustom, setIsCustom] = useState<boolean>(false);
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'phone'>('card');
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isThankYouOpen, setIsThankYouOpen] = useState<boolean>(false);
   const [isScrolled, setIsScrolled] = useState<boolean>(false);
@@ -273,202 +271,87 @@ export const DonationModal: React.FC<DonationModalProps> = ({
             )}
           </div>
 
-          {/* Payment Method Selector Tabs */}
-          <div className="space-y-1.5 pt-1">
-            <span className="text-xs font-bold text-slate-300">Способ перевода средств:</span>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setPaymentMethod('card')}
-                className={`p-2.5 rounded-xl border text-[11px] sm:text-xs font-bold flex flex-col sm:flex-row items-center justify-center space-y-1 sm:space-y-0 sm:space-x-1.5 transition cursor-pointer text-center ${
-                  paymentMethod === 'card'
-                    ? 'bg-emerald-500/20 border-emerald-500 text-white shadow-sm ring-1 ring-emerald-500'
-                    : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <CreditCard className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span>Карта «Мир»</span>
-              </button>
+          {/* CARD «МИР» REQUISITES (2200 7020 1270 2739, Достонджон Т.) */}
+          <div className="space-y-3 animate-in fade-in duration-150 pt-1">
+            <span className="text-xs font-bold text-slate-300">Реквизиты карты для поддержки:</span>
+            {/* Virtual Realistic Bank Card */}
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 border border-emerald-500/40 p-4 sm:p-5 text-white shadow-xl shadow-emerald-950/40">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-6 rounded bg-gradient-to-br from-amber-300 to-amber-500 border border-amber-200 flex items-center justify-center shadow-inner">
+                    <div className="w-5 h-3 border-y border-amber-700/60 rounded-sm" />
+                  </div>
+                  <span className="text-[10px] text-slate-400 uppercase tracking-widest font-mono">Банковская карта</span>
+                </div>
+                <div className="flex items-center space-x-1.5 px-2.5 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-400/40">
+                  <span className="text-[11px] font-black tracking-widest text-emerald-400">МИР</span>
+                </div>
+              </div>
 
+              <div className="my-3">
+                <div className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">
+                  Номер банковской карты:
+                </div>
+                <div className="font-mono text-base sm:text-xl font-black tracking-widest text-emerald-300 select-all flex items-center justify-between bg-slate-950/70 p-2 sm:p-2.5 rounded-xl border border-slate-800">
+                  <span>2200 7020 1270 2739</span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy('2200702012702739', 'card')}
+                    className="px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center space-x-1 transition cursor-pointer shrink-0 ml-2"
+                    title="Скопировать номер карты"
+                  >
+                    {copiedField === 'card' ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-slate-950" />
+                        <span>Скопировано!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5 text-slate-950" />
+                        <span>Копировать</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-end justify-between border-t border-slate-800/80 pt-2 text-xs">
+                <div>
+                  <div className="text-[9px] text-slate-400 uppercase tracking-wider">Банк и Получатель:</div>
+                  <div className="font-bold text-white tracking-wide text-xs sm:text-sm">Т-БАНК • ДОСТОНДЖОН Т.</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[9px] text-slate-400 uppercase tracking-wider">Сумма к переводу:</div>
+                  <div className="text-xs sm:text-sm text-emerald-400 font-extrabold">{currentSum.toLocaleString('ru-RU')} ₽</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Instructions */}
+            <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 space-y-1.5">
+              <div className="font-semibold text-white flex items-center space-x-1.5">
+                <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Как отправить поддержку по номеру карты:</span>
+              </div>
+              <ol className="list-decimal list-inside space-y-1 text-[11px] text-slate-300">
+                <li>Нажмите кнопку <strong>«Копировать»</strong> выше (скопируется номер карты <strong>2200 7020 1270 2739</strong>).</li>
+                <li>Откройте приложение любого вашего банка (Сбербанк, Т-Банк, ВТБ, Альфа и др.).</li>
+                <li>Выберите <strong>«Перевод по номеру карты»</strong>, вставьте скопированный номер, укажите сумму <strong>{currentSum} ₽</strong> и подтвердите перевод.</li>
+              </ol>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-2">
               <button
                 type="button"
-                onClick={() => setPaymentMethod('phone')}
-                className={`p-2.5 rounded-xl border text-[11px] sm:text-xs font-bold flex flex-col sm:flex-row items-center justify-center space-y-1 sm:space-y-0 sm:space-x-1.5 transition cursor-pointer text-center ${
-                  paymentMethod === 'phone'
-                    ? 'bg-cyan-500/20 border-cyan-500 text-white shadow-sm ring-1 ring-cyan-500'
-                    : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200'
-                }`}
+                onClick={() => setIsThankYouOpen(true)}
+                className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold flex items-center justify-center space-x-2 transition shadow-md cursor-pointer"
               >
-                <Smartphone className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                <span>Перевод через СБП</span>
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Я перевёл на карту — Спасибо автору!</span>
               </button>
             </div>
           </div>
-
-          {/* METHOD 1: CARD «МИР» (2200 7020 1270 2739, Достонджон Т.) */}
-          {paymentMethod === 'card' && (
-            <div className="space-y-3 animate-in fade-in duration-150">
-              {/* Virtual Realistic Bank Card */}
-              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 border border-emerald-500/40 p-4 sm:p-5 text-white shadow-xl shadow-emerald-950/40">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-8 h-6 rounded bg-gradient-to-br from-amber-300 to-amber-500 border border-amber-200 flex items-center justify-center shadow-inner">
-                      <div className="w-5 h-3 border-y border-amber-700/60 rounded-sm" />
-                    </div>
-                    <span className="text-[10px] text-slate-400 uppercase tracking-widest font-mono">Карта для переводов</span>
-                  </div>
-                  <div className="flex items-center space-x-1.5 px-2.5 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-400/40">
-                    <span className="text-[11px] font-black tracking-widest text-emerald-400">МИР</span>
-                  </div>
-                </div>
-
-                <div className="my-3">
-                  <div className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">
-                    Номер банковской карты:
-                  </div>
-                  <div className="font-mono text-base sm:text-xl font-black tracking-widest text-emerald-300 select-all flex items-center justify-between bg-slate-950/70 p-2 sm:p-2.5 rounded-xl border border-slate-800">
-                    <span>2200 7020 1270 2739</span>
-                    <button
-                      type="button"
-                      onClick={() => handleCopy('2200702012702739', 'card')}
-                      className="px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center space-x-1 transition cursor-pointer shrink-0 ml-2"
-                      title="Скопировать номер карты"
-                    >
-                      {copiedField === 'card' ? (
-                        <>
-                          <Check className="w-3.5 h-3.5 text-slate-950" />
-                          <span>Скопировано!</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3.5 h-3.5 text-slate-950" />
-                          <span>Копировать</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex items-end justify-between border-t border-slate-800/80 pt-2 text-xs">
-                  <div>
-                    <div className="text-[9px] text-slate-400 uppercase tracking-wider">Получатель:</div>
-                    <div className="font-bold text-white tracking-wide text-xs sm:text-sm">ДОСТОНДЖОН Т.</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-[9px] text-slate-400 uppercase tracking-wider">Сумма к переводу:</div>
-                    <div className="text-xs sm:text-sm text-emerald-400 font-extrabold">{currentSum.toLocaleString('ru-RU')} ₽</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Instructions */}
-              <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 space-y-1.5">
-                <div className="font-semibold text-white flex items-center space-x-1.5">
-                  <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Как отправить поддержку по номеру карты:</span>
-                </div>
-                <ol className="list-decimal list-inside space-y-1 text-[11px] text-slate-300">
-                  <li>Нажмите кнопку <strong>«Копировать»</strong> выше (скопируется номер 2200702012702739).</li>
-                  <li>Откройте приложение любого вашего банка (Сбербанк, Т-Банк, ВТБ, Альфа и др.).</li>
-                  <li>Выберите <strong>«Перевод по номеру карты»</strong>, вставьте скопированный номер, укажите <strong>{currentSum} ₽</strong> и подтвердите перевод.</li>
-                </ol>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="space-y-2">
-                <button
-                  type="button"
-                  onClick={() => setIsThankYouOpen(true)}
-                  className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold flex items-center justify-center space-x-2 transition shadow-md cursor-pointer"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Я перевёл на карту — Спасибо автору!</span>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* METHOD 2: SBP REQUISITES (+7 924 788 99 00, Достонджон Т.) */}
-          {paymentMethod === 'phone' && (
-            <div className="space-y-3 animate-in fade-in duration-150">
-              <div className="p-4 rounded-2xl bg-slate-950/80 border border-cyan-500/40 space-y-3 shadow-lg shadow-cyan-950/30">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">
-                      Реквизиты для перевода через СБП:
-                    </div>
-                    <div className="font-mono text-lg sm:text-xl font-black text-white tracking-wide mt-0.5 select-all">
-                      +7 924 788 99 00
-                    </div>
-                  </div>
-                  <div className="px-2.5 py-1 rounded-lg bg-cyan-500/20 border border-cyan-400/40 text-[10px] font-black tracking-wider text-cyan-300">
-                    СБП 0%
-                  </div>
-                </div>
-
-                {/* SBP Details box */}
-                <div className="space-y-2 bg-slate-900/90 p-3 rounded-xl border border-slate-800 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-400">Номер телефона для СБП:</span>
-                    <span className="font-mono font-bold text-cyan-300 select-all">+7 924 788 99 00</span>
-                  </div>
-                  <div className="flex items-center justify-between border-t border-slate-800/80 pt-1.5">
-                    <span className="text-slate-400">Получатель:</span>
-                    <span className="font-bold text-white">Достонджон Т.</span>
-                  </div>
-                  <div className="flex items-center justify-between border-t border-slate-800/80 pt-1.5">
-                    <span className="text-slate-400">Банк получателя:</span>
-                    <span className="font-bold text-amber-400">Т-Банк (Тинькофф)</span>
-                  </div>
-                  <div className="flex items-center justify-between border-t border-slate-800/80 pt-1.5">
-                    <span className="text-slate-400">Сумма к переводу:</span>
-                    <span className="font-bold text-emerald-400">{currentSum.toLocaleString('ru-RU')} ₽</span>
-                  </div>
-                </div>
-
-                {/* Quick Copy Button for SBP */}
-                <button
-                  type="button"
-                  onClick={() => handleCopy('+79247889900', 'sbp')}
-                  className="w-full py-2.5 px-3 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/50 text-xs font-bold text-cyan-200 flex items-center justify-center space-x-2 transition cursor-pointer"
-                >
-                  {copiedField === 'sbp' ? (
-                    <>
-                      <Check className="w-4 h-4 text-emerald-400" />
-                      <span className="text-emerald-300">Номер для СБП скопирован!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-4 h-4 text-cyan-300" />
-                      <span>Скопировать номер для СБП (+7 924 788 99 00)</span>
-                    </>
-                  )}
-                </button>
-
-                {/* Instructions */}
-                <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-300 space-y-1">
-                  <div className="font-semibold text-white flex items-center space-x-1.5">
-                    <Smartphone className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>Инструкция по переводу через СБП:</span>
-                  </div>
-                  <ol className="list-decimal list-inside space-y-1 text-[11px] text-slate-300 pt-1">
-                    <li>Скопируйте номер телефона <strong>+7 924 788 99 00</strong>.</li>
-                    <li>В мобильном приложении любого банка перейдите в <strong>«Переводы через СБП»</strong> (по номеру телефона).</li>
-                    <li>Вставьте скопированный номер, выберите банк получателя (<strong>Т-Банк</strong>) и сумму <strong>{currentSum} ₽</strong>.</li>
-                  </ol>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setIsThankYouOpen(true)}
-                  className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold flex items-center justify-center space-x-2 transition shadow-md cursor-pointer mt-1"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Я перевёл через СБП — Спасибо автору!</span>
-                </button>
-              </div>
-            </div>
-          )}
 
           {/* EMAIL SUPPORT IN BOTTOM OF DOCUMENT (Адрес электронной почты в нижней части документа) */}
           <div className="p-3 rounded-xl bg-slate-950/90 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs">

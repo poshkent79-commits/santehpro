@@ -4392,7 +4392,22 @@ async function start() {
   });
 
   // Public Legal Offer for Voluntary Donations & Support (ст. 435, 437, 582 ГК РФ, Robokassa compliant)
-  app.get(['/oferta', '/offer', '/terms-offer', '/donation-offer', '/oferta-donation'], (_req, res) => {
+  app.get([
+    '/oferta',
+    '/oferta/',
+    '/oferta.html',
+    '/offer',
+    '/offer/',
+    '/offer.html',
+    '/terms-offer',
+    '/terms-offer/',
+    '/donation-offer',
+    '/donation-offer/',
+    '/donation-offer.html',
+    '/oferta-donation',
+    '/oferta-donation/',
+    '/oferta-donation.html',
+  ], (_req, res) => {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(`<!DOCTYPE html>
 <html lang="ru">
@@ -4451,14 +4466,12 @@ async function start() {
         <li><strong>Через уполномоченный платежный сервис (агрегатор платежей) Robokassa (Робокасса):</strong>
           <ul>
             <li>Банковскими картами национальных и международных платежных систем «Мир», Visa, MasterCard;</li>
-            <li>Через Систему быстрых платежей (СБП) Банка России по QR-коду и платежным ссылкам;</li>
             <li>Электронными средствами платежа и платежными сервисами (SberPay, Mir Pay, ЮMoney и др.).</li>
           </ul>
         </li>
         <li><strong>Прямой перевод по официальным банковским реквизитам Получателя:</strong>
           <ul>
-            <li>На банковскую карту «Мир»: 2200 7020 1270 2739 (Получатель: Достонджон Т.);</li>
-            <li>Через Систему быстрых платежей (СБП) по номеру телефона: +7 924 788 99 00 (Банк получателя: Т-Банк, Получатель: Достонджон Т.).</li>
+            <li>На банковскую карту «Мир»: 2200 7020 1270 2739 (Банк: Т-Банк, Получатель: Достонджон Т.).</li>
           </ul>
         </li>
       </ul>
@@ -4483,9 +4496,8 @@ async function start() {
       <div>Получатель: <span>Самозанятый Туйчиев Достонджон Нортожович</span></div>
       <div>ИНН: <span>250900981804</span></div>
       <div>Адрес: <span>692900, РФ, Приморский край, г. Находка, ул. Озерный бульвар, д. 7, кв. 52</span></div>
-      <div>Платежный шлюз: <span>Robokassa (банковские карты, СБП, Mir Pay, SberPay)</span></div>
-      <div>Карта «Мир»: <span>2200 7020 1270 2739 (Достонджон Т.)</span></div>
-      <div>СБП по номеру: <span>+7 924 788 99 00 (Т-Банк, Достонджон Т.)</span></div>
+      <div>Платежный шлюз: <span>Robokassa (банковские карты, Mir Pay, SberPay)</span></div>
+      <div>Карта «Мир»: <span>2200 7020 1270 2739 (Т-Банк, Достонджон Т.)</span></div>
       <div>Электронная почта: <span>santehpro.info@gmail.com</span></div>
       <div>Официальный сайт: <span>https://santehpro.info</span></div>
     </div>
