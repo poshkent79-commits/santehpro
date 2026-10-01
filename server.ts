@@ -982,6 +982,7 @@ app.get('/api/admin/yandex/config', (req, res) => {
       hasSecret: Boolean(config?.clientSecret),
       maskedSecret: config?.clientSecret ? `${config.clientSecret.slice(0, 4)}••••••••` : '',
       enabled: config?.enabled ?? true,
+      webmasterVerificationCode: config?.webmasterVerificationCode || '9a3402ab46b0793b',
       callbackUrl,
     });
   } catch (error: any) {
@@ -992,27 +993,36 @@ app.get('/api/admin/yandex/config', (req, res) => {
 // POST /api/admin/yandex/config - save settings
 app.post('/api/admin/yandex/config', (req, res) => {
   try {
-    const { clientId, clientSecret, enabled } = req.body;
-    if (!clientId || !clientId.trim()) {
-      return res.status(400).json({ error: 'Укажите Client ID Яндекс OAuth' });
-    }
-
+    const { clientId, clientSecret, enabled, webmasterVerificationCode } = req.body;
     const current = getYandexAuthConfig();
+
+    const clientIdToSave = clientId?.trim() ? clientId.trim() : (current?.clientId || '');
     const secretToSave = clientSecret?.trim() ? clientSecret.trim() : (current?.clientSecret || '');
-    if (!secretToSave) {
-      return res.status(400).json({ error: 'Укажите Client Secret Яндекс OAuth' });
-    }
+    const verificationToSave = webmasterVerificationCode?.trim() || current?.webmasterVerificationCode || '9a3402ab46b0793b';
 
     saveYandexAuthConfig({
-      clientId: clientId.trim(),
+      clientId: clientIdToSave,
       clientSecret: secretToSave,
       enabled: enabled !== undefined ? Boolean(enabled) : true,
+      webmasterVerificationCode: verificationToSave,
     });
 
-    res.json({ success: true, message: 'Настройки Яндекс ID OAuth успешно сохранены' });
+    res.json({ success: true, message: 'Настройки Яндекс и код Яндекс.Вебмастера успешно сохранены' });
   } catch (error: any) {
-    res.status(400).json({ error: error.message || 'Ошибка сохранения настроек Яндекс OAuth' });
+    res.status(400).json({ error: error.message || 'Ошибка сохранения настроек Яндекс' });
   }
+});
+
+// GET /yandex_:code.html - Universal Yandex Webmaster HTML Verification Endpoint
+app.get('/yandex_:code.html', (req, res) => {
+  const code = req.params.code;
+  res.setHeader('Content-Type', 'text/html; charset=UTF-8');
+  res.send(`<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    </head>
+    <body>Verification: ${code}</body>
+</html>`);
 });
 
 // ---------------- AUTOMATIC BACKUPS & DATA RECOVERY SYSTEM ----------------
@@ -4381,81 +4391,104 @@ async function start() {
     res.send(html);
   });
 
-  // Public Legal Offer for Voluntary Donations & Support (ст. 435, 437, 582 ГК РФ)
-  app.get(['/oferta', '/offer', '/terms-offer'], (_req, res) => {
+  // Public Legal Offer for Voluntary Donations & Support (ст. 435, 437, 582 ГК РФ, Robokassa compliant)
+  app.get(['/oferta', '/offer', '/terms-offer', '/donation-offer', '/oferta-donation'], (_req, res) => {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(`<!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Публичная оферта о добровольном пожертвовании — СантехПро</title>
-  <meta name="description" content="Публичная оферта о заключении договора добровольного пожертвования на поддержку и развитие бесплатного онлайн-сервиса «СантехПро».">
+  <title>Публичная оферта о добровольном пожертвовании на развитие проекта — СантехПро</title>
+  <meta name="description" content="Публичная оферта о заключении договора добровольного пожертвования на развитие открытого проекта «СантехПро». Прием платежей через Robokassa, банковские карты, СБП.">
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1e293b; background: #f8fafc; padding: 24px 16px; margin: 0; }
-    .container { max-width: 820px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 32px 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-    h1 { font-size: 22px; color: #0f172a; margin-top: 0; line-height: 1.3; }
-    h2 { font-size: 16px; color: #0f172a; margin-top: 24px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; }
+    .container { max-width: 840px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 36px 28px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+    h1 { font-size: 22px; color: #0f172a; margin-top: 0; line-height: 1.35; }
+    h2 { font-size: 16px; color: #0f172a; margin-top: 26px; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; }
     p, li { font-size: 14px; color: #334155; }
     ul, ol { padding-left: 20px; }
-    .badge { display: inline-block; background: #dcfce7; color: #15803d; font-weight: 700; font-size: 12px; padding: 4px 10px; border-radius: 999px; margin-bottom: 12px; }
-    .box { background: #f1f5f9; border-left: 4px solid #0284c7; padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 16px 0; font-size: 13px; line-height: 1.6; }
+    .badge { display: inline-block; background: #dcfce7; color: #15803d; font-weight: 700; font-size: 12px; padding: 4px 12px; border-radius: 999px; margin-bottom: 14px; }
+    .box { background: #f1f5f9; border-left: 4px solid #0284c7; padding: 14px 18px; border-radius: 0 8px 8px 0; margin: 16px 0; font-size: 13px; line-height: 1.6; }
     .highlight-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 14px 18px; margin: 18px 0; font-size: 13px; }
-    .requisites { background: #0f172a; color: #f8fafc; border-radius: 12px; padding: 16px; margin: 16px 0; font-family: monospace; font-size: 13px; line-height: 1.8; }
+    .requisites { background: #0f172a; color: #f8fafc; border-radius: 12px; padding: 18px; margin: 16px 0; font-family: monospace; font-size: 13px; line-height: 1.8; }
     .requisites span { color: #38bdf8; font-weight: bold; }
     .footer-link { display: inline-block; margin-top: 24px; color: #0284c7; text-decoration: none; font-weight: 600; font-size: 14px; }
+    .footer-link:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="badge">Редакция 3.0 от 26 сентября 2026 года • 100% БЕСПЛАТНО</div>
+    <div class="badge">Редакция 3.1 от 1 октября 2026 года • ст. 435, 437, 582 ГК РФ</div>
     <h1>Публичная оферта о заключении договора добровольного пожертвования на развитие открытого проекта «СантехПро»</h1>
     
     <div class="box">
       <strong>Получатель пожертвования:</strong> Самозанятый Туйчиев Достонджон Нортожович<br>
       <strong>ИНН:</strong> 250900981804<br>
-      <strong>Адрес:</strong> РФ, Приморский край, г. Находка, ул. Озерный бульвар, д. 7, кв. 52<br>
-      <strong>Служба поддержки:</strong> <a href="mailto:santehpro.info@gmail.com">santehpro.info@gmail.com</a> | Официальный сайт: <a href="https://santehpro.info">santehpro.info</a>
+      <strong>Адрес регистрации:</strong> РФ, Приморский край, г. Находка, ул. Озерный бульвар, д. 7, кв. 52<br>
+      <strong>Служба поддержки:</strong> <a href="mailto:santehpro.info@gmail.com">santehpro.info@gmail.com</a> | Официальный сайт: <a href="https://santehpro.info">https://santehpro.info</a>
     </div>
 
     <div class="highlight-box">
-      <strong>Статус проекта:</strong> Все материалы платформы «СантехПро» — включая обучающие видеокурсы, интерактивный калькулятор материалов, инженерные схемы узлов ввода, справочники типовых неисправностей и каталог специалистов — предоставляются каждому пользователю на <strong>100% бесплатной основе</strong>. Платные подписки и скрытые платежи отсутствуют.
+      <strong>Статус проекта:</strong> Сервис «СантехПро» — это открытая некоммерческая обучающая платформа по сантехнике. Все материалы, пошаговые инструкции, интерактивный калькулятор материалов и каталог проверенных мастеров предоставляются пользователям на <strong>100% бесплатной основе</strong>. Платные подписки отсутствуют. Пожертвования вносятся пользователями добровольно по их собственному желанию в общеполезных целях.
     </div>
 
     <h2>1. Общие положения и предмет оферты</h2>
-    <p>1.1. Настоящий документ представляет собой официальное публичное предложение (публичную оферту в соответствии со ст. 435 и ч. 2 ст. 437 Гражданского кодекса РФ) Получателя пожертвования заключить Договор добровольного пожертвования на общеполезные цели поддержки и развития некоммерческого просветительского онлайн-проекта «СантехПро».</p>
-    <p>1.2. Предметом настоящего договора является добровольное и безвозмездное перечисление Пользователем (Жертвователем) денежных средств в пользу Получателя пожертвования для использования исключительно по целевому назначению: покрытие расходов на аренду серверов, хостинг, поддержку открытой базы знаний и съёмку новых практических обучающих видеоуроков по сантехнике.</p>
-
-    <h2>2. Порядок акцепта и перечисления средств</h2>
-    <p>2.1. В соответствии со ст. 438 ГК РФ акцептом оферты признается факт добровольного перевода Жертвователем любой денежной суммы по официальным реквизитам Получателя.</p>
-    <p>2.2. Перечисление пожертвований осуществляется Жертвователем самостоятельно через банковские сервисы без участия сторонних агрегаторов:</p>
-
-    <div class="requisites">
-      <div>Реквизиты для добровольной поддержки проекта:</div>
-      <div>1. Карта «Мир»: <span>2200 7020 1270 2739</span> (Получатель: Достонджон Т.)</div>
-      <div>2. СБП по номеру телефона: <span>+7 924 788 99 00</span> (Банк: Т-Банк, Получатель: Достонджон Т.)</div>
-    </div>
-
-    <h2>3. Сумма пожертвования и безвозмездный характер</h2>
-    <p>3.1. Размер добровольного пожертвования определяется Жертвователем самостоятельно исходя из комфортной для него суммы.</p>
-    <p>3.2. Пожертвование является безвозмездным взносом и не является платой за оказание услуг или продажу товаров. Доступ ко всем материалам проекта предоставляется в полном объёме на равных условиях независимо от факта пожертвования.</p>
-    <p>3.3. Добровольные пожертвования не облагаются НДС.</p>
-
-    <h2>4. Невозвратность пожертвования</h2>
-    <p>4.1. В соответствии со ст. 582 Гражданского кодекса РФ совершённое добровольное пожертвование возврату не подлежит, так как направляется на общеполезные цели содержания некоммерческого проекта.</p>
-    <p>4.2. Получатель ведёт учёт поступивших средств и обеспечивает их расходование строго по целевому назначению.</p>
-
-    <h2>5. Отсутствие сбора платёжных данных</h2>
-    <p>5.1. Приложение и веб-сервис «СантехПро» не запрашивают, не обрабатывают и не хранят номера банковских карт, коды CVV2/CVC2 и платёжные реквизиты пользователей.</p>
-    <p>5.2. Все переводы осуществляются Жертвователем непосредственно в защищённом мобильном приложении его собственного банка по стандартам Национальной системы платежных карт (НСПК) и Системы быстрых платежей (СБП) Банка России.</p>
-
-    <h2>6. Реквизиты Получателя</h2>
-    <p>
-      Самозанятый Туйчиев Достонджон Нортожович<br>
-      ИНН: 250900981804<br>
-      Почтовый адрес: 692900, РФ, Приморский край, г. Находка, ул. Озерный бульвар, д. 7, кв. 52<br>
-      Email: santehpro.info@gmail.com
+    <p>1.1. Настоящий документ представляет собой официальное публичное предложение (публичную оферту в соответствии со ст. 435 и ч. 2 ст. 437 Гражданского кодекса РФ) Получателя пожертвования — Самозанятого Туйчиева Достонджона Нортожовича заключить Договор добровольного пожертвования на общеполезные цели поддержки, сопровождения и развития открытого просветительского онлайн-проекта «СантехПро».</p>
+    <p>1.2. Предметом настоящего договора является добровольное и безвозмездное перечисление Пользователем (Жертвователем) денежных средств в пользу Получателя пожертвования для использования исключительно по целевому назначению:
+      <ul>
+        <li>Оплата аренды серверов, вычислительных мощностей, доменных имен и базы данных проекта;</li>
+        <li>Приобретение сантехнических расходных материалов, фитингов, инструмента для съёмки новых бесплатных обучающих видеоуроков и схем;</li>
+        <li>Техническая поддержка и совершенствование мобильной и веб-версий сервиса.</li>
+      </ul>
     </p>
+
+    <h2>2. Порядок акцепта оферты и способы внесения пожертвования</h2>
+    <p>2.1. В соответствии со ст. 438 Гражданского кодекса РФ акцептом настоящей оферты признается факт совершения Пользователем перечисления денежных средств любым из доступных способов, предложенных в интерфейсе Сервиса.</p>
+    <p>2.2. Договор добровольного пожертвования считается заключенным в письменной форме с момента успешного подтверждения транзакции авторизованным платежным сервисом либо с момента поступления средств на счет Получателя.</p>
+    <p>2.3. Доступные способы внесения добровольного пожертвования:
+      <ul>
+        <li><strong>Через уполномоченный платежный сервис (агрегатор платежей) Robokassa (Робокасса):</strong>
+          <ul>
+            <li>Банковскими картами национальных и международных платежных систем «Мир», Visa, MasterCard;</li>
+            <li>Через Систему быстрых платежей (СБП) Банка России по QR-коду и платежным ссылкам;</li>
+            <li>Электронными средствами платежа и платежными сервисами (SberPay, Mir Pay, ЮMoney и др.).</li>
+          </ul>
+        </li>
+        <li><strong>Прямой перевод по официальным банковским реквизитам Получателя:</strong>
+          <ul>
+            <li>На банковскую карту «Мир»: 2200 7020 1270 2739 (Получатель: Достонджон Т.);</li>
+            <li>Через Систему быстрых платежей (СБП) по номеру телефона: +7 924 788 99 00 (Банк получателя: Т-Банк, Получатель: Достонджон Т.).</li>
+          </ul>
+        </li>
+      </ul>
+    </p>
+
+    <h2>3. Безопасность платежей и конфиденциальность</h2>
+    <p>3.1. Перечисление пожертвований через платежный сервис Robokassa осуществляется в защищенном режиме с использованием шифрования по протоколу HTTPS и международного стандарта безопасности индустрии платежных карт PCI DSS.</p>
+    <p>3.2. Сервис «СантехПро» не собирает, не запрашивает и не сохраняет данные банковских карт Жертвователя (включая номера карт, сроки действия и CVV/CVC коды).</p>
+    <p>3.3. Обработка персональных данных (имя, email для отправки чека) осуществляется в строгом соответствии с Федеральным законом РФ № 152-ФЗ «О персональных данных».</p>
+
+    <h2>4. Сумма пожертвования и безвозмездный характер</h2>
+    <p>4.1. Размер добровольного пожертвования определяется Жертвователем самостоятельно исходя из комфортной для него суммы.</p>
+    <p>4.2. Пожертвование является безвозмездным целевым взносом и не влечет возникновения у Получателя встречных обязательств по продаже товаров, выполнению работ или оказанию услуг. Доступ ко всем материалам проекта предоставляется в полном объёме на равных условиях независимо от факта пожертвования.</p>
+    <p>4.3. В соответствии с подпунктом 1 пункта 2 статьи 146 Налогового кодекса РФ добровольные пожертвования не облагаются НДС.</p>
+
+    <h2>5. Невозвратность пожертвования</h2>
+    <p>5.1. В соответствии со ст. 582 Гражданского кодекса РФ совершённое добровольное пожертвование возврату не подлежит, так как направляется на общеполезные цели содержания некоммерческого проекта.</p>
+    <p>5.2. Получатель ведёт учёт поступивших средств и обеспечивает их расходование строго по целевому назначению.</p>
+
+    <h2>6. Реквизиты Получателя пожертвования</h2>
+    <div class="requisites">
+      <div>Получатель: <span>Самозанятый Туйчиев Достонджон Нортожович</span></div>
+      <div>ИНН: <span>250900981804</span></div>
+      <div>Адрес: <span>692900, РФ, Приморский край, г. Находка, ул. Озерный бульвар, д. 7, кв. 52</span></div>
+      <div>Платежный шлюз: <span>Robokassa (банковские карты, СБП, Mir Pay, SberPay)</span></div>
+      <div>Карта «Мир»: <span>2200 7020 1270 2739 (Достонджон Т.)</span></div>
+      <div>СБП по номеру: <span>+7 924 788 99 00 (Т-Банк, Достонджон Т.)</span></div>
+      <div>Электронная почта: <span>santehpro.info@gmail.com</span></div>
+      <div>Официальный сайт: <span>https://santehpro.info</span></div>
+    </div>
 
     <a href="/" class="footer-link">← Вернуться на главную страницу «СантехПро»</a>
   </div>

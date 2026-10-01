@@ -22,6 +22,7 @@ interface YandexConfigStatus {
   maskedSecret: string;
   enabled: boolean;
   callbackUrl: string;
+  webmasterVerificationCode?: string;
 }
 
 export const YandexOAuthSettingsTab: React.FC = () => {
@@ -35,6 +36,7 @@ export const YandexOAuthSettingsTab: React.FC = () => {
   const [clientId, setClientId] = useState('');
   const [clientSecret, setClientSecret] = useState('');
   const [enabled, setEnabled] = useState(true);
+  const [webmasterVerificationCode, setWebmasterVerificationCode] = useState('9a3402ab46b0793b');
 
   // Copy helpers
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -70,6 +72,9 @@ export const YandexOAuthSettingsTab: React.FC = () => {
         setStatus(data);
         setClientId(data.clientId || '');
         setEnabled(data.enabled ?? true);
+        if (data.webmasterVerificationCode) {
+          setWebmasterVerificationCode(data.webmasterVerificationCode);
+        }
       }
     } catch (err: any) {
       console.error('Failed to fetch Yandex config:', err);
@@ -90,16 +95,6 @@ export const YandexOAuthSettingsTab: React.FC = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!clientId.trim()) {
-      setNotification({ type: 'error', message: 'Пожалуйста, введите Client ID из кабинета Яндекс OAuth' });
-      return;
-    }
-
-    if (!clientSecret.trim() && !status?.hasSecret) {
-      setNotification({ type: 'error', message: 'Пожалуйста, введите Client Secret (пароль приложения)' });
-      return;
-    }
-
     setSaving(true);
     setNotification(null);
 
@@ -108,9 +103,10 @@ export const YandexOAuthSettingsTab: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          clientId: clientId.trim(),
+          clientId: clientId.trim() || undefined,
           clientSecret: clientSecret.trim() || undefined,
           enabled,
+          webmasterVerificationCode: webmasterVerificationCode.trim() || '9a3402ab46b0793b',
         }),
       });
 
@@ -186,6 +182,113 @@ export const YandexOAuthSettingsTab: React.FC = () => {
           <span>{notification.message}</span>
         </div>
       )}
+
+      {/* YANDEX WEBMASTER VERIFICATION & SEO SECTION */}
+      <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
+        <div className="flex items-start justify-between flex-wrap gap-3">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-2xl bg-red-600/20 text-red-500 flex items-center justify-center font-black text-lg border border-red-500/30">
+              Я
+            </div>
+            <div>
+              <div className="flex items-center space-x-2">
+                <h3 className="text-base font-bold text-white">Верификация в Яндекс.Вебмастере (SEO & Индексация)</h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  Включено
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Подтверждение прав владельца в сервисе Яндекс.Вебмастер ускоряет индексацию страниц и показ карточек мастеров в Яндекс.Поиске.
+              </p>
+            </div>
+          </div>
+
+          <a
+            href="https://webmaster.yandex.ru/site/indexing/verification/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center space-x-1.5 transition border border-slate-700 hover:border-slate-600"
+          >
+            <span>Открыть Яндекс.Вебмастер</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+          {/* Option 1: Meta Tag */}
+          <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3 flex flex-col justify-between">
+            <div>
+              <span className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center space-x-1.5 mb-2">
+                <span>Способ 1: Мета-тег в &lt;head&gt;</span>
+              </span>
+              <p className="text-[11px] text-slate-400 mb-2 leading-relaxed">
+                Мета-тег автоматически внедрён в шапку всех страниц сайта. Робот Яндекса считывает его моментально.
+              </p>
+              <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 font-mono text-[11px] text-emerald-400 select-all break-all">
+                {`<meta name="yandex-verification" content="${webmasterVerificationCode}" />`}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleCopy(`<meta name="yandex-verification" content="${webmasterVerificationCode}" />`, 'meta_tag')}
+              className="mt-2 w-full py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-bold transition flex items-center justify-center space-x-1.5 border border-slate-700 cursor-pointer"
+            >
+              {copiedKey === 'meta_tag' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copiedKey === 'meta_tag' ? 'Мета-тег скопирован!' : 'Скопировать мета-тег'}</span>
+            </button>
+          </div>
+
+          {/* Option 2: HTML File */}
+          <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3 flex flex-col justify-between">
+            <div>
+              <span className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center space-x-1.5 mb-2">
+                <span>Способ 2: HTML-файл верификации</span>
+              </span>
+              <p className="text-[11px] text-slate-400 mb-2 leading-relaxed">
+                Файл подтверждения доступен в корне сайта по стандартному URL Яндекс.Вебмастера:
+              </p>
+              <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 font-mono text-[11px] text-cyan-400 select-all break-all">
+                {`https://santehpro.info/yandex_${webmasterVerificationCode}.html`}
+              </div>
+            </div>
+            <a
+              href={`/yandex_${webmasterVerificationCode}.html`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 w-full py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition flex items-center justify-center space-x-1.5 border border-slate-700 text-center"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Проверить открытие HTML-файла</span>
+            </a>
+          </div>
+        </div>
+
+        {/* Verification Code Input */}
+        <div className="pt-2 border-t border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="flex-1">
+            <label className="block text-xs font-bold text-slate-300 mb-1">
+              Код верификации Яндекс (yandex-verification):
+            </label>
+            <input
+              type="text"
+              value={webmasterVerificationCode}
+              onChange={(e) => setWebmasterVerificationCode(e.target.value)}
+              placeholder="9a3402ab46b0793b"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 font-mono focus:outline-none focus:border-red-500"
+            />
+          </div>
+          <div className="flex items-end">
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="w-full sm:w-auto py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs transition shadow-md shadow-red-600/20 flex items-center justify-center space-x-1.5 cursor-pointer disabled:opacity-60"
+            >
+              <span>Сохранить код</span>
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* STEP 2: EXACT URLS TO COPY TO YANDEX OAUTH */}
       <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">

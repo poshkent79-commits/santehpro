@@ -145,11 +145,13 @@ function getMailTransporter(customConfig?: Partial<SmtpSettings>) {
     throw new Error(`Не заполнены обязательные параметры: ${missing.join(', ')}`);
   }
 
+  const isSecure = config.port === 465 ? true : (config.port === 587 ? false : Boolean(config.secure));
+
   return {
     transporter: nodemailer.createTransport({
       host: config.host,
       port: config.port,
-      secure: config.secure,
+      secure: isSecure,
       family: 4, // CRITICAL: forces IPv4 socket connection to avoid EHOSTUNREACH on IPv6 in cloud environments
       auth: {
         user: config.user,
@@ -237,6 +239,15 @@ export async function testSmtpConnection(targetEmail?: string, customConfig?: Pa
         success: false,
         message: 'Не передан пароль для авторизации на почтовом сервере.',
         hint: 'Введите пароль приложения в поле формы и нажмите «Сохранить настройки SMTP».',
+        details: error,
+      };
+    }
+
+    if (rawMsg.includes('ETIMEDOUT') || error?.code === 'ETIMEDOUT' || rawMsg.includes('Connection timeout')) {
+      return {
+        success: false,
+        message: 'Таймаут подключения к SMTP (ETIMEDOUT / Connection timeout): сервер Timeweb не может достучаться до почтового порта.',
+        hint: 'Облачный хостинг Timeweb часто фильтрует порт 465 к серверам Google. Решение: 1) Переключите Порт на 587 и СНИМИТЕ галочку «SSL/TLS (465)» (Gmail работает через STARTTLS на порту 587); 2) Или используйте пресет «Яндекс Почта» (smtp.yandex.ru:465) — российские почтовые шлюзы на Timeweb работают без каких-либо сетевых блокировок.',
         details: error,
       };
     }

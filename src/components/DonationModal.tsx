@@ -17,6 +17,8 @@ interface DonationModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialAmount?: number;
+  onOpenOffer?: () => void;
+  onOpenPrivacy?: () => void;
 }
 
 const PRESET_AMOUNTS = [
@@ -31,6 +33,8 @@ export const DonationModal: React.FC<DonationModalProps> = ({
   isOpen,
   onClose,
   initialAmount = 500,
+  onOpenOffer,
+  onOpenPrivacy,
 }) => {
   const [selectedAmount, setSelectedAmount] = useState<number>(initialAmount);
   const [customAmount, setCustomAmount] = useState<string>('');
@@ -533,6 +537,38 @@ export const DonationModal: React.FC<DonationModalProps> = ({
               </button>
             </div>
           )}
+
+          {/* LEGAL COMPLIANCE NOTICE FOR ROBOKASSA & PAYMENT PROVIDERS */}
+          <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 text-[11px] text-slate-400 text-center leading-relaxed space-y-1">
+            <p>
+              Совершая добровольный перевод, вы принимаете условия{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenOffer?.();
+                }}
+                className="text-cyan-400 hover:text-cyan-300 font-semibold underline cursor-pointer"
+              >
+                Публичной оферты о добровольном пожертвовании
+              </button>{' '}
+              и соглашаетесь с{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenPrivacy?.();
+                }}
+                className="text-cyan-400 hover:text-cyan-300 font-semibold underline cursor-pointer"
+              >
+                Политикой конфиденциальности
+              </button>
+              .
+            </p>
+            <p className="text-[10px] text-slate-500">
+              Пожертвование осуществляется в общеполезных целях на развитие открытого некоммерческого сервиса и серверов в соответствии со ст. 582 ГК РФ.
+            </p>
+          </div>
 
           {/* Footnote reassurance without phone */}
           <div className="flex flex-wrap items-center justify-between text-[10px] text-slate-500 border-t border-slate-800/80 pt-2 gap-y-1">

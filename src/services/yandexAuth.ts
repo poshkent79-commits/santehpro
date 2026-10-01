@@ -5,6 +5,7 @@ export interface YandexAuthConfig {
   clientId: string;
   clientSecret: string;
   enabled?: boolean;
+  webmasterVerificationCode?: string;
 }
 
 export interface YandexUserInfo {
@@ -41,6 +42,7 @@ export function getYandexAuthConfig(): YandexAuthConfig | null {
           clientId: saved.clientId.trim(),
           clientSecret: saved.clientSecret.trim(),
           enabled: saved.enabled !== false,
+          webmasterVerificationCode: saved.webmasterVerificationCode?.trim() || '9a3402ab46b0793b',
         };
       }
     }
@@ -50,16 +52,23 @@ export function getYandexAuthConfig(): YandexAuthConfig | null {
 
   const envClientId = process.env.YANDEX_CLIENT_ID?.trim();
   const envClientSecret = process.env.YANDEX_CLIENT_SECRET?.trim();
+  const envVerification = process.env.YANDEX_VERIFICATION?.trim() || '9a3402ab46b0793b';
 
   if (envClientId && envClientSecret) {
     return {
       clientId: envClientId,
       clientSecret: envClientSecret,
       enabled: true,
+      webmasterVerificationCode: envVerification,
     };
   }
 
-  return null;
+  return {
+    clientId: '',
+    clientSecret: '',
+    enabled: true,
+    webmasterVerificationCode: '9a3402ab46b0793b',
+  };
 }
 
 export function saveYandexAuthConfig(config: YandexAuthConfig): void {
@@ -74,6 +83,7 @@ export function saveYandexAuthConfig(config: YandexAuthConfig): void {
           clientId: config.clientId.trim(),
           clientSecret: config.clientSecret.trim(),
           enabled: config.enabled ?? true,
+          webmasterVerificationCode: config.webmasterVerificationCode?.trim() || '9a3402ab46b0793b',
           updatedAt: new Date().toISOString(),
         },
         null,

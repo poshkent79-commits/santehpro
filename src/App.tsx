@@ -1253,7 +1253,7 @@ function AppContent() {
                 }}
                 className="text-slate-400 hover:text-sky-400 no-underline hover:underline transition-colors cursor-pointer"
               >
-                Публичная оферта
+                Оферта о добровольном пожертвовании
               </a>
 
               <span className="text-slate-600 select-none hidden sm:inline">•</span>
@@ -1337,6 +1337,8 @@ function AppContent() {
       <DonationModal
         isOpen={isDonationModalOpen}
         onClose={() => setIsDonationModalOpen(false)}
+        onOpenOffer={() => handleOpenLegalModal('offer')}
+        onOpenPrivacy={() => handleOpenLegalModal('privacy')}
       />
 
       {/* Shared Client Estimate Modal */}
