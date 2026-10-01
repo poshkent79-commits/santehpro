@@ -2775,6 +2775,94 @@ app.post('/api/auth/google-sync', async (req, res) => {
   }
 });
 
+// POST Sync VK ID authenticated user (App ID: 54798550)
+app.post('/api/auth/vk/sync', async (req, res) => {
+  try {
+    const { vkId, email, name, phone, avatar, role } = req.body;
+    if (!vkId) {
+      return res.status(400).json({ error: 'Требуется vkId' });
+    }
+
+    const uid = `vk_${vkId}`;
+    const userEmail = email || `vk_${vkId}@vk.id`;
+    let userName = name || 'Пользователь VK ID';
+    let userRole = role === 'specialist' ? 'specialist' : 'user';
+
+    // Intelligent Account Linking: Check if master already exists by phone or email
+    const cleanPhone = phone ? phone.replace(/\D/g, '') : '';
+    const existingMaster = specialistsStore.find((s) => {
+      const sPhone = s.phone ? s.phone.replace(/\D/g, '') : '';
+      const sEmail = s.email ? s.email.toLowerCase().trim() : '';
+      const emailMatches = Boolean(userEmail && sEmail && !userEmail.includes('@vk.id') && userEmail.toLowerCase().trim() === sEmail);
+      const phoneMatches = Boolean(cleanPhone && cleanPhone.length >= 10 && sPhone && (cleanPhone === sPhone || cleanPhone.endsWith(sPhone.slice(-10))));
+      return emailMatches || phoneMatches;
+    });
+
+    if (existingMaster) {
+      userRole = 'specialist';
+      userName = existingMaster.name || userName;
+      existingMaster.userUid = uid;
+      console.log(`[VK ID] Automatically linked master "${existingMaster.name}" to VK UID ${uid}`);
+    }
+
+    const clientProfile = {
+      uid,
+      email: userEmail,
+      name: userName,
+      phone: phone || (existingMaster?.phone || ''),
+      role: userRole,
+      dataConsent: true,
+      legalConsent: true,
+      avatar: avatar || (existingMaster?.photo || ''),
+      createdAt: new Date().toISOString(),
+    };
+
+    const host = req.get('host') || 'localhost:3000';
+    const protocol = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'https';
+    const cookieSettings = protocol === 'https' ? 'SameSite=None; Secure' : 'SameSite=Lax';
+
+    res.setHeader('Set-Cookie', [
+      `santehpro_auth_user=${encodeURIComponent(JSON.stringify(clientProfile))}; Path=/; Max-Age=${30 * 24 * 3600}; ${cookieSettings}`,
+      `santehpro_auth_session=${encodeURIComponent(JSON.stringify(clientProfile))}; Path=/; Max-Age=${30 * 24 * 3600}; ${cookieSettings}`,
+    ]);
+
+    return res.json({ success: true, user: clientProfile });
+  } catch (error: any) {
+    console.error('Error in /api/auth/vk/sync:', error);
+    res.status(500).json({ error: error?.message || 'Ошибка синхронизации VK ID' });
+  }
+});
+
+// GET /api/auth/vk/callback - VK OAuth redirect callback handler
+app.get(['/api/auth/vk/callback', '/auth/vk/callback'], (req, res) => {
+  const { code, payload } = req.query;
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="ru">
+      <head>
+        <meta charset="utf-8">
+        <title>Авторизация VK ID — СантехПро</title>
+      </head>
+      <body style="background:#0f172a;color:#fff;font-family:system-ui,-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
+        <div style="text-align:center;padding:24px;background:#1e293b;border-radius:24px;border:1px solid #334155;max-width:360px;">
+          <div style="width:48px;height:48px;border-radius:12px;background:#0077ff;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-weight:900;font-size:20px;">VK</div>
+          <h2 style="font-size:18px;margin:0 0 8px;">Вход выполнен успешно!</h2>
+          <p style="font-size:13px;color:#94a3b8;margin:0;">Возвращаемся в личный кабинет СантехПро...</p>
+        </div>
+        <script>
+          const authData = { code: "${code || ''}", payload: ${payload ? JSON.stringify(payload) : 'null'} };
+          if (window.opener) {
+            window.opener.postMessage({ type: 'VK_AUTH_SUCCESS', data: authData }, '*');
+            setTimeout(() => window.close(), 1200);
+          } else {
+            window.location.href = '/?auth=vk_success';
+          }
+        </script>
+      </body>
+    </html>
+  `);
+});
+
 // POST Change password from inside user account (cabinet)
 app.post('/api/auth/change-password', async (req, res) => {
   try {

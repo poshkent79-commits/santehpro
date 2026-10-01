@@ -15,6 +15,7 @@ interface AuthContextType {
   }) => Promise<UserProfile>;
   logoutGoogle: () => Promise<void>;
   loginWithYandex: (demoDirect?: boolean, selectedRole?: 'user' | 'specialist') => Promise<UserProfile>;
+  loginWithVk: (userData: any, selectedRole?: 'user' | 'specialist') => Promise<UserProfile>;
   register: (
     data: {
       email: string;
@@ -310,6 +311,68 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch {
         // ignore
       }
+    }
+  };
+
+  const loginWithVk = async (
+    userData: any,
+    selectedRole: 'user' | 'specialist' = 'user'
+  ): Promise<UserProfile> => {
+    setIsLoading(true);
+    try {
+      const vkId = String(userData.id || userData.user_id || Date.now());
+      const fullName = [userData.first_name, userData.last_name].filter(Boolean).join(' ') || userData.name || 'Пользователь VK ID';
+      const email = userData.email || `vk_${vkId}@vk.id`;
+      const phone = userData.phone || '';
+
+      const res = await fetch('/api/auth/vk/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vkId,
+          name: fullName,
+          email,
+          phone,
+          avatar: userData.avatar || userData.photo_200 || '',
+          role: selectedRole,
+        }),
+      });
+
+      let profile: UserProfile;
+      if (res.ok) {
+        const data = await res.json();
+        profile = data.user;
+      } else {
+        profile = {
+          uid: `vk_${vkId}`,
+          email,
+          name: fullName,
+          phone,
+          role: selectedRole,
+          dataConsent: true,
+          legalConsent: true,
+          createdAt: new Date().toISOString(),
+        };
+      }
+
+      setCurrentUser(profile);
+      try {
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(profile));
+        localStorage.setItem('santehpro_current_user', JSON.stringify(profile));
+      } catch {}
+
+      triggerAuthNotice('Успешный вход', `Вы вошли как ${fullName} через VK ID`, 'login');
+      closeAuthModal();
+
+      if (pendingCallback) {
+        const cb = pendingCallback;
+        setPendingCallback(null);
+        cb();
+      }
+
+      return profile;
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -993,6 +1056,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginWithGoogle,
         logoutGoogle,
         loginWithYandex,
+        loginWithVk,
         register,
         login,
         logout,

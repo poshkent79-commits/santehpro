@@ -19,11 +19,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
     isAuthModalOpen,
     closeAuthModal,
     loginWithYandex,
+    loginWithVk,
   } = useAuth();
 
   const [dataConsentAccepted, setDataConsentAccepted] = useState(true);
   const [termsAccepted, setTermsAccepted] = useState(true);
   const [isYandexLoading, setIsYandexLoading] = useState(false);
+  const [isVkLoading, setIsVkLoading] = useState(false);
   const [popupBlockedUrl, setPopupBlockedUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,8 +39,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
       setError(null);
       setPopupBlockedUrl(null);
       setIsYandexLoading(false);
+      setIsVkLoading(false);
     }
   }, [isAuthModalOpen]);
+
+  // Listen to postMessage from VK OAuth callback popup
+  useEffect(() => {
+    const handleMessage = async (event: MessageEvent) => {
+      if (event.data?.type === 'VK_AUTH_SUCCESS') {
+        const payload = event.data.data;
+        if (payload?.code) {
+          try {
+            await loginWithVk({ id: payload.user_id || 'vk_user', token: payload.code });
+            if (onNavigateTab) onNavigateTab('cabinet');
+          } catch (e: any) {
+            setError(formatErrorMessage(e));
+          }
+        }
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [loginWithVk, onNavigateTab]);
 
   if (!isAuthModalOpen) return null;
 
@@ -53,6 +75,74 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
       return 'Временная задержка соединения с сервером. Пожалуйста, повторите попытку через несколько секунд.';
     }
     return raw || 'Произошла ошибка при выполнении операции. Попробуйте еще раз.';
+  };
+
+  // Unified VK ID OAuth (App ID: 54798550)
+  const handleVkAuth = async () => {
+    if (!dataConsentAccepted || !termsAccepted) {
+      setError('Для продолжения необходимо подтвердить согласие с Политикой обработки персональных данных и Пользовательским соглашением');
+      return;
+    }
+
+    setIsVkLoading(true);
+    setError(null);
+    setPopupBlockedUrl(null);
+
+    try {
+      if (typeof window !== 'undefined' && window.VKIDSDK) {
+        const VKID = window.VKIDSDK;
+        try {
+          VKID.Config.init({
+            app: 54798550,
+            redirectUrl: 'https://santehpro.info/api/auth/vk/callback',
+            responseMode: VKID.ConfigResponseMode?.Callback || 'callback',
+            source: VKID.ConfigSource?.LOWCODE || 1,
+            scope: '',
+          });
+
+          if (VKID.Auth && VKID.Auth.login) {
+            VKID.Auth.login()
+              .then(async (payload: any) => {
+                if (payload?.code) {
+                  const data = await VKID.Auth.exchangeCode(payload.code, payload.device_id);
+                  const user = data.user || data;
+                  await loginWithVk(user);
+                  if (onNavigateTab) onNavigateTab('cabinet');
+                }
+              })
+              .catch((err: any) => {
+                console.warn('[VK Auth popup warning]:', err);
+                openDirectVkOAuth();
+              })
+              .finally(() => {
+                setIsVkLoading(false);
+              });
+            return;
+          }
+        } catch (e) {
+          console.warn('[VK Config error]:', e);
+        }
+      }
+
+      openDirectVkOAuth();
+    } catch (err: any) {
+      setError(formatErrorMessage(err));
+      setIsVkLoading(false);
+    }
+  };
+
+  const openDirectVkOAuth = () => {
+    const authUrl = `https://id.vk.com/auth?app_id=54798550&response_type=code&redirect_uri=${encodeURIComponent('https://santehpro.info/api/auth/vk/callback')}&scope=email,phone`;
+    const width = 600;
+    const height = 700;
+    const left = window.screenX + (window.outerWidth - width) / 2;
+    const top = window.screenY + (window.outerHeight - height) / 2;
+
+    const popup = window.open(authUrl, '_blank', `width=${width},height=${height},left=${left},top=${top},status=no,toolbar=no,menubar=no`);
+    if (!popup || popup.closed) {
+      window.location.assign(authUrl);
+    }
+    setIsVkLoading(false);
   };
 
   // Unified Yandex ID OAuth
@@ -117,10 +207,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
 
         {/* ================= 2. ЦЕНТРАЛЬНЫЙ БЛОК АВТОРИЗАЦИИ ================= */}
         <div className="p-5 sm:p-6 space-y-5">
-          {/* По центру крупная скругленная красная иконка с белой буквой «Я» */}
+          {/* По центру брендовые иконки VK ID и Яндекс ID */}
           <div className="text-center space-y-2.5 pt-1">
-            <div className="w-16 h-16 rounded-2xl bg-red-600 text-white flex items-center justify-center shadow-xl shadow-red-600/30 font-black text-3xl mx-auto transform hover:scale-105 transition-transform duration-200 select-none">
-              <span>Я</span>
+            <div className="flex items-center justify-center space-x-3 mx-auto">
+              {/* Синяя иконка VK */}
+              <div className="w-14 h-14 rounded-2xl bg-[#0077ff] text-white flex items-center justify-center shadow-xl shadow-blue-600/30 font-black text-2xl transform hover:scale-105 transition-transform duration-200 select-none">
+                <span>VK</span>
+              </div>
+              <span className="text-slate-500 font-bold text-lg">•</span>
+              {/* Красная иконка Яндекс «Я» */}
+              <div className="w-14 h-14 rounded-2xl bg-red-600 text-white flex items-center justify-center shadow-xl shadow-red-600/30 font-black text-2xl transform hover:scale-105 transition-transform duration-200 select-none">
+                <span>Я</span>
+              </div>
             </div>
 
             {/* Четкий белый заголовок: «Вход в СантехПро» */}
@@ -128,9 +226,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
               Вход в СантехПро
             </h2>
 
-            {/* Подзаголовок приглушенным светло-серым цветом: «Единый личный кабинет для клиентов и мастеров» */}
+            {/* Подзаголовок: «Единый личный кабинет для клиентов и мастеров» */}
             <p className="text-xs sm:text-sm text-slate-400 leading-snug">
-              Единый личный кабинет для клиентов и мастеров
+              Быстрый вход через ВКонтакте или Яндекс ID
             </p>
           </div>
 
@@ -157,25 +255,47 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
                 rel="noopener noreferrer"
                 className="w-full py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center justify-center space-x-2 transition shadow-md"
               >
-                <span>Перейти на страницу Яндекс ID ↗</span>
+                <span>Перейти на страницу авторизации ↗</span>
               </a>
             </div>
           )}
 
-          {/* ================= 3. ОСНОВНАЯ КНОПКА ДЕЙСТВИЯ ================= */}
-          <div className="space-y-4 pt-1">
+          {/* ================= 3. КНОПКИ АВТОРИЗАЦИИ ================= */}
+          <div className="space-y-3 pt-1">
+            {/* Кнопка 1: Официальный вход через VK ID */}
+            <button
+              type="button"
+              id="auth-vk-primary-btn"
+              disabled={isVkLoading || isYandexLoading}
+              onClick={handleVkAuth}
+              className="w-full py-3.5 px-4 rounded-2xl bg-[#0077ff] hover:bg-[#0066ee] text-white font-bold text-sm sm:text-base flex items-center justify-center space-x-3 transition-all duration-200 shadow-xl shadow-blue-600/25 hover:shadow-blue-600/35 cursor-pointer active:scale-[0.99] disabled:opacity-60"
+            >
+              <div className="w-6 h-6 rounded-lg bg-white/20 text-white flex items-center justify-center font-black text-xs shrink-0">
+                {isVkLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin text-white" /> : <span>VK</span>}
+              </div>
+              <span className="font-extrabold tracking-tight">
+                {isVkLoading ? 'Подключение к VK ID...' : 'Войти через VK ID'}
+              </span>
+            </button>
+
+            {/* Разделитель ИЛИ */}
+            <div className="flex items-center space-x-3 py-0.5">
+              <div className="flex-1 h-px bg-slate-800" />
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">или</span>
+              <div className="flex-1 h-px bg-slate-800" />
+            </div>
+
+            {/* Кнопка 2: Вход с Яндекс ID */}
             <button
               type="button"
               id="auth-yandex-primary-btn"
-              disabled={isYandexLoading}
+              disabled={isYandexLoading || isVkLoading}
               onClick={handleYandexAuth}
-              className="w-full py-3.5 px-4 rounded-2xl bg-white hover:bg-slate-100 text-slate-950 font-bold text-sm sm:text-base flex items-center justify-center space-x-3 transition-all duration-200 shadow-xl shadow-red-600/10 hover:shadow-red-600/20 cursor-pointer border border-white active:scale-[0.99] disabled:opacity-60"
+              className="w-full py-3 px-4 rounded-2xl bg-white hover:bg-slate-100 text-slate-950 font-bold text-sm sm:text-base flex items-center justify-center space-x-3 transition-all duration-200 shadow-lg shadow-black/20 cursor-pointer border border-white active:scale-[0.99] disabled:opacity-60"
             >
-              {/* Круглая красная иконка «Я» */}
               <div className="w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
                 {isYandexLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin text-white" /> : <span>Я</span>}
               </div>
-              {/* Четкий черный текст «Войти с Яндекс ID» */}
               <span className="text-slate-950 font-extrabold tracking-tight">
                 {isYandexLoading ? 'Подключение к Яндекс ID...' : 'Войти с Яндекс ID'}
               </span>
