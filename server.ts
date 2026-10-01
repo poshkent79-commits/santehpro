@@ -1594,13 +1594,20 @@ app.get('/api/specialists', async (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   const showPending = req.query.admin === 'true';
   const city = req.query.city as string;
+  const userUid = (req.query.userUid as string)?.trim();
+  const userEmail = (req.query.email as string)?.trim().toLowerCase();
 
   try {
     const all = await getDbSpecialists();
     let filtered = all.filter(s => !DEMO_SPECIALIST_IDS.has(s.id));
 
     if (!showPending) {
-      filtered = filtered.filter(s => s.status === 'approved');
+      filtered = filtered.filter(s => {
+        if (s.status === 'approved') return true;
+        if (userUid && s.userUid === userUid) return true;
+        if (userEmail && s.email && s.email.toLowerCase() === userEmail) return true;
+        return false;
+      });
     }
 
     if (city && city !== 'Все города') {
@@ -1615,6 +1622,35 @@ app.get('/api/specialists', async (req, res) => {
   } catch (error) {
     console.error('Error fetching specialists:', error);
     res.json([]);
+  }
+});
+
+// GET Current user's specialist profile (by userUid, email, or phone)
+app.get('/api/specialists/my', async (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  const uid = (req.query.uid as string)?.trim();
+  const email = (req.query.email as string)?.trim().toLowerCase();
+  const phone = (req.query.phone as string)?.replace(/\D/g, '');
+
+  try {
+    const all = await getDbSpecialists();
+    const found = all.find((s) => {
+      if (uid && s.userUid && s.userUid === uid) return true;
+      if (email && s.email && s.email.toLowerCase() === email) return true;
+      if (phone && s.phone) {
+        const cleanS = s.phone.replace(/\D/g, '');
+        if (cleanS.length >= 10 && (cleanS === phone || cleanS.slice(-10) === phone.slice(-10))) return true;
+      }
+      return false;
+    });
+
+    if (found) {
+      return res.json({ specialist: found });
+    }
+    return res.json({ specialist: null });
+  } catch (error) {
+    console.error('Error fetching my specialist profile:', error);
+    res.status(500).json({ specialist: null });
   }
 });
 

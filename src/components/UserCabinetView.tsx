@@ -117,29 +117,45 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
     (currentUser?.email && (currentUser.email.toLowerCase().endsWith('@yandex.ru') || currentUser.email.toLowerCase().endsWith('@ya.ru')))
   );
 
-  // Find linked specialist profile ONLY for the matching provider
+  // Find linked specialist profile with robust multi-factor matching
   const userSpecialist = specialists.find((s) => {
     if (!currentUser) return false;
     
-    // Direct match by userUid (highest priority)
-    if (s.userUid && s.userUid === currentUser.uid) return true;
+    // 0. Manual link from localStorage if user picked it
+    const storedSpecialistId = typeof window !== 'undefined' ? localStorage.getItem('santehpro_master_specialist_id') : null;
+    if (storedSpecialistId && s.id === storedSpecialistId) return true;
 
-    // Strict cross-provider isolation:
-    const isSpecVk = Boolean(s.userUid && s.userUid.startsWith('vk_'));
-    const isSpecYandex = Boolean(
-      (s.userUid && (s.userUid.startsWith('yandex_') || s.userUid.startsWith('usr-yandex'))) ||
-      (s.email && (s.email.toLowerCase().endsWith('@yandex.ru') || s.email.toLowerCase().endsWith('@ya.ru')))
-    );
+    // 1. Direct match by userUid (highest priority)
+    if (s.userUid && currentUser.uid && s.userUid === currentUser.uid) return true;
 
-    // If master is from Yandex and current session is VK -> strictly DO NOT open master cabinet!
-    if (isSpecYandex && isCurrentVk) return false;
-    // If master is from VK and current session is Yandex -> strictly DO NOT open master cabinet!
-    if (isSpecVk && isCurrentYandex) return false;
+    // 2. Direct match by email (regardless of user role)
+    if (s.email && currentUser.email && s.email.toLowerCase().trim() === currentUser.email.toLowerCase().trim()) {
+      return true;
+    }
 
-    // If specialist has a userUid belonging to another account, do not cross-link
-    if (s.userUid && currentUser.uid && s.userUid !== currentUser.uid) return false;
+    // 3. Direct match by phone number (clean 10 digits)
+    if (s.phone && currentUser.phone) {
+      const cleanS = s.phone.replace(/\D/g, '');
+      const cleanU = currentUser.phone.replace(/\D/g, '');
+      if (cleanS.length >= 10 && cleanU.length >= 10) {
+        if (cleanS === cleanU || cleanS.slice(-10) === cleanU.slice(-10)) {
+          return true;
+        }
+      }
+    }
 
-    // Fallback match only if user role is explicitly specialist within the same provider
+    // 4. Super-admin auto-match (+79247889900 or poshkent79@gmail.com)
+    const currentEmail = currentUser.email?.toLowerCase().trim() || '';
+    const currentPhone = (currentUser.phone || '').replace(/\D/g, '');
+    const isSuperAdmin = currentEmail === 'poshkent79@gmail.com' || currentEmail === 'admin@santehpro.ru' || currentPhone.endsWith('9247889900');
+    if (isSuperAdmin) {
+      const cleanS = (s.phone || '').replace(/\D/g, '');
+      if (cleanS.endsWith('9247889900') || s.email?.toLowerCase().trim() === 'poshkent79@gmail.com' || s.email?.toLowerCase().trim() === 'santehpro.info@yandex.ru') {
+        return true;
+      }
+    }
+
+    // 5. Fallback match if user role is explicitly specialist
     if (currentUser.role === 'specialist') {
       if (s.email && currentUser.email && s.email.toLowerCase() === currentUser.email.toLowerCase()) return true;
       if (s.phone && currentUser.phone) {

@@ -420,11 +420,21 @@ export async function sendSpecialistModerationNotification(
   }
 ): Promise<{ success: boolean; simulated: boolean; error?: string }> {
   const config = getEffectiveSmtpConfig();
-  const adminEmail =
-    process.env.ADMIN_EMAIL?.trim() ||
-    config?.fromEmail ||
-    config?.user ||
-    'poshkent79@gmail.com';
+
+  // Aggregate all admin notification recipients so owner receives notice everywhere
+  const recipientSet = new Set<string>();
+  if (process.env.ADMIN_EMAIL?.trim()) {
+    recipientSet.add(process.env.ADMIN_EMAIL.trim().toLowerCase());
+  }
+  recipientSet.add('poshkent79@gmail.com');
+  recipientSet.add('santehpro.info@gmail.com');
+  if (config?.user?.trim() && config.user.includes('@')) {
+    recipientSet.add(config.user.trim().toLowerCase());
+  }
+  if (config?.fromEmail?.trim() && config.fromEmail.includes('@')) {
+    recipientSet.add(config.fromEmail.trim().toLowerCase());
+  }
+  const adminEmail = Array.from(recipientSet).join(', ');
 
   const docs = Array.isArray(specialist.verificationDocs) ? specialist.verificationDocs : [];
   const servicesList = Array.isArray(specialist.services)
