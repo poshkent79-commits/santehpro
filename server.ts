@@ -15,7 +15,8 @@ import { INITIAL_ARTICLES, INITIAL_SPECIALISTS, INITIAL_QUESTIONS, INITIAL_SERVI
 import { Article, PlumbingSpecialist, CommunityQuestion, ServiceCallRequest, MediaFile, MediaFileType, DiagnosticSession, MasterWork } from './src/types.js';
 import { INITIAL_DIAGNOSTIC_SESSIONS, detectDiagnosticCategory } from './src/utils/diagnosticHistory.ts';
 import { getDbServiceRequests, createDbServiceRequest, updateDbServiceRequest, deleteDbServiceRequest } from './src/db/serviceRequests.ts';
-import { getDbSpecialists, createDbSpecialist, updateDbSpecialist, deleteDbSpecialist, getDbDeletedSpecialists } from './src/db/specialists.ts';
+import { getDbSpecialists, createDbSpecialist, updateDbSpecialist, deleteDbSpecialist, getDbDeletedSpecialists, saveCachedSpecialists, getCachedSpecialists } from './src/db/specialists.ts';
+import { createSystemSnapshot, listAllBackups, readBackupPayload } from './src/services/backupEngine.ts';
 import { getDbMasterWorks, createDbMasterWork, updateDbMasterWork, deleteDbMasterWork } from './src/db/masterWorks.ts';
 import { getDbSavedEstimates, createDbSavedEstimate, deleteDbSavedEstimate, getDbSavedEstimateById, updateDbSavedEstimate } from './src/db/estimates.ts';
 import { getDbArticles, createDbArticle, updateDbArticle, deleteDbArticle, getCachedArticles, saveCachedArticles } from './src/db/articles.ts';
@@ -1011,6 +1012,295 @@ app.post('/api/admin/yandex/config', (req, res) => {
     res.json({ success: true, message: 'Настройки Яндекс ID OAuth успешно сохранены' });
   } catch (error: any) {
     res.status(400).json({ error: error.message || 'Ошибка сохранения настроек Яндекс OAuth' });
+  }
+});
+
+// ---------------- AUTOMATIC BACKUPS & DATA RECOVERY SYSTEM ----------------
+
+// GET /api/admin/backups - List all available backups
+app.get('/api/admin/backups', (_req, res) => {
+  try {
+    const list = listAllBackups();
+    res.json({
+      success: true,
+      backups: list,
+      currentStats: {
+        specialists: specialistsStore.length,
+        requests: serviceRequestsStore.length,
+        articles: articlesStore.length,
+      }
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || 'Ошибка чтения списка резервных копий' });
+  }
+});
+
+// POST /api/admin/backups/create - Create immediate snapshot
+app.post('/api/admin/backups/create', async (req, res) => {
+  try {
+    const label = req.body?.label || 'Ручная резервная копия из админ-панели';
+    const allUsers = await getUsers().catch(() => []);
+    const meta = createSystemSnapshot(specialistsStore, allUsers, serviceRequestsStore, articlesStore, label);
+    res.json({ success: true, backup: meta, message: 'Резервная копия успешно создана' });
+  } catch (err: any) {
+    console.error('Error creating backup:', err);
+    res.status(500).json({ error: err?.message || 'Ошибка создания резервной копии' });
+  }
+});
+
+// POST /api/admin/backups/restore - Restore data from a backup file
+app.post('/api/admin/backups/restore', async (req, res) => {
+  try {
+    const { filename, restoreSpecialists = true, restoreRequests = true } = req.body;
+    let targetFile = filename;
+    if (!targetFile) {
+      const all = listAllBackups();
+      if (all.length === 0) {
+        return res.status(404).json({ error: 'На сервере нет доступных резервных копий' });
+      }
+      targetFile = all[0].filename;
+    }
+
+    const payload = readBackupPayload(targetFile);
+    let restoredSpecialistsCount = 0;
+    let restoredRequestsCount = 0;
+
+    if (restoreSpecialists && Array.isArray(payload.data?.specialists) && payload.data.specialists.length > 0) {
+      const backupSpecs: PlumbingSpecialist[] = payload.data.specialists;
+      const specMap = new Map<string, PlumbingSpecialist>();
+      for (const s of specialistsStore) {
+        specMap.set(s.id, s);
+      }
+      for (const bs of backupSpecs) {
+        if (!specMap.has(bs.id)) {
+          specMap.set(bs.id, bs);
+          restoredSpecialistsCount++;
+        } else {
+          const curr = specMap.get(bs.id)!;
+          if (bs.status === 'approved' && curr.status !== 'approved') {
+            curr.status = 'approved';
+            curr.verified = true;
+            restoredSpecialistsCount++;
+          }
+        }
+      }
+      specialistsStore = Array.from(specMap.values());
+      saveCachedSpecialists(specialistsStore);
+    }
+
+    if (restoreRequests && Array.isArray(payload.data?.requests) && payload.data.requests.length > 0) {
+      const reqMap = new Map<string, ServiceCallRequest>();
+      for (const r of serviceRequestsStore) reqMap.set(r.id, r);
+      for (const br of payload.data.requests) {
+        if (!reqMap.has(br.id)) {
+          reqMap.set(br.id, br);
+          restoredRequestsCount++;
+        }
+      }
+      serviceRequestsStore = Array.from(reqMap.values());
+    }
+
+    res.json({
+      success: true,
+      message: `Данные успешно восстановлены из ${targetFile}!`,
+      restored: {
+        specialists: restoredSpecialistsCount,
+        requests: restoredRequestsCount,
+        totalSpecialists: specialistsStore.length,
+      }
+    });
+  } catch (err: any) {
+    console.error('Error restoring backup:', err);
+    res.status(500).json({ error: err?.message || 'Ошибка восстановления из резервной копии' });
+  }
+});
+
+// POST /api/admin/backups/restore-master - Restore or create master by phone
+app.post('/api/admin/backups/restore-master', async (req, res) => {
+  try {
+    const { phone, name, city, services, bio, experienceYears } = req.body;
+    if (!phone) {
+      return res.status(400).json({ error: 'Укажите номер телефона мастера' });
+    }
+
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (cleanPhone.length < 10) {
+      return res.status(400).json({ error: 'Номер телефона должен содержать минимум 10 цифр' });
+    }
+
+    // 1. Search in memory
+    let found = specialistsStore.find((s) => {
+      const sPhone = (s.phone || '').replace(/\D/g, '');
+      return sPhone && (sPhone === cleanPhone || sPhone.endsWith(cleanPhone.slice(-10)) || cleanPhone.endsWith(sPhone.slice(-10)));
+    });
+
+    // 2. Search in all backup files
+    if (!found) {
+      const backups = listAllBackups();
+      for (const b of backups) {
+        try {
+          const payload = readBackupPayload(b.filename);
+          const backupSpecs: PlumbingSpecialist[] = payload.data?.specialists || [];
+          const match = backupSpecs.find((s) => {
+            const sPhone = (s.phone || '').replace(/\D/g, '');
+            return sPhone && (sPhone === cleanPhone || sPhone.endsWith(cleanPhone.slice(-10)) || cleanPhone.endsWith(sPhone.slice(-10)));
+          });
+          if (match) {
+            found = match;
+            console.log(`[Backups] Restored master "${match.name}" from backup ${b.filename}!`);
+            break;
+          }
+        } catch {}
+      }
+    }
+
+    if (found) {
+      found.status = 'approved';
+      found.verified = true;
+      if (city) found.city = city;
+      if (name) found.name = name;
+      if (services && services.length > 0) found.services = services;
+
+      const idx = specialistsStore.findIndex((s) => s.id === found!.id);
+      if (idx >= 0) {
+        specialistsStore[idx] = found;
+      } else {
+        specialistsStore.unshift(found);
+      }
+
+      saveCachedSpecialists(specialistsStore);
+      return res.json({
+        success: true,
+        resurrected: true,
+        specialist: found,
+        message: `Мастер "${found.name}" успешно восстановлен и активирован в городе ${found.city}!`
+      });
+    }
+
+    // 3. Create approved profile if not found
+    const newSpec: PlumbingSpecialist = {
+      id: `master_${cleanPhone}_${Date.now()}`,
+      name: name || 'Мастер Сантехник',
+      city: city || 'Москва',
+      phone: phone,
+      services: services && services.length > 0 ? services : ['Установка сантехники', 'Монтаж водоснабжения', 'Монтаж отопления', 'Аварийный вызов'],
+      experienceYears: Number(experienceYears) || 5,
+      minPrice: 1500,
+      rating: 5.0,
+      reviewsCount: 1,
+      emergency247: true,
+      verified: true,
+      badge: 'Проверен',
+      bio: bio || 'Профессиональный мастер-сантехник. Гарантия на все выполненные работы по официальному договору.',
+      photo: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=350&q=80',
+      status: 'approved',
+      appliedAt: new Date().toISOString().split('T')[0],
+      dataConsent: true,
+      legalConsent: true,
+    };
+
+    specialistsStore.unshift(newSpec);
+    saveCachedSpecialists(specialistsStore);
+    createSystemSnapshot(specialistsStore, [], serviceRequestsStore, articlesStore, `Восстановление мастера ${newSpec.phone}`);
+
+    return res.json({
+      success: true,
+      created: true,
+      specialist: newSpec,
+      message: `Мастер "${newSpec.name}" успешно создан и активирован в городе ${newSpec.city}!`
+    });
+  } catch (err: any) {
+    console.error('Error in restore-master:', err);
+    res.status(500).json({ error: err?.message || 'Ошибка восстановления мастера' });
+  }
+});
+
+// GET /api/admin/backups/download-latest - Direct download JSON backup
+app.get('/api/admin/backups/download-latest', async (_req, res) => {
+  try {
+    const allUsers = await getUsers().catch(() => []);
+    const meta = createSystemSnapshot(specialistsStore, allUsers, serviceRequestsStore, articlesStore, 'Экспорт резервной копии');
+    const payload = readBackupPayload(meta.filename);
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="santehpro_backup_${new Date().toISOString().split('T')[0]}.json"`);
+    res.send(JSON.stringify(payload, null, 2));
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || 'Ошибка выгрузки резервной копии' });
+  }
+});
+
+// POST /api/admin/backups/upload - Upload and restore JSON file
+app.post('/api/admin/backups/upload', express.json({ limit: '50mb' }), async (req, res) => {
+  try {
+    const payload = req.body;
+    if (!payload || !payload.data) {
+      return res.status(400).json({ error: 'Неверный формат файла резервной копии' });
+    }
+
+    let restoredCount = 0;
+    if (Array.isArray(payload.data.specialists)) {
+      const specMap = new Map<string, PlumbingSpecialist>();
+      for (const s of specialistsStore) specMap.set(s.id, s);
+      for (const bs of payload.data.specialists) {
+        if (!specMap.has(bs.id) || bs.status === 'approved') {
+          specMap.set(bs.id, bs);
+          restoredCount++;
+        }
+      }
+      specialistsStore = Array.from(specMap.values());
+      saveCachedSpecialists(specialistsStore);
+    }
+
+    createSystemSnapshot(specialistsStore, [], serviceRequestsStore, articlesStore, 'Восстановление из загруженного файла');
+
+    res.json({
+      success: true,
+      message: `Резервная копия успешно загружена! Восстановлено мастеров: ${restoredCount}, всего в каталоге: ${specialistsStore.length}`,
+      totalSpecialists: specialistsStore.length,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || 'Ошибка импорта резервной копии' });
+  }
+});
+
+// POST /api/specialists/self-heal - Master client-side self-healing from browser cache
+app.post('/api/specialists/self-heal', async (req, res) => {
+  try {
+    const { specialist } = req.body;
+    if (!specialist || !specialist.phone) {
+      return res.status(400).json({ error: 'Не переданы данные мастера' });
+    }
+
+    const cleanPhone = specialist.phone.replace(/\D/g, '');
+    let existing = specialistsStore.find((s) => {
+      const sPhone = (s.phone || '').replace(/\D/g, '');
+      return sPhone && (sPhone === cleanPhone || sPhone.endsWith(cleanPhone.slice(-10)));
+    });
+
+    if (existing) {
+      existing.status = 'approved';
+      existing.verified = true;
+      saveCachedSpecialists(specialistsStore);
+      return res.json({ success: true, specialist: existing });
+    }
+
+    const restoredSpec: PlumbingSpecialist = {
+      ...specialist,
+      id: specialist.id || `master_${cleanPhone}_${Date.now()}`,
+      status: 'approved',
+      verified: true,
+      rating: specialist.rating || 5.0,
+      reviewsCount: specialist.reviewsCount || 1,
+    };
+
+    specialistsStore.unshift(restoredSpec);
+    saveCachedSpecialists(specialistsStore);
+    createSystemSnapshot(specialistsStore, [], serviceRequestsStore, articlesStore, `Самоисцеление мастера ${restoredSpec.phone}`);
+    console.log(`[Self-Heal] Successfully self-healed master "${restoredSpec.name}" (${restoredSpec.phone})!`);
+    return res.json({ success: true, healed: true, specialist: restoredSpec });
+  } catch (err: any) {
+    console.error('Error in /api/specialists/self-heal:', err);
+    res.status(500).json({ error: err?.message || 'Ошибка самовосстановления' });
   }
 });
 
@@ -2785,35 +3075,21 @@ app.post('/api/auth/vk/sync', async (req, res) => {
 
     const uid = `vk_${vkId}`;
     const userEmail = email || `vk_${vkId}@vk.id`;
-    let userName = name || 'Пользователь VK ID';
-    let userRole = role === 'specialist' ? 'specialist' : 'user';
+    const userName = name || 'Пользователь VK ID';
 
-    // Intelligent Account Linking: Check if master already exists by phone or email
-    const cleanPhone = phone ? phone.replace(/\D/g, '') : '';
-    const existingMaster = specialistsStore.find((s) => {
-      const sPhone = s.phone ? s.phone.replace(/\D/g, '') : '';
-      const sEmail = s.email ? s.email.toLowerCase().trim() : '';
-      const emailMatches = Boolean(userEmail && sEmail && !userEmail.includes('@vk.id') && userEmail.toLowerCase().trim() === sEmail);
-      const phoneMatches = Boolean(cleanPhone && cleanPhone.length >= 10 && sPhone && (cleanPhone === sPhone || cleanPhone.endsWith(sPhone.slice(-10))));
-      return emailMatches || phoneMatches;
-    });
-
-    if (existingMaster) {
-      userRole = 'specialist';
-      userName = existingMaster.name || userName;
-      existingMaster.userUid = uid;
-      console.log(`[VK ID] Automatically linked master "${existingMaster.name}" to VK UID ${uid}`);
-    }
+    // Strict Provider Isolation: only grant specialist role if registered under this exact VK UID
+    const existingVkMaster = specialistsStore.find((s) => s.userUid === uid);
+    const userRole = existingVkMaster ? 'specialist' : (role === 'specialist' ? 'specialist' : 'user');
 
     const clientProfile = {
       uid,
       email: userEmail,
-      name: userName,
-      phone: phone || (existingMaster?.phone || ''),
+      name: existingVkMaster?.name || userName,
+      phone: phone || (existingVkMaster?.phone || ''),
       role: userRole,
       dataConsent: true,
       legalConsent: true,
-      avatar: avatar || (existingMaster?.photo || ''),
+      avatar: avatar || (existingVkMaster?.photo || ''),
       createdAt: new Date().toISOString(),
     };
 

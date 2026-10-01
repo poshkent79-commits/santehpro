@@ -110,53 +110,61 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
     loginWithYandex,
   } = useAuth();
 
-  // Find linked specialist profile for the logged in user by UID, Email, Phone, Name or Local link
-  const storedSpecialistId = typeof window !== 'undefined' ? localStorage.getItem('santehpro_master_specialist_id') : null;
+  // Strict Provider Isolation: Identify current login provider
+  const isCurrentVk = Boolean(currentUser?.uid && currentUser.uid.startsWith('vk_'));
+  const isCurrentYandex = Boolean(
+    (currentUser?.uid && (currentUser.uid.startsWith('yandex_') || currentUser.uid.startsWith('usr-yandex'))) ||
+    (currentUser?.email && (currentUser.email.toLowerCase().endsWith('@yandex.ru') || currentUser.email.toLowerCase().endsWith('@ya.ru')))
+  );
+
+  // Find linked specialist profile ONLY for the matching provider
   const userSpecialist = specialists.find((s) => {
     if (!currentUser) return false;
-    if (storedSpecialistId && s.id === storedSpecialistId) return true;
+    
+    // Direct match by userUid (highest priority)
     if (s.userUid && s.userUid === currentUser.uid) return true;
-    if (s.email && currentUser.email && s.email.toLowerCase() === currentUser.email.toLowerCase()) return true;
-    if (s.phone && currentUser.phone) {
-      const cleanS = s.phone.replace(/\D/g, '');
-      const cleanU = currentUser.phone.replace(/\D/g, '');
-      if (cleanS.length >= 10 && cleanS === cleanU) return true;
-    }
-    if (currentUser.name && s.name && s.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase()) return true;
-    return false;
-  }) || (currentUser?.role === 'specialist' || currentUser?.role === 'admin' ? specialists.find((s) => s.verified || s.status === 'approved') || specialists[0] : null);
 
-  // Guarantee fallback specialist object for master account if not yet matched in specialists list
-  const masterProfile: PlumbingSpecialist | null = userSpecialist || (currentUser?.role === 'specialist' ? {
-    id: storedSpecialistId || `spec-${currentUser.uid}`,
-    name: currentUser.name || 'Мастер-сантехник',
-    city: currentUser.city || selectedCity || 'Москва',
-    phone: currentUser.phone || '+7 (999) 000-00-00',
-    experienceYears: 5,
-    minPrice: 1000,
-    emergency247: true,
-    services: ['Установка сантехники', 'Монтаж отопления', 'Устранение протечек'],
-    rating: 5.0,
-    reviewCount: 1,
-    verified: true,
-    status: 'approved',
-    userUid: currentUser.uid,
-    email: currentUser.email,
-  } : null);
+    // Strict cross-provider isolation:
+    const isSpecVk = Boolean(s.userUid && s.userUid.startsWith('vk_'));
+    const isSpecYandex = Boolean(
+      (s.userUid && (s.userUid.startsWith('yandex_') || s.userUid.startsWith('usr-yandex'))) ||
+      (s.email && (s.email.toLowerCase().endsWith('@yandex.ru') || s.email.toLowerCase().endsWith('@ya.ru')))
+    );
+
+    // If master is from Yandex and current session is VK -> strictly DO NOT open master cabinet!
+    if (isSpecYandex && isCurrentVk) return false;
+    // If master is from VK and current session is Yandex -> strictly DO NOT open master cabinet!
+    if (isSpecVk && isCurrentYandex) return false;
+
+    // If specialist has a userUid belonging to another account, do not cross-link
+    if (s.userUid && currentUser.uid && s.userUid !== currentUser.uid) return false;
+
+    // Fallback match only if user role is explicitly specialist within the same provider
+    if (currentUser.role === 'specialist') {
+      if (s.email && currentUser.email && s.email.toLowerCase() === currentUser.email.toLowerCase()) return true;
+      if (s.phone && currentUser.phone) {
+        const cleanS = s.phone.replace(/\D/g, '');
+        const cleanU = currentUser.phone.replace(/\D/g, '');
+        if (cleanS.length >= 10 && cleanS === cleanU) return true;
+      }
+    }
+
+    return false;
+  }) || null;
+
+  // Master profile is only present if userSpecialist belongs to this provider
+  const masterProfile: PlumbingSpecialist | null = userSpecialist;
 
   // "У мастеров, прошедших проверку, автоматически открывается личный кабинет"
   const isVerifiedMaster = Boolean(
     currentUser &&
-    (
-      (masterProfile && (masterProfile.verified || masterProfile.status === 'approved')) ||
-      currentUser.role === 'specialist' ||
-      currentUser.role === 'admin'
-    )
+    masterProfile &&
+    (masterProfile.verified || masterProfile.status === 'approved')
   );
 
   const [activeTab, setActiveTab] = useState<'favorites' | 'requests' | 'profile' | 'master'>(() => {
     if (initialTab && initialTab !== 'purchases') return initialTab;
-    if (isVerifiedMaster || masterProfile) return 'master';
+    if (isVerifiedMaster && masterProfile) return 'master';
     return 'favorites';
   });
 

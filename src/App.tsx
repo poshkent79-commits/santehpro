@@ -695,15 +695,107 @@ function AppContent() {
   const totalPendingCount = totalPendingSpecialists + totalPendingServiceRequests + totalPendingQuestions;
 
   // Find linked specialist if currentUser is a master
+  // Find linked specialist if currentUser is a master (strict provider isolation)
   const userMasterSpecialist = currentUser
-    ? specialists.find(
-        (s) =>
-          (s.userUid && s.userUid === currentUser.uid) ||
-          (s.email && currentUser.email && s.email.toLowerCase() === currentUser.email.toLowerCase()) ||
-          (s.phone && currentUser.phone && s.phone.replace(/\D/g, '') === currentUser.phone.replace(/\D/g, '')) ||
-          (currentUser.name && s.name && s.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase())
-      )
+    ? specialists.find((s) => {
+        // Direct matching by userUid (highest priority)
+        if (s.userUid && currentUser.uid && s.userUid === currentUser.uid) {
+          return true;
+        }
+
+        const isSpecVk = Boolean(s.userUid && s.userUid.startsWith('vk_'));
+        const isCurrentVk = Boolean(currentUser.uid && currentUser.uid.startsWith('vk_'));
+
+        const isSpecYandex = Boolean(
+          (s.userUid && (s.userUid.startsWith('yandex_') || s.userUid.startsWith('usr-yandex'))) ||
+          (s.email && (s.email.toLowerCase().endsWith('@yandex.ru') || s.email.toLowerCase().endsWith('@ya.ru')))
+        );
+        const isCurrentYandex = Boolean(
+          (currentUser.uid && (currentUser.uid.startsWith('yandex_') || currentUser.uid.startsWith('usr-yandex'))) ||
+          (currentUser.email && (currentUser.email.toLowerCase().endsWith('@yandex.ru') || currentUser.email.toLowerCase().endsWith('@ya.ru')))
+        );
+
+        // Strict cross-provider isolation:
+        // A specialist registered through Yandex MUST NOT open when entering via VK ID
+        if (isSpecYandex && isCurrentVk) {
+          return false;
+        }
+        // A specialist registered through VK ID MUST NOT open when entering via Yandex ID
+        if (isSpecVk && isCurrentYandex) {
+          return false;
+        }
+
+        // If the specialist has a userUid from a different user ID, do not cross-link
+        if (s.userUid && currentUser.uid && s.userUid !== currentUser.uid) {
+          return false;
+        }
+
+        // Fallback match only if user role is explicitly specialist within the same provider
+        if (currentUser.role === 'specialist') {
+          return (
+            (s.email && currentUser.email && s.email.toLowerCase() === currentUser.email.toLowerCase()) ||
+            (s.phone && currentUser.phone && s.phone.replace(/\D/g, '') === currentUser.phone.replace(/\D/g, ''))
+          );
+        }
+
+        return false;
+      })
     : null;
+
+  // Cache master profile in localStorage for resilient disaster recovery
+  useEffect(() => {
+    if (userMasterSpecialist) {
+      try {
+        localStorage.setItem('santehpro_cached_master_profile', JSON.stringify(userMasterSpecialist));
+        if (userMasterSpecialist.phone) {
+          localStorage.setItem(`santehpro_master_${userMasterSpecialist.phone.replace(/\D/g, '')}`, JSON.stringify(userMasterSpecialist));
+        }
+      } catch {}
+    }
+  }, [userMasterSpecialist]);
+
+  // Master Self-Healing: If user is logged in as master or has cached master data, but server lost the record
+  useEffect(() => {
+    if (currentUser && !userMasterSpecialist) {
+      try {
+        const cached = localStorage.getItem('santehpro_cached_master_profile');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          const isCachedVk = Boolean(parsed.userUid && parsed.userUid.startsWith('vk_'));
+          const isCurrentVk = Boolean(currentUser.uid && currentUser.uid.startsWith('vk_'));
+          
+          // Strict isolation: only self-heal if the provider matches the current session
+          if (isCachedVk !== isCurrentVk) {
+            return;
+          }
+
+          const cleanUserPhone = (currentUser.phone || '').replace(/\D/g, '');
+          const cleanCachedPhone = (parsed.phone || '').replace(/\D/g, '');
+
+          const isMatch = (cleanUserPhone && cleanCachedPhone && (cleanUserPhone === cleanCachedPhone || cleanUserPhone.endsWith(cleanCachedPhone.slice(-10)))) ||
+                          (currentUser.email && parsed.email && currentUser.email.toLowerCase() === parsed.email.toLowerCase()) ||
+                          currentUser.role === 'specialist';
+
+          if (isMatch) {
+            console.log('[Self-Healing] Restoring master profile to server from browser cache...');
+            fetch('/api/specialists/self-heal', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ specialist: parsed }),
+            })
+              .then((res) => res.json())
+              .then((data) => {
+                if (data.success && data.specialist) {
+                  console.log('[Self-Healing] Master profile restored!');
+                  fetchSpecialists();
+                }
+              })
+              .catch((err) => console.warn('[Self-Healing] Error:', err));
+          }
+        }
+      } catch {}
+    }
+  }, [currentUser, userMasterSpecialist]);
 
   const masterIncomingOrdersCount = userMasterSpecialist
     ? serviceRequests.filter(

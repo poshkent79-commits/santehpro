@@ -7,15 +7,41 @@ import fs from 'fs';
 import path from 'path';
 
 const DATA_DIR = path.resolve(process.cwd(), '.data');
+const BACKUPS_DIR = path.join(DATA_DIR, 'backups');
 const SPECIALISTS_STORE_FILE = path.join(DATA_DIR, 'specialists_store.json');
+const SPECIALISTS_BACKUP_FILE = path.join(DATA_DIR, 'specialists_store.backup.json');
 
 export function getCachedSpecialists(): PlumbingSpecialist[] {
   try {
+    // 1. Try main store file
     if (fs.existsSync(SPECIALISTS_STORE_FILE)) {
       const data = fs.readFileSync(SPECIALISTS_STORE_FILE, 'utf-8');
       const parsed = JSON.parse(data);
-      if (Array.isArray(parsed)) {
+      if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed;
+      }
+    }
+    // 2. Try safety backup file if main was empty or missing
+    if (fs.existsSync(SPECIALISTS_BACKUP_FILE)) {
+      const data = fs.readFileSync(SPECIALISTS_BACKUP_FILE, 'utf-8');
+      const parsed = JSON.parse(data);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        console.log(`[Specialists] Recovered ${parsed.length} specialists from safety backup file.`);
+        return parsed;
+      }
+    }
+    // 3. Try latest rotating backup
+    if (fs.existsSync(BACKUPS_DIR)) {
+      const files = fs.readdirSync(BACKUPS_DIR).filter(f => f.startsWith('specialists_')).sort().reverse();
+      for (const f of files) {
+        try {
+          const content = fs.readFileSync(path.join(BACKUPS_DIR, f), 'utf-8');
+          const p = JSON.parse(content);
+          if (Array.isArray(p) && p.length > 0) {
+            console.log(`[Specialists] Recovered ${p.length} specialists from rotating backup: ${f}`);
+            return p;
+          }
+        } catch {}
       }
     }
   } catch (err) {
@@ -29,7 +55,44 @@ export function saveCachedSpecialists(list: PlumbingSpecialist[]): void {
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
     }
-    fs.writeFileSync(SPECIALISTS_STORE_FILE, JSON.stringify(list, null, 2), 'utf-8');
+    if (!fs.existsSync(BACKUPS_DIR)) {
+      fs.mkdirSync(BACKUPS_DIR, { recursive: true });
+    }
+
+    // Safety guard: NEVER overwrite non-empty store with empty array!
+    if (!list || list.length === 0) {
+      const existing = getCachedSpecialists();
+      if (existing.length > 0) {
+        console.warn(`[Safety Guard] Prevented wiping ${existing.length} specialists with empty array!`);
+        return;
+      }
+    }
+
+    const jsonStr = JSON.stringify(list, null, 2);
+
+    // Save main file
+    fs.writeFileSync(SPECIALISTS_STORE_FILE, jsonStr, 'utf-8');
+
+    // Save safety mirror backup
+    if (list.length > 0) {
+      fs.writeFileSync(SPECIALISTS_BACKUP_FILE, jsonStr, 'utf-8');
+
+      // Save timestamped rotating backup (keep last 30)
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const backupPath = path.join(BACKUPS_DIR, `specialists_${timestamp}.json`);
+      fs.writeFileSync(backupPath, jsonStr, 'utf-8');
+
+      // Prune old backups if more than 30
+      try {
+        const allBackups = fs.readdirSync(BACKUPS_DIR).filter(f => f.startsWith('specialists_')).sort();
+        if (allBackups.length > 30) {
+          const toRemove = allBackups.slice(0, allBackups.length - 30);
+          for (const rmFile of toRemove) {
+            fs.unlinkSync(path.join(BACKUPS_DIR, rmFile));
+          }
+        }
+      } catch {}
+    }
   } catch (err) {
     console.error('Failed to save cached specialists to disk:', err);
   }

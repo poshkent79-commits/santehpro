@@ -79,6 +79,7 @@ import { TimeWebCloudTab } from './admin/TimeWebCloudTab';
 import { CitySpecialistsWorkloadChart } from './admin/CitySpecialistsWorkloadChart';
 import { SpecialistRejectionModal } from './admin/SpecialistRejectionModal';
 import { SpecialistApprovalModal } from './admin/SpecialistApprovalModal';
+import { BackupRecoveryTab } from './admin/BackupRecoveryTab';
 import { compressImageFile } from '../utils/imageCompressor';
 import { useTimeWebSync } from '../services/timewebSyncClient';
 
@@ -124,7 +125,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   onSelectArticle,
   onOpenLoginModal,
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'requests' | 'articles' | 'files' | 'specialists' | 'questions' | 'users' | 'moderation' | 'smtp' | 'yandex' | 'timeweb'>('requests');
+  const [activeTab, setActiveTab] = useState<'overview' | 'requests' | 'articles' | 'files' | 'specialists' | 'questions' | 'users' | 'moderation' | 'smtp' | 'yandex' | 'timeweb' | 'backups'>('requests');
   
   // TimeWeb Cloud Live Sync
   const {
@@ -1388,6 +1389,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 <span>TimeWeb Cloud</span>
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               </button>
+
+              <button
+                onClick={() => setActiveTab('backups')}
+                className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shrink-0 whitespace-nowrap cursor-pointer ${
+                  activeTab === 'backups'
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-500 text-white shadow-md shadow-emerald-600/25'
+                    : 'text-emerald-400 hover:text-white'
+                }`}
+              >
+                <Archive className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
+                <span>Бэкапы и восстановление</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              </button>
             </div>
           </div>
         </div>
@@ -2505,6 +2519,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </button>
 
                 <button
+                  onClick={() => setActiveTab('backups')}
+                  className="px-3.5 py-2 sm:py-2.5 rounded-xl bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-600/30 font-bold text-xs transition flex items-center space-x-1.5 shadow-md cursor-pointer"
+                  title="Восстановление мастеров из резервных копий или по номеру телефона"
+                >
+                  <RotateCcw className="w-4 h-4 text-emerald-400" />
+                  <span>Восстановить мастеров</span>
+                </button>
+
+                <button
                   onClick={handleOpenNewSpecialistModal}
                   className="px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-black text-xs hover:bg-emerald-400 transition flex items-center space-x-1.5 shadow-lg shadow-emerald-500/20 cursor-pointer"
                 >
@@ -3152,6 +3175,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             if (onRefreshQuestions) onRefreshQuestions();
             loadCloudUsers();
           }}
+        />
+      )}
+
+      {/* TAB: BACKUPS & EMERGENCY RECOVERY */}
+      {activeTab === 'backups' && (
+        <BackupRecoveryTab
+          specialists={specialists}
+          onRefreshData={onRefreshSpecialists}
         />
       )}
 
