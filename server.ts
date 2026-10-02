@@ -4040,7 +4040,7 @@ app.post('/api/user/purchases', async (req, res) => {
 // POST: Create Robokassa payment session
 app.post('/api/payment/robokassa/create', async (req, res) => {
   try {
-    const { amount, description, type, targetId, email, phone, userUid, userName, items } = req.body;
+    const { amount, description, type, targetId, email, phone, userUid, userName, items, incCurrLabel } = req.body;
     const numAmount = parseFloat(amount);
     if (!numAmount || numAmount <= 0) {
       return res.status(400).json({ error: 'Неверная сумма платежа' });
@@ -4056,6 +4056,7 @@ app.post('/api/payment/robokassa/create', async (req, res) => {
       userUid,
       userName,
       items,
+      incCurrLabel,
     });
 
     res.json({

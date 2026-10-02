@@ -1,10 +1,10 @@
 {
   "merchantLogin": "santehproinfo",
-  "password1": "wrSA1jRIGW1PDSLri694",
+  "password1": "wrSA1jRlGW1PDSLri694",
   "password2": "hBh17Fp6VfMcb9tUH7Fu",
   "password3": "LHI7EqL9v8TA2PzuKI2B",
   "testPassword1": "FxJWtor4W3a3NbII46dk",
   "testPassword2": "Eb7eZN8qT0F4RIkwVH3R",
-  "isTest": true,
+  "isTest": false,
   "enabled": true
 }

@@ -32,6 +32,7 @@ export interface CreatePaymentOptions {
   userUid?: string;
   userName?: string;
   items?: PaymentItem[];
+  incCurrLabel?: string;
 }
 
 export interface PaymentRecord {
@@ -57,12 +58,12 @@ const PAYMENTS_FILE = path.join(DATA_DIR, 'robokassa_payments.json');
 // Default initial config based on approved Robokassa credentials
 const DEFAULT_CONFIG: RobokassaConfig = {
   merchantLogin: process.env.ROBOKASSA_MERCHANT_LOGIN || 'santehproinfo',
-  password1: process.env.ROBOKASSA_PASSWORD_1 || 'wrSA1jRIGW1PDSLri694',
+  password1: process.env.ROBOKASSA_PASSWORD_1 || 'wrSA1jRlGW1PDSLri694',
   password2: process.env.ROBOKASSA_PASSWORD_2 || 'hBh17Fp6VfMcb9tUH7Fu',
   password3: process.env.ROBOKASSA_PASSWORD_3 || 'LHI7EqL9v8TA2PzuKI2B',
   testPassword1: process.env.ROBOKASSA_TEST_PASSWORD_1 || 'FxJWtor4W3a3NbII46dk',
   testPassword2: process.env.ROBOKASSA_TEST_PASSWORD_2 || 'Eb7eZN8qT0F4RIkwVH3R',
-  isTest: process.env.ROBOKASSA_IS_TEST === 'true' ? true : false,
+  isTest: false,
   enabled: true,
 };
 
@@ -191,6 +192,10 @@ export function generateRobokassaPaymentUrl(options: CreatePaymentOptions): { pa
 
   if (options.email) {
     queryParams.set('Email', options.email);
+  }
+
+  if (options.incCurrLabel && options.incCurrLabel !== 'ALL') {
+    queryParams.set('IncCurrLabel', options.incCurrLabel);
   }
 
   if (config.isTest) {

@@ -343,20 +343,42 @@ export const DonationModal: React.FC<DonationModalProps> = ({
               </div>
             )}
 
-            {/* Big Modern "Оплатить" Button */}
+            {/* Official Robokassa Style Payment Widget Button */}
             <button
               type="button"
               disabled={isProcessingPayment || currentSum <= 0}
               onClick={handleRobokassaPay}
-              className="w-full py-3.5 px-5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:via-teal-400 hover:to-cyan-400 active:scale-[0.99] disabled:opacity-50 text-slate-950 font-black text-sm sm:text-base flex items-center justify-center space-x-2 transition shadow-xl shadow-emerald-950/50 cursor-pointer"
+              className="w-full py-4 px-6 rounded-2xl bg-black hover:bg-neutral-900 border-2 border-neutral-700/80 active:scale-[0.99] disabled:opacity-50 text-white flex items-center justify-between transition shadow-2xl shadow-black/80 cursor-pointer group"
             >
               {isProcessingPayment ? (
-                <span className="animate-pulse">Переход к оплате...</span>
+                <div className="w-full flex items-center justify-center space-x-2 text-neutral-300">
+                  <span className="animate-spin text-base">⏳</span>
+                  <span className="font-semibold text-sm">Переход к безопасной оплате...</span>
+                </div>
               ) : (
                 <>
-                  <Lock className="w-4 h-4 text-slate-950" />
-                  <span>Оплатить {currentSum > 0 ? `${currentSum.toLocaleString('ru-RU')} ₽` : ''}</span>
-                  <ArrowRight className="w-4 h-4 text-slate-950 ml-1" />
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 rounded-xl bg-neutral-800 border border-neutral-700 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition">
+                      <Lock className="w-4 h-4" />
+                    </div>
+                    <div className="text-left">
+                      <div className="text-xs text-neutral-400 font-semibold uppercase tracking-wider">
+                        Перейти к оплате
+                      </div>
+                      <div className="text-base sm:text-lg font-black tracking-tight text-white leading-tight">
+                        {currentSum > 0 ? `${currentSum.toLocaleString('ru-RU')} ₽` : '0 ₽'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Official Robokassa Brand Mark */}
+                  <div className="flex items-center space-x-2 bg-neutral-900 border border-neutral-800 px-3 py-1.5 rounded-xl shadow-inner shrink-0 group-hover:border-neutral-700 transition">
+                    <span className="w-2.5 h-2.5 rounded-full bg-orange-500 shadow-sm shadow-orange-500/50" />
+                    <span className="text-sm font-black tracking-tight text-white lowercase select-none">
+                      robo<span className="text-orange-500">kassa</span>
+                    </span>
+                    <ArrowRight className="w-4 h-4 text-neutral-400 group-hover:translate-x-0.5 group-hover:text-white transition" />
+                  </div>
                 </>
               )}
             </button>
