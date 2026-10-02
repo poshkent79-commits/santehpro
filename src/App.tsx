@@ -16,8 +16,9 @@ import { ProtectedSectionGuard, ProtectedSectionType } from './components/Protec
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Article, PlumbingSpecialist, ServiceCallRequest, CommunityQuestion } from './types';
 import { INITIAL_ARTICLES, INITIAL_SPECIALISTS, INITIAL_SERVICE_REQUESTS, INITIAL_QUESTIONS } from './data/initialData';
-import { Wrench, ShieldCheck, Scale, CheckCircle2, X, MapPin, Check, Search, ArrowRight, Share2, Heart, Bell } from 'lucide-react';
+import { Wrench, ShieldCheck, Scale, CheckCircle2, X, MapPin, Check, Search, ArrowRight, Share2, Heart, Bell, HelpCircle, Mail } from 'lucide-react';
 import { LegalTermsModal } from './components/LegalTermsModal';
+import { SupportFeedbackModal } from './components/SupportFeedbackModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { detectBestUserLocation, RUSSIAN_CITIES, DetectedCityResult } from './utils/geoCity';
 import { getCountryByCity } from './data/regionsData';
@@ -121,6 +122,7 @@ function AppContent() {
   const [isFooterLegalModalOpen, setIsFooterLegalModalOpen] = useState<boolean>(false);
   const [footerLegalDoc, setFooterLegalDoc] = useState<'privacy' | 'terms' | 'offer'>('privacy');
   const [isDonationModalOpen, setIsDonationModalOpen] = useState<boolean>(false);
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState<boolean>(false);
 
   const handleOpenLegalModal = (doc: 'privacy' | 'terms' | 'offer') => {
     setFooterLegalDoc(doc);
@@ -168,11 +170,17 @@ function AppContent() {
         setFooterLegalDoc('terms');
         setIsFooterLegalModalOpen(true);
       }
+
+      if (search.get('payment') === 'success') {
+        setPaymentSuccessToast(true);
+        window.history.replaceState({}, '', window.location.pathname);
+      }
     } catch {
       // ignore
     }
   }, []);
   const [diagnosticPrompt, setDiagnosticPrompt] = useState<string>('');
+  const [paymentSuccessToast, setPaymentSuccessToast] = useState<boolean>(false);
   const [cabinetInitialTab, setCabinetInitialTab] = useState<'favorites' | 'purchases' | 'requests' | 'profile' | 'master' | undefined>(undefined);
   const [viewingEstimate, setViewingEstimate] = useState<MasterPlumbingEstimate | null>(null);
   const [viewingContractForApproval, setViewingContractForApproval] = useState<PlumbingContract | null>(null);
@@ -963,6 +971,7 @@ function AppContent() {
         setIsAdmin={setIsAdmin}
         onOpenAdminLogin={() => setIsLoginModalOpen(true)}
         onOpenDonation={() => setIsDonationModalOpen(true)}
+        onOpenSupport={() => setIsSupportModalOpen(true)}
       />
 
       {/* Main App Container */}
@@ -1306,104 +1315,126 @@ function AppContent() {
       )}
 
       {/* Footer */}
-      <footer className="bg-slate-900 border-t border-slate-800 text-slate-400 text-xs py-6 px-4 mt-12">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-blue-600 flex items-center justify-center text-white font-bold">
-                <Wrench className="w-4 h-4" />
+      <footer className="bg-slate-900/95 border-t border-slate-800 text-slate-400 text-xs py-8 px-4 mt-12">
+        <div className="max-w-4xl mx-auto space-y-5">
+          {/* Header Brand and Description */}
+          <div className="flex flex-col items-center justify-center text-center space-y-2">
+            <div className="flex items-center space-x-2.5">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-red-500 to-blue-600 flex items-center justify-center text-white font-bold shadow-lg shadow-blue-950/40">
+                <Wrench className="w-5 h-5" />
               </div>
-              <span className="text-base font-black tracking-tight">
+              <span className="text-lg font-black tracking-tight">
                 <span className="text-red-500">Сантех</span>
                 <span className="text-blue-500">Про</span>
               </span>
             </div>
 
-            <p className="text-center md:text-right text-slate-400 max-w-md">
+            <p className="text-slate-400 text-xs sm:text-sm max-w-lg mx-auto leading-relaxed">
               Твой карманный помощник по сантехнике. Справочник по инженерным системам, обучающие курсы, персональный кабинет и сервис проверенных мастеров.
             </p>
           </div>
 
-          <div className="border-t border-slate-800/80 pt-6 flex flex-col items-center justify-center text-center space-y-3">
-            {/* Document links row with separators and hover effects */}
-            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs sm:text-[13px] font-normal">
-              <a
-                href="/oferta"
-                onClick={(e) => {
-                  if (!e.ctrlKey && !e.metaKey && !e.shiftKey) {
-                    e.preventDefault();
-                    handleOpenLegalModal('offer');
-                  }
-                }}
-                className="text-slate-400 hover:text-sky-400 no-underline hover:underline transition-colors cursor-pointer"
-              >
-                Оферта о добровольном пожертвовании
-              </a>
+          {/* Action Buttons Row */}
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => setIsDonationModalOpen(true)}
+              className="px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 active:scale-95 text-rose-300 hover:text-white border border-rose-500/30 hover:border-rose-400 text-xs font-bold flex items-center space-x-2 transition shadow-sm cursor-pointer"
+              title="Поддержать проект СантехПро"
+            >
+              <Heart className="w-3.5 h-3.5 fill-rose-400 text-rose-400" />
+              <span>Поддержать проект</span>
+            </button>
 
-              <span className="text-slate-600 select-none hidden sm:inline">•</span>
+            <button
+              type="button"
+              onClick={() => setIsSupportModalOpen(true)}
+              className="px-4 py-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 active:scale-95 text-cyan-300 hover:text-white border border-cyan-500/30 hover:border-cyan-400 text-xs font-bold flex items-center space-x-2 transition shadow-sm cursor-pointer"
+              title="Написать в службу поддержки (с файлами до 10 МБ)"
+            >
+              <Mail className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Поддержка</span>
+            </button>
+          </div>
 
+          <div className="border-t border-slate-800/80 w-full" />
+
+          {/* Legal Documents Row with uniform spacing */}
+          <div className="flex flex-wrap items-center justify-center gap-x-3 sm:gap-x-5 gap-y-2 text-xs text-slate-400">
+            <a
+              href="/oferta"
+              onClick={(e) => {
+                if (!e.ctrlKey && !e.metaKey && !e.shiftKey) {
+                  e.preventDefault();
+                  handleOpenLegalModal('offer');
+                }
+              }}
+              className="hover:text-cyan-300 transition-colors cursor-pointer"
+            >
+              Оферта о пожертвовании
+            </a>
+
+            <span className="text-slate-700 select-none">•</span>
+
+            <button
+              type="button"
+              onClick={() => handleOpenLegalModal('terms')}
+              className="hover:text-cyan-300 transition-colors cursor-pointer"
+            >
+              Пользовательское соглашение
+            </button>
+
+            <span className="text-slate-700 select-none">•</span>
+
+            <button
+              type="button"
+              onClick={() => handleOpenLegalModal('privacy')}
+              className="hover:text-cyan-300 transition-colors cursor-pointer"
+            >
+              Политика конфиденциальности
+            </button>
+          </div>
+
+          {/* Requisites and Copyright Card */}
+          <div className="w-full max-w-xl mx-auto rounded-2xl bg-slate-950/70 border border-slate-800/80 p-3 sm:p-4 text-center space-y-1.5 shadow-sm">
+            <div className="text-xs text-slate-300 font-medium">
+              © 2026 СантехПро. Самозанятый Туйчиев Д. Н. (ИНН 250900981804)
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-1.5 text-[11px] text-slate-400">
+              <span>Электронная почта:</span>
               <button
                 type="button"
-                onClick={() => handleOpenLegalModal('terms')}
-                className="text-slate-400 hover:text-sky-400 no-underline hover:underline transition-colors cursor-pointer"
+                onClick={() => setIsSupportModalOpen(true)}
+                className="font-mono text-cyan-400 hover:text-cyan-300 font-semibold underline underline-offset-2 transition cursor-pointer"
+                title="Написать обращение в поддержку"
               >
-                Пользовательское соглашение
-              </button>
-
-              <span className="text-slate-600 select-none hidden sm:inline">•</span>
-
-              <button
-                type="button"
-                onClick={() => handleOpenLegalModal('privacy')}
-                className="text-slate-400 hover:text-sky-400 no-underline hover:underline transition-colors cursor-pointer"
-              >
-                Политика конфиденциальности
-              </button>
-
-              <span className="text-slate-600 select-none hidden sm:inline">•</span>
-
-              <button
-                type="button"
-                onClick={() => setIsDonationModalOpen(true)}
-                className="text-rose-400 hover:text-rose-300 font-bold flex items-center space-x-1 cursor-pointer transition"
-                title="Поддержать проект СантехПро"
-              >
-                <Heart className="w-3.5 h-3.5 fill-rose-400 text-rose-400" />
-                <span>Поддержать проект</span>
+                santehpro.info@yandex.ru
               </button>
             </div>
+          </div>
 
-            {/* Requisites and copyright */}
-            <p className="text-[12px] sm:text-[13px] text-slate-500 m-0 leading-relaxed text-center">
-              © 2026 СантехПро. Самозанятый Туйчиев Д. Н. (ИНН 250900981804) • Электронная почта:{' '}
-              <a href="mailto:santehpro.info@gmail.com" className="text-slate-400 hover:text-emerald-400 font-medium">
-                santehpro.info@gmail.com
-              </a>
-            </p>
-
-            {/* Discrete Admin Link at the very end of footer */}
-            <div className="pt-1">
-              {!isAdmin ? (
-                <button
-                  type="button"
-                  onClick={() => setIsLoginModalOpen(true)}
-                  className="text-[11px] text-slate-700 hover:text-slate-500 transition-colors cursor-pointer flex items-center justify-center space-x-1 opacity-40 hover:opacity-100"
-                  title="Панель администратора"
-                >
-                  <ShieldCheck className="w-3 h-3" />
-                  <span>Вход для админа</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('admin')}
-                  className="text-[11px] text-amber-500/80 hover:text-amber-400 font-medium transition cursor-pointer flex items-center justify-center space-x-1"
-                >
-                  <ShieldCheck className="w-3 h-3 text-amber-500" />
-                  <span>Панель управления (Админ)</span>
-                </button>
-              )}
-            </div>
+          {/* Discrete Admin Link at the very end of footer (Almost invisible / stealth mode) */}
+          <div className="pt-1 flex justify-center">
+            {!isAdmin ? (
+              <button
+                type="button"
+                onClick={() => setIsLoginModalOpen(true)}
+                className="text-[10px] text-slate-700/60 hover:text-slate-400 opacity-[0.05] hover:opacity-80 transition-all duration-300 cursor-pointer flex items-center justify-center space-x-1 py-1 px-3 select-none"
+                title="Вход для админа"
+              >
+                <ShieldCheck className="w-2.5 h-2.5" />
+                <span>Вход для админа</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setActiveTab('admin')}
+                className="text-[11px] text-amber-500/80 hover:text-amber-400 font-medium transition cursor-pointer flex items-center justify-center space-x-1 mx-auto"
+              >
+                <ShieldCheck className="w-3 h-3 text-amber-500" />
+                <span>Панель управления (Админ)</span>
+              </button>
+            )}
           </div>
         </div>
       </footer>
@@ -1423,6 +1454,12 @@ function AppContent() {
         onClose={() => setIsDonationModalOpen(false)}
         onOpenOffer={() => handleOpenLegalModal('offer')}
         onOpenPrivacy={() => handleOpenLegalModal('privacy')}
+      />
+
+      {/* User Support & Feedback Modal (santehpro.info@yandex.ru with up to 10 MB attachments) */}
+      <SupportFeedbackModal
+        isOpen={isSupportModalOpen}
+        onClose={() => setIsSupportModalOpen(false)}
       />
 
       {/* Shared Client Estimate Modal */}
@@ -1506,6 +1543,45 @@ function AppContent() {
                     title="Повторить звук"
                   >
                     🔊
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Robokassa Payment Success Notification Toast */}
+      {paymentSuccessToast && (
+        <div className="fixed top-20 right-4 sm:right-6 z-50 max-w-sm sm:max-w-md w-full animate-in slide-in-from-top-4 duration-300">
+          <div className="bg-gradient-to-br from-emerald-950/95 via-slate-900/95 to-slate-950/95 backdrop-blur-md border-2 border-emerald-500 rounded-2xl p-4 text-white shadow-2xl shadow-emerald-950/60">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/40">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[12px] font-black tracking-wider text-emerald-400 uppercase">
+                    🎉 Оплата успешно принята!
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentSuccessToast(false)}
+                    className="text-slate-400 hover:text-white p-1 text-xs cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <p className="text-xs text-slate-200 mt-1 leading-relaxed">
+                  Огромное спасибо за поддержку сервиса «СантехПро»! Официальный электронный чек успешно сформирован.
+                </p>
+                <div className="mt-2.5 flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentSuccessToast(false)}
+                    className="px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition cursor-pointer"
+                  >
+                    Отлично
                   </button>
                 </div>
               </div>

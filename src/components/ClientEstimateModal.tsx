@@ -148,6 +148,13 @@ export const ClientEstimateModal: React.FC<ClientEstimateModalProps> = ({
     window.open(url, '_blank');
   };
 
+  const handleMaxShare = () => {
+    const rawText = generateMessengerText();
+    const encoded = encodeURIComponent(rawText);
+    const url = `https://max.ru/:share?text=${encoded}`;
+    window.open(url, '_blank');
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -260,6 +267,15 @@ export const ClientEstimateModal: React.FC<ClientEstimateModalProps> = ({
               >
                 <Send className="w-3.5 h-3.5" />
                 <span>В Telegram</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleMaxShare}
+                className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-md shadow-indigo-900/30 transition cursor-pointer"
+                title="Отправить смету через мессенджер MAX"
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>В MAX</span>
               </button>
               <button
                 type="button"

@@ -427,7 +427,7 @@ export async function sendSpecialistModerationNotification(
     recipientSet.add(process.env.ADMIN_EMAIL.trim().toLowerCase());
   }
   recipientSet.add('poshkent79@gmail.com');
-  recipientSet.add('santehpro.info@gmail.com');
+  recipientSet.add('santehpro.info@yandex.ru');
   if (config?.user?.trim() && config.user.includes('@')) {
     recipientSet.add(config.user.trim().toLowerCase());
   }
@@ -898,6 +898,178 @@ function saveEmailToLocalAudit(to: string, code: string, status: string) {
     fs.writeFileSync(AUDIT_FILE, JSON.stringify(logs.slice(0, 50), null, 2), 'utf-8');
   } catch {
     // ignore
+  }
+}
+
+// ------------------- USER SUPPORT TICKETS & FEEDBACK -------------------
+
+export interface SupportAttachment {
+  filename: string;
+  content: string; // base64 string
+  contentType?: string;
+  size?: number;
+}
+
+export interface SupportTicketData {
+  id: string;
+  name?: string;
+  email: string;
+  phone?: string;
+  topic?: string;
+  message: string;
+  attachments?: SupportAttachment[];
+  userUid?: string;
+  createdAt: string;
+  status: 'new' | 'in_progress' | 'resolved';
+}
+
+const SUPPORT_TICKETS_FILE = path.join(DATA_DIR, 'support_tickets.json');
+
+export function getSupportTickets(): SupportTicketData[] {
+  try {
+    if (fs.existsSync(SUPPORT_TICKETS_FILE)) {
+      const data = fs.readFileSync(SUPPORT_TICKETS_FILE, 'utf-8');
+      const parsed = JSON.parse(data);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to read support tickets:', err);
+  }
+  return [];
+}
+
+export function saveSupportTicketLocally(ticket: SupportTicketData): void {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    const list = getSupportTickets();
+    const existingIndex = list.findIndex((t) => t.id === ticket.id);
+    if (existingIndex >= 0) {
+      list[existingIndex] = ticket;
+    } else {
+      list.unshift(ticket);
+    }
+    fs.writeFileSync(SUPPORT_TICKETS_FILE, JSON.stringify(list.slice(0, 300), null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Failed to save support ticket locally:', err);
+  }
+}
+
+export async function sendSupportTicketEmail(ticket: SupportTicketData): Promise<{ success: boolean; deliveredViaSmtp: boolean; error?: string }> {
+  // Always persist ticket safely to disk database
+  saveSupportTicketLocally(ticket);
+
+  const targetEmail = 'santehpro.info@yandex.ru';
+  const config = getEffectiveSmtpConfig();
+
+  if (config) {
+    const fromAddress = `«${config.fromName || 'СантехПро'}» <${config.fromEmail || config.user}>`;
+    try {
+      const { transporter } = getMailTransporter(config);
+
+      const mailAttachments = (ticket.attachments || []).map((att) => {
+        const cleanBase64 = att.content.includes(',')
+          ? att.content.split(',')[1]
+          : att.content;
+        return {
+          filename: att.filename,
+          content: Buffer.from(cleanBase64, 'base64'),
+          contentType: att.contentType,
+        };
+      });
+
+      const htmlContent = `
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Новое обращение в поддержку СантехПро</title>
+</head>
+<body style="margin:0; padding:20px; background-color:#f1f5f9; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color:#0f172a;">
+  <div style="max-width:640px; margin:0 auto; background:#ffffff; border-radius:16px; border:1px solid #e2e8f0; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
+    <div style="background:linear-gradient(135deg, #0284c7, #0369a1); padding:24px 32px; color:#ffffff;">
+      <h1 style="margin:0; font-size:20px; font-weight:800; letter-spacing:-0.02em;">📩 Новое обращение пользователя</h1>
+      <p style="margin:6px 0 0; font-size:13px; opacity:0.9;">Поступило через форму обратной связи «СантехПро»</p>
+    </div>
+    
+    <div style="padding:28px 32px;">
+      <table style="width:100%; border-collapse:collapse; margin-bottom:24px;">
+        <tr style="border-bottom:1px solid #f1f5f9;">
+          <td style="padding:10px 0; font-size:13px; color:#64748b; width:140px; font-weight:600;">Отправитель:</td>
+          <td style="padding:10px 0; font-size:14px; font-weight:700; color:#0f172a;">${ticket.name || 'Не указано'}</td>
+        </tr>
+        <tr style="border-bottom:1px solid #f1f5f9;">
+          <td style="padding:10px 0; font-size:13px; color:#64748b; font-weight:600;">Email для ответа:</td>
+          <td style="padding:10px 0; font-size:14px; font-weight:700; color:#0284c7;">
+            <a href="mailto:${ticket.email}" style="color:#0284c7; text-decoration:none;">${ticket.email}</a>
+          </td>
+        </tr>
+        ${ticket.phone ? `
+        <tr style="border-bottom:1px solid #f1f5f9;">
+          <td style="padding:10px 0; font-size:13px; color:#64748b; font-weight:600;">Телефон:</td>
+          <td style="padding:10px 0; font-size:14px; color:#0f172a;">${ticket.phone}</td>
+        </tr>` : ''}
+        <tr style="border-bottom:1px solid #f1f5f9;">
+          <td style="padding:10px 0; font-size:13px; color:#64748b; font-weight:600;">Тема:</td>
+          <td style="padding:10px 0; font-size:14px; font-weight:700; color:#0f172a;">${ticket.topic || 'Без темы'}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 0; font-size:13px; color:#64748b; font-weight:600;">Дата и время:</td>
+          <td style="padding:10px 0; font-size:13px; color:#64748b;">${new Date(ticket.createdAt).toLocaleString('ru-RU')}</td>
+        </tr>
+      </table>
+
+      <div style="font-size:13px; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px;">Текст сообщения:</div>
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-left:4px solid #0284c7; border-radius:12px; padding:16px 20px; font-size:14px; line-height:1.6; color:#1e293b; white-space:pre-wrap; margin-bottom:20px;">${ticket.message}</div>
+
+      ${mailAttachments.length > 0 ? `
+      <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:14px 18px; margin-bottom:20px;">
+        <div style="font-size:13px; font-weight:700; color:#166534; margin-bottom:4px;">📎 Прикреплённые файлы (${mailAttachments.length} шт.):</div>
+        <ul style="margin:0; padding-left:18px; font-size:12px; color:#15803d;">
+          ${(ticket.attachments || []).map((a) => `<li><strong>${a.filename}</strong> ${a.size ? `(${Math.round(a.size / 1024)} КБ)` : ''}</li>`).join('')}
+        </ul>
+      </div>` : ''}
+
+      <div style="text-align:center; padding-top:12px;">
+        <a href="mailto:${ticket.email}?subject=Ответ на ваше обращение в СантехПро: ${encodeURIComponent(ticket.topic || '')}" 
+           style="display:inline-block; background:#0284c7; color:#ffffff; font-weight:700; font-size:14px; padding:12px 28px; border-radius:10px; text-decoration:none;">
+          Ответить на обращение (${ticket.email})
+        </a>
+      </div>
+    </div>
+
+    <div style="background:#f8fafc; border-top:1px solid #e2e8f0; padding:16px 32px; text-align:center; font-size:11px; color:#94a3b8;">
+      Платформа СантехПро • Письмо отправлено автоматически на целевой адрес: santehpro.info@yandex.ru
+    </div>
+  </div>
+</body>
+</html>
+      `;
+
+      await transporter.sendMail({
+        from: fromAddress,
+        to: targetEmail,
+        replyTo: ticket.email,
+        subject: `[Поддержка СантехПро] ${ticket.topic || 'Новое обращение'}: от ${ticket.name || ticket.email}`,
+        text: `Новое обращение от: ${ticket.name || 'Пользователь'} (${ticket.email})\nТема: ${ticket.topic}\n\n${ticket.message}`,
+        html: htmlContent,
+        attachments: mailAttachments,
+      });
+
+      saveEmailToLocalAudit(targetEmail, `ticket-${ticket.id}`, 'sent_smtp');
+      return { success: true, deliveredViaSmtp: true };
+    } catch (smtpError: any) {
+      const errMsg = smtpError?.message || 'SMTP delivery failed';
+      console.warn('[sendSupportTicketEmail] SMTP error:', errMsg);
+      saveEmailToLocalAudit(targetEmail, `ticket-${ticket.id}`, `smtp_error: ${errMsg}`);
+      return { success: true, deliveredViaSmtp: false, error: errMsg };
+    }
+  } else {
+    saveEmailToLocalAudit(targetEmail, `ticket-${ticket.id}`, 'saved_locally');
+    return { success: true, deliveredViaSmtp: false };
   }
 }
 

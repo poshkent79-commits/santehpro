@@ -9,8 +9,13 @@ import {
   CheckCircle2,
   Gift,
   Mail,
+  ShieldCheck,
+  ArrowRight,
+  Lock,
+  MessageSquare,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { SupportFeedbackModal } from './SupportFeedbackModal';
 
 interface DonationModalProps {
   isOpen: boolean;
@@ -35,12 +40,16 @@ export const DonationModal: React.FC<DonationModalProps> = ({
   onOpenOffer,
   onOpenPrivacy,
 }) => {
+  const { currentUser } = useAuth();
   const [selectedAmount, setSelectedAmount] = useState<number>(initialAmount);
   const [customAmount, setCustomAmount] = useState<string>('');
   const [isCustom, setIsCustom] = useState<boolean>(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isThankYouOpen, setIsThankYouOpen] = useState<boolean>(false);
   const [isScrolled, setIsScrolled] = useState<boolean>(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState<boolean>(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState<boolean>(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -80,6 +89,37 @@ export const DonationModal: React.FC<DonationModalProps> = ({
     }
   };
 
+  const handleRobokassaPay = async () => {
+    if (currentSum <= 0) return;
+    setIsProcessingPayment(true);
+    setPaymentError(null);
+    try {
+      const response = await fetch('/api/payment/robokassa/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: currentSum,
+          description: `Добровольное пожертвование на развитие сервиса СантехПро (${currentSum} ₽)`,
+          type: 'donation',
+          userUid: currentUser?.uid,
+          userName: currentUser?.name,
+          email: currentUser?.email,
+          phone: currentUser?.phone,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success || !data.paymentUrl) {
+        throw new Error(data.error || 'Не удалось сформировать платёж');
+      }
+      // Redirect to official Robokassa checkout
+      window.location.href = data.paymentUrl;
+    } catch (err: any) {
+      console.error('Robokassa pay error:', err);
+      setPaymentError(err.message || 'Ошибка запуска онлайн-оплаты. Попробуйте снова или воспользуйтесь переводом по номеру карты.');
+      setIsProcessingPayment(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
       <div
@@ -116,22 +156,13 @@ export const DonationModal: React.FC<DonationModalProps> = ({
                     Поддержать проект СантехПро
                   </h2>
                   <div className="text-[10px] text-rose-100 font-medium">
-                    100% бесплатно • Добровольная поддержка
+                    Добровольная поддержка проекта
                   </div>
                 </div>
               )}
             </div>
 
             <div className="flex items-center space-x-2 shrink-0">
-              <span
-                className={`rounded-full bg-white/25 text-white font-black uppercase tracking-wider backdrop-blur-sm shadow-sm transition-all duration-300 ease-out ${
-                  isScrolled
-                    ? 'px-2 py-0.5 text-[9px] hidden sm:inline-block'
-                    : 'px-3 py-1 text-[10px] sm:text-xs'
-                }`}
-              >
-                100% БЕСПЛАТНО
-              </span>
               <button
                 type="button"
                 onClick={onClose}
@@ -154,7 +185,7 @@ export const DonationModal: React.FC<DonationModalProps> = ({
             }`}
           >
             <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight">
-              Поддержать<br />проект<br />СантехПро
+              Поддержать проект<br />СантехПро
             </h2>
             <p className="text-xs sm:text-sm text-rose-100/90 font-medium leading-relaxed max-w-md">
               Мы сохраняем все справочники, курсы и калькулятор бесплатными для каждого мастера и пользователя!
@@ -271,111 +302,95 @@ export const DonationModal: React.FC<DonationModalProps> = ({
             )}
           </div>
 
-          {/* CARD «МИР» REQUISITES (2200 7020 1270 2739, Достонджон Т.) */}
-          <div className="space-y-3 animate-in fade-in duration-150 pt-1">
-            <span className="text-xs font-bold text-slate-300">Реквизиты карты для поддержки:</span>
-            {/* Virtual Realistic Bank Card */}
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 border border-emerald-500/40 p-4 sm:p-5 text-white shadow-xl shadow-emerald-950/40">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center space-x-2">
-                  <div className="w-8 h-6 rounded bg-gradient-to-br from-amber-300 to-amber-500 border border-amber-200 flex items-center justify-center shadow-inner">
-                    <div className="w-5 h-3 border-y border-amber-700/60 rounded-sm" />
-                  </div>
-                  <span className="text-[10px] text-slate-400 uppercase tracking-widest font-mono">Банковская карта</span>
+          {/* MODERN SECURE ONLINE PAYMENT SECTION */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900/95 to-slate-950 border border-slate-800 space-y-4 shadow-2xl relative overflow-hidden">
+            {/* Top row with modern payment badges */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-cyan-950/40 shrink-0">
+                  <CreditCard className="w-5 h-5" />
                 </div>
-                <div className="flex items-center space-x-1.5 px-2.5 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-400/40">
-                  <span className="text-[11px] font-black tracking-widest text-emerald-400">МИР</span>
-                </div>
-              </div>
-
-              <div className="my-3">
-                <div className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">
-                  Номер банковской карты:
-                </div>
-                <div className="font-mono text-base sm:text-xl font-black tracking-widest text-emerald-300 select-all flex items-center justify-between bg-slate-950/70 p-2 sm:p-2.5 rounded-xl border border-slate-800">
-                  <span>2200 7020 1270 2739</span>
-                  <button
-                    type="button"
-                    onClick={() => handleCopy('2200702012702739', 'card')}
-                    className="px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center space-x-1 transition cursor-pointer shrink-0 ml-2"
-                    title="Скопировать номер карты"
-                  >
-                    {copiedField === 'card' ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-slate-950" />
-                        <span>Скопировано!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5 text-slate-950" />
-                        <span>Копировать</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex items-end justify-between border-t border-slate-800/80 pt-2 text-xs">
                 <div>
-                  <div className="text-[9px] text-slate-400 uppercase tracking-wider">Банк и Получатель:</div>
-                  <div className="font-bold text-white tracking-wide text-xs sm:text-sm">Т-БАНК • ДОСТОНДЖОН Т.</div>
+                  <div className="text-sm font-bold text-white flex items-center gap-2">
+                    <span>Безопасная оплата</span>
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-extrabold border border-emerald-500/30">
+                      СБП 0%
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-400">
+                    СБП, карты МИР, СберБанк, Т-Банк
+                  </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-[9px] text-slate-400 uppercase tracking-wider">Сумма к переводу:</div>
-                  <div className="text-xs sm:text-sm text-emerald-400 font-extrabold">{currentSum.toLocaleString('ru-RU')} ₽</div>
-                </div>
+              </div>
+
+              {/* Supported payment badges */}
+              <div className="flex items-center gap-1.5 self-start sm:self-auto">
+                <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 text-[10px] font-semibold border border-slate-700/60">
+                  СБП
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 text-[10px] font-semibold border border-slate-700/60">
+                  МИР
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 text-[10px] font-semibold border border-slate-700/60">
+                  Любые карты
+                </span>
               </div>
             </div>
 
-            {/* Instructions */}
-            <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 space-y-1.5">
-              <div className="font-semibold text-white flex items-center space-x-1.5">
-                <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Как отправить поддержку по номеру карты:</span>
+            {paymentError && (
+              <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-500/40 text-xs text-rose-300">
+                {paymentError}
               </div>
-              <ol className="list-decimal list-inside space-y-1 text-[11px] text-slate-300">
-                <li>Нажмите кнопку <strong>«Копировать»</strong> выше (скопируется номер карты <strong>2200 7020 1270 2739</strong>).</li>
-                <li>Откройте приложение любого вашего банка (Сбербанк, Т-Банк, ВТБ, Альфа и др.).</li>
-                <li>Выберите <strong>«Перевод по номеру карты»</strong>, вставьте скопированный номер, укажите сумму <strong>{currentSum} ₽</strong> и подтвердите перевод.</li>
-              </ol>
-            </div>
+            )}
 
-            {/* Action Buttons */}
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => setIsThankYouOpen(true)}
-                className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold flex items-center justify-center space-x-2 transition shadow-md cursor-pointer"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Я перевёл на карту — Спасибо автору!</span>
-              </button>
+            {/* Big Modern "Оплатить" Button */}
+            <button
+              type="button"
+              disabled={isProcessingPayment || currentSum <= 0}
+              onClick={handleRobokassaPay}
+              className="w-full py-3.5 px-5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:via-teal-400 hover:to-cyan-400 active:scale-[0.99] disabled:opacity-50 text-slate-950 font-black text-sm sm:text-base flex items-center justify-center space-x-2 transition shadow-xl shadow-emerald-950/50 cursor-pointer"
+            >
+              {isProcessingPayment ? (
+                <span className="animate-pulse">Переход к оплате...</span>
+              ) : (
+                <>
+                  <Lock className="w-4 h-4 text-slate-950" />
+                  <span>Оплатить {currentSum > 0 ? `${currentSum.toLocaleString('ru-RU')} ₽` : ''}</span>
+                  <ArrowRight className="w-4 h-4 text-slate-950 ml-1" />
+                </>
+              )}
+            </button>
+
+            {/* Trust footer note */}
+            <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400 pt-0.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span>Защищённое соединение SSL • Официальный электронный чек</span>
             </div>
           </div>
 
-          {/* EMAIL SUPPORT IN BOTTOM OF DOCUMENT (Адрес электронной почты в нижней части документа) */}
-          <div className="p-3 rounded-xl bg-slate-950/90 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs">
+          {/* EMAIL SUPPORT IN BOTTOM OF DOCUMENT (Служба поддержки и связь) */}
+          <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-md">
             <div className="flex items-center space-x-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0">
                 <Mail className="w-4 h-4" />
               </div>
               <div className="min-w-0">
                 <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
-                  Электронная почта для связи и предложений:
+                  Служба поддержки и связи:
                 </div>
                 <a
-                  href="mailto:santehpro.info@gmail.com"
-                  className="font-medium text-slate-200 hover:text-cyan-300 transition truncate block"
+                  href="mailto:santehpro.info@yandex.ru"
+                  className="font-semibold text-slate-200 hover:text-cyan-300 transition truncate block font-mono"
                 >
-                  santehpro.info@gmail.com
+                  santehpro.info@yandex.ru
                 </a>
               </div>
             </div>
-            <div className="flex items-center space-x-1.5 w-full sm:w-auto shrink-0">
+            <div className="flex items-center space-x-2 w-full sm:w-auto shrink-0">
               <button
                 type="button"
-                onClick={() => handleCopy('santehpro.info@gmail.com', 'email')}
-                className="flex-1 sm:flex-none px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center justify-center space-x-1 transition cursor-pointer border border-slate-700"
+                onClick={() => handleCopy('santehpro.info@yandex.ru', 'email')}
+                className="flex-1 sm:flex-none px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center justify-center space-x-1.5 transition cursor-pointer border border-slate-700"
                 title="Скопировать e-mail"
               >
                 {copiedField === 'email' ? (
@@ -390,12 +405,15 @@ export const DonationModal: React.FC<DonationModalProps> = ({
                   </>
                 )}
               </button>
-              <a
-                href="mailto:santehpro.info@gmail.com"
-                className="px-2.5 py-1.5 rounded-lg bg-cyan-600/30 hover:bg-cyan-600/50 text-cyan-200 border border-cyan-500/40 text-xs font-semibold flex items-center justify-center space-x-1 transition"
+              <button
+                type="button"
+                onClick={() => setIsSupportModalOpen(true)}
+                className="flex-1 sm:flex-none px-3.5 py-2 rounded-xl bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-500 hover:to-cyan-500 text-white font-bold text-xs flex items-center justify-center space-x-1.5 transition cursor-pointer shadow-md shadow-cyan-950/40"
+                title="Написать в поддержку с файлами до 10 МБ"
               >
+                <MessageSquare className="w-3.5 h-3.5" />
                 <span>Написать</span>
-              </a>
+              </button>
             </div>
           </div>
 
@@ -456,10 +474,18 @@ export const DonationModal: React.FC<DonationModalProps> = ({
           {/* Footnote reassurance without phone */}
           <div className="flex flex-wrap items-center justify-between text-[10px] text-slate-500 border-t border-slate-800/80 pt-2 gap-y-1">
             <span>СантехПро • Самозанятый Туйчиев Д. Н. (ИНН 250900981804)</span>
-            <span>E-mail: santehpro.info@gmail.com</span>
+            <span>E-mail: santehpro.info@yandex.ru</span>
           </div>
         </div>
       </div>
+
+      {isSupportModalOpen && (
+        <SupportFeedbackModal
+          isOpen={isSupportModalOpen}
+          onClose={() => setIsSupportModalOpen(false)}
+          defaultTopic="Вопрос по работе сервиса"
+        />
+      )}
     </div>
   );
 };

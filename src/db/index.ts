@@ -5,141 +5,11 @@ import fs from 'fs';
 import path from 'path';
 import * as schema from './schema.ts';
 
-export function ensureCloudSqlProxy(force = false) {
-  const sqlHost = process.env.SQL_HOST;
-  if (!sqlHost || !sqlHost.startsWith('/app/cloudsql/')) return;
-  const instanceName = sqlHost.replace('/app/cloudsql/', '').trim();
-  const socketPath = `${sqlHost}/.s.PGSQL.5432`;
-
-  if (fs.existsSync('/app/cloud_sql_proxy')) {
-    // 1. Terminate any proxy processes started with --impersonate-service-account
-    // because GCP rejects token impersonation in this environment with 403.
-    try {
-      const pids = execSync('pgrep -x cloud_sql_proxy || true', { encoding: 'utf-8' }).trim();
-      if (pids) {
-        for (const pidStr of pids.split(/\s+/)) {
-          const pid = Number(pidStr);
-          if (pid && !isNaN(pid)) {
-            try {
-              const cmd = fs.readFileSync(`/proc/${pid}/cmdline`, 'utf8');
-              if (cmd.includes('impersonate-service-account')) {
-                process.kill(pid, 'SIGKILL');
-              }
-            } catch {
-              // ignore
-            }
-          }
-        }
-      }
-    } catch {
-      // ignore
-    }
-
-    // 2. Check if a clean proxy (without impersonate) is currently active for this instance
-    let isCleanRunning = false;
-    if (!force) {
-      try {
-        const pids = execSync('pgrep -x cloud_sql_proxy || true', { encoding: 'utf-8' }).trim();
-        if (pids) {
-          for (const pidStr of pids.split(/\s+/)) {
-            const pid = Number(pidStr);
-            if (pid && !isNaN(pid)) {
-              try {
-                const cmd = fs.readFileSync(`/proc/${pid}/cmdline`, 'utf8');
-                if (cmd.includes(instanceName) && !cmd.includes('impersonate-service-account')) {
-                  isCleanRunning = true;
-                  break;
-                }
-              } catch {
-                // ignore
-              }
-            }
-          }
-        }
-      } catch {
-        isCleanRunning = false;
-      }
-    }
-
-    // 3. If force restart requested, proxy is not running, or socket is missing/stale
-    if (force || !isCleanRunning || !fs.existsSync(socketPath)) {
-      if (force || !isCleanRunning) {
-        try {
-          const pids = execSync('pgrep -x cloud_sql_proxy || true', { encoding: 'utf-8' }).trim();
-          if (pids) {
-            for (const pidStr of pids.split(/\s+/)) {
-              const pid = Number(pidStr);
-              if (pid && !isNaN(pid)) {
-                try {
-                  process.kill(pid, 'SIGKILL');
-                } catch {
-                  // ignore
-                }
-              }
-            }
-          }
-        } catch {
-          // ignore
-        }
-      }
-
-      try {
-        if (fs.existsSync(socketPath)) {
-          fs.unlinkSync(socketPath);
-        }
-      } catch {
-        // ignore
-      }
-
-      try {
-        const dir = path.dirname(socketPath);
-        if (!fs.existsSync(dir)) {
-          fs.mkdirSync(dir, { recursive: true });
-        }
-      } catch {
-        // ignore
-      }
-
-      try {
-        const child = spawn('/app/cloud_sql_proxy', [
-          instanceName,
-          '--unix-socket=/app/cloudsql',
-          '--sql-data',
-          '--sql-data-endpoint=sqladmin.googleapis.com',
-          '--sqladmin-api-endpoint=sqladmin.googleapis.com',
-        ], {
-          detached: true,
-          stdio: 'ignore',
-        });
-        child.unref();
-        if (child.pid) {
-          fs.writeFileSync('/app/.cloud_sql_proxy.pid', String(child.pid));
-        }
-        // Wait for unix socket to appear
-        for (let i = 0; i < 30; i++) {
-          if (fs.existsSync(socketPath)) {
-            try {
-              Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50);
-            } catch {
-              // ignore
-            }
-            break;
-          }
-          try {
-            Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100);
-          } catch {
-            // ignore
-          }
-        }
-      } catch (err) {
-        console.error('Failed to auto-spawn cloud_sql_proxy:', err);
-      }
-    }
-  }
+// Cloud SQL is completely detached. Using local persistent disk & JSON database on Timeweb.
+export function ensureCloudSqlProxy(_force = false) {
+  // No-op: Cloud SQL proxy is detached
+  return;
 }
-
-// Ensure proxy is up when initializing DB
-ensureCloudSqlProxy();
 
 // Add global connection pool caching to persist across hot-reloads
 declare global {
@@ -148,7 +18,19 @@ declare global {
 
 // Function to create or retrieve the connection pool.
 export const createPool = () => {
-  ensureCloudSqlProxy();
+  // If SQL_HOST points to Google Cloud SQL socket or is not defined, do NOT connect to Cloud SQL
+  const sqlHost = process.env.SQL_HOST;
+  const isCloudSqlSocket = !sqlHost || sqlHost.startsWith('/app/cloudsql/');
+  if (isCloudSqlSocket) {
+    // Return a dummy pool that immediately allows safe fallback to local disk storage
+    return new Pool({
+      host: '127.0.0.1',
+      port: 54329,
+      max: 1,
+      connectionTimeoutMillis: 100,
+    });
+  }
+
   if (!global._postgresPool) {
     global._postgresPool = new Pool({
       host: process.env.SQL_HOST,
@@ -157,7 +39,7 @@ export const createPool = () => {
       database: process.env.SQL_DB_NAME,
       max: 10,
       idleTimeoutMillis: 10000,
-      connectionTimeoutMillis: 15000,
+      connectionTimeoutMillis: 5000,
       keepAlive: true,
       keepAliveInitialDelayMillis: 3000,
       allowExitOnIdle: true,

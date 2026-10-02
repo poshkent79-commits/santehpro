@@ -187,8 +187,8 @@ export const LegalTermsModal: React.FC<LegalTermsModalProps> = ({
         <div className="p-3.5 sm:p-4 border-t border-slate-800 bg-slate-950/90 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
           <div className="text-xs text-slate-400 text-center sm:text-left">
             <span>Редакция 3.0 от 26 сентября 2026 года • Самозанятый Туйчиев Д. Н. • E-mail:{' '}
-              <a href="mailto:santehpro.info@gmail.com" className="text-cyan-400 hover:underline">
-                santehpro.info@gmail.com
+              <a href="mailto:santehpro.info@yandex.ru" className="text-cyan-400 hover:underline">
+                santehpro.info@yandex.ru
               </a>
             </span>
           </div>

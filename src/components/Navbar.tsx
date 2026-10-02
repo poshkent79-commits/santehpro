@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Users, Stethoscope, ShieldCheck, Wrench, GraduationCap, Calculator, User, MapPin, Heart } from 'lucide-react';
+import { BookOpen, Users, Stethoscope, ShieldCheck, Wrench, GraduationCap, Calculator, User, MapPin, Heart, Mail } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 interface NavbarProps {
@@ -14,6 +14,7 @@ interface NavbarProps {
   onOpenAdminLogin?: () => void;
   onOpenCitySelect?: () => void;
   onOpenDonation?: () => void;
+  onOpenSupport?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -26,6 +27,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   isAdmin = false,
   onOpenCitySelect,
   onOpenDonation,
+  onOpenSupport,
 }) => {
   const { currentUser, openAuthModal } = useAuth();
 
@@ -59,21 +61,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* Upper Right: Support button styled like screenshot & Admin badge */}
-        <div className="flex items-center space-x-1.5 sm:space-x-2">
-          {onOpenDonation && (
-            <button
-              type="button"
-              onClick={onOpenDonation}
-              className="px-2.5 py-1 sm:px-3 sm:py-1 rounded-xl bg-emerald-950/20 hover:bg-emerald-900/30 active:scale-95 text-emerald-400 hover:text-emerald-300 border border-emerald-500/70 hover:border-emerald-400 text-[11px] sm:text-xs font-medium flex items-center space-x-1.5 transition shadow-sm cursor-pointer shrink-0"
-              title="Поддержать проект"
-            >
-              <Heart className="w-3.5 h-3.5 text-emerald-400 shrink-0" strokeWidth={2} />
-              <span>Поддержать</span>
-            </button>
-          )}
-
-          {isAdmin && (
+        {/* Upper Right: Admin badge if logged in */}
+        {isAdmin && (
+          <div className="flex items-center space-x-1.5 sm:space-x-2">
             <button
               onClick={() => setActiveTab('admin')}
               className="flex items-center space-x-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl text-xs font-semibold bg-amber-500 text-slate-950 hover:bg-amber-400 transition shadow-sm cursor-pointer shrink-0"
@@ -86,8 +76,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </span>
               )}
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Sub-Bar: Navigation Menu */}

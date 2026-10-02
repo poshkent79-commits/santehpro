@@ -59,7 +59,6 @@ import {
   toggleUserFavorite,
   deleteUserFavorite,
 } from './src/db/userFavorites.ts';
-import { ensureCloudSqlProxy } from './src/db/index.ts';
 import {
   sendPasswordResetEmail,
   sendSpecialistModerationNotification,
@@ -69,6 +68,8 @@ import {
   saveSmtpSettings,
   testSmtpConnection,
   getEmailAuditLogs,
+  sendSupportTicketEmail,
+  getSupportTickets,
 } from './src/services/emailService.ts';
 import { requireAuth, AuthRequest } from './src/middleware/auth.ts';
 import { generateDiagnosticReport } from './src/ai/diagnosticEngine.ts';
@@ -81,6 +82,14 @@ import {
   syncEntityToTimeWebCloud,
   performFullTimeWebSync,
 } from './src/services/timewebCloudService.ts';
+import {
+  getRobokassaConfig,
+  saveRobokassaConfig,
+  generateRobokassaPaymentUrl,
+  verifyRobokassaResult,
+  getPaymentsHistory,
+  savePaymentRecord,
+} from './src/services/robokassaService.ts';
 
 const currentDirname = typeof __dirname !== 'undefined' ? __dirname : process.cwd();
 
@@ -4026,6 +4035,188 @@ app.post('/api/user/purchases', async (req, res) => {
   }
 });
 
+// ----------------- ROBOKASSA PAYMENT ENDPOINTS -----------------
+
+// POST: Create Robokassa payment session
+app.post('/api/payment/robokassa/create', async (req, res) => {
+  try {
+    const { amount, description, type, targetId, email, phone, userUid, userName, items } = req.body;
+    const numAmount = parseFloat(amount);
+    if (!numAmount || numAmount <= 0) {
+      return res.status(400).json({ error: 'Неверная сумма платежа' });
+    }
+
+    const { paymentUrl, invId, record } = generateRobokassaPaymentUrl({
+      outSum: numAmount,
+      description: description || 'Добровольное пожертвование на развитие сервиса СантехПро',
+      email,
+      phone,
+      type: type || 'donation',
+      targetId,
+      userUid,
+      userName,
+      items,
+    });
+
+    res.json({
+      success: true,
+      paymentUrl,
+      invId,
+      record,
+    });
+  } catch (err: any) {
+    console.error('Failed to create Robokassa payment:', err);
+    res.status(500).json({ error: err.message || 'Ошибка генерации ссылки на оплату' });
+  }
+});
+
+// ALL (POST & GET): Robokassa Result URL Callback (Webhook from Robokassa)
+app.all('/api/payment/robokassa/result', async (req, res) => {
+  try {
+    const payload = req.method === 'POST' ? req.body : req.query;
+    console.log('[Robokassa Result Callback]', payload);
+
+    const verification = verifyRobokassaResult(payload);
+    if (!verification.valid) {
+      console.warn('[Robokassa Result] Invalid signature:', payload);
+      return res.status(400).send('bad sign');
+    }
+
+    const { invId, outSum, shpParams } = verification;
+    const payments = getPaymentsHistory();
+    const existing = payments.find((p) => p.invId === invId);
+
+    if (existing) {
+      existing.status = 'success';
+      existing.paymentDate = new Date().toISOString();
+      existing.rawPayload = payload;
+      savePaymentRecord(existing);
+
+      if (existing.type === 'course' && existing.targetId && existing.userUid) {
+        try {
+          await createDbPurchase({
+            userUid: existing.userUid,
+            userEmail: existing.userEmail || '',
+            courseId: existing.targetId,
+            courseTitle: existing.description,
+            price: `${outSum} ₽`,
+            paymentMethod: 'Robokassa (СБП / Карта)',
+          });
+        } catch (e) {
+          console.error('[Robokassa Course Unlock Error]', e);
+        }
+      }
+    } else {
+      savePaymentRecord({
+        id: `pay-${invId}`,
+        invId,
+        outSum,
+        description: `Оплата #${invId}`,
+        type: (shpParams.shp_type as any) || 'donation',
+        targetId: shpParams.shp_target,
+        userUid: shpParams.shp_user,
+        status: 'success',
+        paymentDate: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        rawPayload: payload,
+      });
+    }
+
+    // Required protocol response for Robokassa: OK<InvId>
+    return res.status(200).send(`OK${invId}`);
+  } catch (err) {
+    console.error('[Robokassa Result Error]', err);
+    res.status(500).send('internal error');
+  }
+});
+
+// GET: Robokassa Payment Success & Fail Redirect Handlers
+app.get('/payment/success', (_req, res) => {
+  res.redirect('/?payment=success');
+});
+
+app.get('/payment/fail', (_req, res) => {
+  res.redirect('/?payment=fail');
+});
+
+// GET: Robokassa status & configuration
+app.get('/api/payment/robokassa/status', (_req, res) => {
+  const config = getRobokassaConfig();
+  res.json({
+    enabled: config.enabled,
+    merchantLogin: config.merchantLogin,
+    isTest: config.isTest,
+  });
+});
+
+// POST: Update Robokassa configuration (Admin only)
+app.post('/api/payment/robokassa/config', async (req, res) => {
+  try {
+    const updated = saveRobokassaConfig(req.body);
+    res.json({ success: true, config: { enabled: updated.enabled, merchantLogin: updated.merchantLogin, isTest: updated.isTest } });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ----------------- USER SUPPORT & FEEDBACK TICKETS -----------------
+
+// POST: Submit a new support inquiry with attachments (up to 10 MB each)
+app.post('/api/support/send', async (req, res) => {
+  try {
+    const { name, email, phone, topic, message, attachments, userUid } = req.body;
+    if (!email || !email.trim()) {
+      return res.status(400).json({ error: 'Пожалуйста, укажите ваш email для ответа' });
+    }
+    if (!message || !message.trim()) {
+      return res.status(400).json({ error: 'Пожалуйста, напишите текст вашего сообщения' });
+    }
+
+    // Validate attachments size limit (max 10 MB per file, max 25 MB total)
+    const processedAttachments = Array.isArray(attachments) ? attachments.slice(0, 10) : [];
+    for (const att of processedAttachments) {
+      if (att.size && att.size > 10 * 1024 * 1024) {
+        return res.status(400).json({ error: `Файл "${att.filename}" превышает допустимый размер 10 МБ.` });
+      }
+    }
+
+    const ticket = {
+      id: `ticket_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      name: name?.trim() || undefined,
+      email: email.trim(),
+      phone: phone?.trim() || undefined,
+      topic: topic?.trim() || 'Обращение в поддержку',
+      message: message.trim(),
+      attachments: processedAttachments,
+      userUid: userUid || undefined,
+      createdAt: new Date().toISOString(),
+      status: 'new' as const,
+    };
+
+    const sendResult = await sendSupportTicketEmail(ticket);
+
+    res.json({
+      success: true,
+      ticketId: ticket.id,
+      deliveredViaSmtp: sendResult.deliveredViaSmtp,
+      message: 'Ваше обращение успешно отправлено на santehpro.info@yandex.ru!',
+    });
+  } catch (err: any) {
+    console.error('[Support Ticket API Error]', err);
+    res.status(500).json({ error: err.message || 'Ошибка отправки обращения в поддержку' });
+  }
+});
+
+// GET: Retrieve all support tickets (for Admin Panel)
+app.get('/api/support/tickets', (_req, res) => {
+  try {
+    const tickets = getSupportTickets();
+    res.json(tickets);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET User Favorites
 app.get('/api/user/favorites', async (req, res) => {
   try {
@@ -4388,8 +4579,6 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 // ---------------- VITE MIDDLEWARE & SERVER START ----------------
 
 async function start() {
-  ensureCloudSqlProxy();
-
   // PWA Service Worker explicit endpoint to guarantee correct MIME type and scope
   app.get('/sw.js', (_req, res) => {
     res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
