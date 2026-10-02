@@ -239,13 +239,39 @@ function AppContent() {
       specialists.find((s) => {
         if (storedSpecialistId && s.id === storedSpecialistId) return true;
         if (s.userUid && s.userUid === currentUser.uid) return true;
-        if (s.email && currentUser.email && s.email.toLowerCase() === currentUser.email.toLowerCase()) return true;
+        if (s.email && currentUser.email && s.email.toLowerCase().trim() === currentUser.email.toLowerCase().trim()) return true;
         if (s.phone && currentUser.phone) {
           const cleanS = s.phone.replace(/\D/g, '');
           const cleanU = currentUser.phone.replace(/\D/g, '');
-          if (cleanS.length >= 10 && cleanS === cleanU) return true;
+          if (cleanS.length >= 10 && cleanU.length >= 10 && (cleanS === cleanU || cleanS.slice(-10) === cleanU.slice(-10))) return true;
         }
         if (currentUser.name && s.name && s.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase()) return true;
+
+        const curName = (currentUser.name || '').toLowerCase();
+        const curEmail = (currentUser.email || '').toLowerCase().trim();
+        const curPhone = (currentUser.phone || '').replace(/\D/g, '');
+        const isOwner =
+          curName.includes('достонджон') ||
+          curName.includes('туйчиев') ||
+          curEmail.includes('poshkent') ||
+          curEmail.includes('dostonjon') ||
+          curEmail.includes('sommoni') ||
+          curEmail.includes('santehpro.info') ||
+          curPhone.endsWith('9247889900') ||
+          currentUser.role === 'admin';
+
+        if (isOwner) {
+          const specName = (s.name || '').toLowerCase();
+          if (
+            specName.includes('достонджон') ||
+            specName.includes('туйчиев') ||
+            s.id === 'spec-1790212144464' ||
+            s.id === 'spec-dostonjon' ||
+            (s.phone && s.phone.replace(/\D/g, '').endsWith('9247889900'))
+          ) {
+            return true;
+          }
+        }
         return false;
       }) || (currentUser.role === 'specialist' ? specialists.find((s) => s.verified || s.status === 'approved') || null : null)
     );
@@ -741,9 +767,12 @@ function AppContent() {
   const totalPendingCount = totalPendingSpecialists + totalPendingServiceRequests + totalPendingQuestions;
 
   // Find linked specialist if currentUser is a master
-  // Find linked specialist if currentUser is a master (strict provider isolation)
   const userMasterSpecialist = currentUser
     ? specialists.find((s) => {
+        // 0. Manual link from localStorage if user picked it
+        const storedSpecialistId = typeof window !== 'undefined' ? localStorage.getItem('santehpro_master_specialist_id') : null;
+        if (storedSpecialistId && s.id === storedSpecialistId) return true;
+
         // 1. Direct matching by userUid (highest priority)
         if (s.userUid && currentUser.uid && s.userUid === currentUser.uid) {
           return true;
@@ -765,13 +794,29 @@ function AppContent() {
           }
         }
 
-        // 4. Super-admin auto-match (+79247889900 or poshkent79@gmail.com)
-        const currentEmail = currentUser.email?.toLowerCase().trim() || '';
-        const currentPhone = (currentUser.phone || '').replace(/\D/g, '');
-        const isSuperAdmin = currentEmail === 'poshkent79@gmail.com' || currentEmail === 'admin@santehpro.ru' || currentPhone.endsWith('9247889900');
-        if (isSuperAdmin) {
-          const cleanS = (s.phone || '').replace(/\D/g, '');
-          if (cleanS.endsWith('9247889900') || s.email?.toLowerCase().trim() === 'poshkent79@gmail.com' || s.email?.toLowerCase().trim() === 'santehpro.info@yandex.ru') {
+        // 4. Owner & founder auto-match (Достонджон Туйчиев, Находка, +79247889900, poshkent79@gmail.com, etc.)
+        const curName = (currentUser.name || '').toLowerCase();
+        const curEmail = (currentUser.email || '').toLowerCase().trim();
+        const curPhone = (currentUser.phone || '').replace(/\D/g, '');
+        const isOwner =
+          curName.includes('достонджон') ||
+          curName.includes('туйчиев') ||
+          curEmail.includes('poshkent') ||
+          curEmail.includes('dostonjon') ||
+          curEmail.includes('sommoni') ||
+          curEmail.includes('santehpro.info') ||
+          curPhone.endsWith('9247889900') ||
+          currentUser.role === 'admin';
+
+        if (isOwner) {
+          const specName = (s.name || '').toLowerCase();
+          if (
+            specName.includes('достонджон') ||
+            specName.includes('туйчиев') ||
+            s.id === 'spec-1790212144464' ||
+            s.id === 'spec-dostonjon' ||
+            (s.phone && s.phone.replace(/\D/g, '').endsWith('9247889900'))
+          ) {
             return true;
           }
         }
@@ -807,19 +852,12 @@ function AppContent() {
         const cached = localStorage.getItem('santehpro_cached_master_profile');
         if (cached) {
           const parsed = JSON.parse(cached);
-          const isCachedVk = Boolean(parsed.userUid && parsed.userUid.startsWith('vk_'));
-          const isCurrentVk = Boolean(currentUser.uid && currentUser.uid.startsWith('vk_'));
-          
-          // Strict isolation: only self-heal if the provider matches the current session
-          if (isCachedVk !== isCurrentVk) {
-            return;
-          }
-
           const cleanUserPhone = (currentUser.phone || '').replace(/\D/g, '');
           const cleanCachedPhone = (parsed.phone || '').replace(/\D/g, '');
 
           const isMatch = (cleanUserPhone && cleanCachedPhone && (cleanUserPhone === cleanCachedPhone || cleanUserPhone.endsWith(cleanCachedPhone.slice(-10)))) ||
                           (currentUser.email && parsed.email && currentUser.email.toLowerCase() === parsed.email.toLowerCase()) ||
+                          parsed.userUid === currentUser.uid ||
                           currentUser.role === 'specialist';
 
           if (isMatch) {

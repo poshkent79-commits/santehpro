@@ -47,7 +47,7 @@ export function getCachedSpecialists(): PlumbingSpecialist[] {
   } catch (err) {
     console.warn('Failed to read cached specialists from disk:', err);
   }
-  return [];
+  return INITIAL_SPECIALISTS;
 }
 
 export function saveCachedSpecialists(list: PlumbingSpecialist[]): void {

@@ -110,13 +110,6 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
     loginWithYandex,
   } = useAuth();
 
-  // Strict Provider Isolation: Identify current login provider
-  const isCurrentVk = Boolean(currentUser?.uid && currentUser.uid.startsWith('vk_'));
-  const isCurrentYandex = Boolean(
-    (currentUser?.uid && (currentUser.uid.startsWith('yandex_') || currentUser.uid.startsWith('usr-yandex'))) ||
-    (currentUser?.email && (currentUser.email.toLowerCase().endsWith('@yandex.ru') || currentUser.email.toLowerCase().endsWith('@ya.ru')))
-  );
-
   // Find linked specialist profile with robust multi-factor matching
   const userSpecialist = specialists.find((s) => {
     if (!currentUser) return false;
@@ -144,13 +137,29 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
       }
     }
 
-    // 4. Super-admin auto-match (+79247889900 or poshkent79@gmail.com)
-    const currentEmail = currentUser.email?.toLowerCase().trim() || '';
+    // 4. Owner & founder auto-match (Достонджон Туйчиев, Находка, +79247889900, poshkent79@gmail.com, sommoni@bk.ru, etc.)
+    const currentName = (currentUser.name || '').toLowerCase();
+    const currentEmail = (currentUser.email || '').toLowerCase().trim();
     const currentPhone = (currentUser.phone || '').replace(/\D/g, '');
-    const isSuperAdmin = currentEmail === 'poshkent79@gmail.com' || currentEmail === 'admin@santehpro.ru' || currentPhone.endsWith('9247889900');
-    if (isSuperAdmin) {
-      const cleanS = (s.phone || '').replace(/\D/g, '');
-      if (cleanS.endsWith('9247889900') || s.email?.toLowerCase().trim() === 'poshkent79@gmail.com' || s.email?.toLowerCase().trim() === 'santehpro.info@yandex.ru') {
+    const isOwnerUser =
+      currentName.includes('достонджон') ||
+      currentName.includes('туйчиев') ||
+      currentEmail.includes('poshkent') ||
+      currentEmail.includes('dostonjon') ||
+      currentEmail.includes('sommoni') ||
+      currentEmail.includes('santehpro.info') ||
+      currentPhone.endsWith('9247889900') ||
+      currentUser.role === 'admin';
+
+    if (isOwnerUser) {
+      const specName = (s.name || '').toLowerCase();
+      if (
+        specName.includes('достонджон') ||
+        specName.includes('туйчиев') ||
+        s.id === 'spec-1790212144464' ||
+        s.id === 'spec-dostonjon' ||
+        (s.phone && s.phone.replace(/\D/g, '').endsWith('9247889900'))
+      ) {
         return true;
       }
     }
@@ -168,19 +177,38 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
     return false;
   }) || null;
 
-  // Master profile is only present if userSpecialist belongs to this provider
+  // Master profile is present if userSpecialist is found
   const masterProfile: PlumbingSpecialist | null = userSpecialist;
+
+  const currentName = (currentUser?.name || '').toLowerCase();
+  const currentEmail = (currentUser?.email || '').toLowerCase().trim();
+  const currentPhone = (currentUser?.phone || '').replace(/\D/g, '');
+  const isOwnerUser = Boolean(
+    currentUser && (
+      currentName.includes('достонджон') ||
+      currentName.includes('туйчиев') ||
+      currentEmail.includes('poshkent') ||
+      currentEmail.includes('dostonjon') ||
+      currentEmail.includes('sommoni') ||
+      currentEmail.includes('santehpro.info') ||
+      currentPhone.endsWith('9247889900') ||
+      currentUser.role === 'admin'
+    )
+  );
 
   // "У мастеров, прошедших проверку, автоматически открывается личный кабинет"
   const isVerifiedMaster = Boolean(
     currentUser &&
-    masterProfile &&
-    (masterProfile.verified || masterProfile.status === 'approved')
+    (
+      isOwnerUser ||
+      currentUser.role === 'specialist' ||
+      (masterProfile && (masterProfile.verified || masterProfile.status === 'approved'))
+    )
   );
 
   const [activeTab, setActiveTab] = useState<'favorites' | 'requests' | 'profile' | 'master'>(() => {
     if (initialTab && initialTab !== 'purchases') return initialTab;
-    if (isVerifiedMaster && masterProfile) return 'master';
+    if (isOwnerUser || isVerifiedMaster || currentUser?.role === 'specialist') return 'master';
     return 'favorites';
   });
 
@@ -314,21 +342,21 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
     return isThisMaster && r.status !== 'completed' && r.status !== 'rejected' && !r.masterReply;
   }).length : 0;
 
-  // Automatically switch to 'master' tab if user requested it or if user is verified master without other initial tab
+  // Automatically switch to 'master' tab if user is a verified master or owner
   useEffect(() => {
-    if (initialTab === 'master' && (isVerifiedMaster || masterProfile)) {
+    if (initialTab === 'master' && (isVerifiedMaster || masterProfile || isOwnerUser)) {
       setActiveTab('master');
-    } else if (!initialTab && isVerifiedMaster) {
+    } else if (!initialTab && (isVerifiedMaster || isOwnerUser)) {
       setActiveTab('master');
     }
-  }, [initialTab, isVerifiedMaster, masterProfile]);
+  }, [initialTab, isVerifiedMaster, masterProfile, isOwnerUser]);
 
   // If activeTab is 'master' but current user has no specialist profile or verified access, redirect to 'favorites'
   useEffect(() => {
-    if (activeTab === 'master' && !isVerifiedMaster && !masterProfile && currentUser?.role !== 'admin') {
+    if (activeTab === 'master' && !isVerifiedMaster && !masterProfile && !isOwnerUser && currentUser?.role !== 'admin') {
       setActiveTab('favorites');
     }
-  }, [activeTab, isVerifiedMaster, masterProfile, currentUser]);
+  }, [activeTab, isVerifiedMaster, masterProfile, isOwnerUser, currentUser]);
 
   const filteredUserRequests = userRequests.filter((r) => {
     if (requestFilter === 'needs_review') {
@@ -981,7 +1009,7 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
       {/* Tabs Navigation */}
       <div className="flex items-center space-x-2 border-b border-slate-800 pb-2 overflow-x-auto">
         {/* Master's Cabinet Tab: moved to the very BEGINNING (position 1) for verified masters, specialists, or pending applicants */}
-        {(isVerifiedMaster || userSpecialist || currentUser?.role === 'specialist' || currentUser?.role === 'admin') && (
+        {(isVerifiedMaster || userSpecialist || currentUser?.role === 'specialist' || currentUser?.role === 'admin' || isOwnerUser) && (
           <button
             type="button"
             id="cabinet-master-tab-btn"
