@@ -169,16 +169,15 @@ export function generateRobokassaPaymentUrl(options: CreatePaymentOptions): { pa
     })),
   };
 
-  const receiptJson = JSON.stringify(receiptObj);
-  const receiptUrlEncoded = encodeURIComponent(receiptJson);
-
   // Sort shp_ parameters alphabetically
   const sortedShpKeys = Object.keys(shpParams).sort();
   const shpSignaturePart = sortedShpKeys.map((k) => `${k}=${shpParams[k]}`).join(':');
 
   // Signature calculation:
-  // Format with receipt: MerchantLogin:OutSum:InvId:Receipt:Pass1:shp_1=val1:shp_2=val2
-  const signatureRaw = `${config.merchantLogin}:${outSumFormatted}:${invId}:${receiptUrlEncoded}:${pass1}${shpSignaturePart ? `:${shpSignaturePart}` : ''}`;
+  // Standard Robokassa format: MD5(MerchantLogin:OutSum:InvId:Password1[:shp_1=val1:...])
+  // Note: When "Робочеки" (онлайн-касса) включена в личном кабинете Robokassa, Robokassa автоматически формирует
+  // фискальный чек из Description и OutSum. Ручная передача Receipt не требуется и вызывает ошибку 29 при несоответствии.
+  const signatureRaw = `${config.merchantLogin}:${outSumFormatted}:${invId}:${pass1}${shpSignaturePart ? `:${shpSignaturePart}` : ''}`;
   const signature = crypto.createHash('md5').update(signatureRaw).digest('hex');
 
   // Build query string for redirection
@@ -188,7 +187,6 @@ export function generateRobokassaPaymentUrl(options: CreatePaymentOptions): { pa
     InvId: String(invId),
     Description: options.description.slice(0, 100),
     SignatureValue: signature,
-    Receipt: receiptUrlEncoded,
   });
 
   if (options.email) {
