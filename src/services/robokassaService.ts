@@ -68,16 +68,23 @@ const DEFAULT_CONFIG: RobokassaConfig = {
 };
 
 export function getRobokassaConfig(): RobokassaConfig {
+  let cfg = { ...DEFAULT_CONFIG };
   try {
     if (fs.existsSync(CONFIG_FILE)) {
       const data = fs.readFileSync(CONFIG_FILE, 'utf-8');
       const parsed = JSON.parse(data);
-      return { ...DEFAULT_CONFIG, ...parsed };
+      cfg = { ...cfg, ...parsed };
     }
   } catch (err) {
     console.warn('Failed to read robokassa_config.json, using defaults:', err);
   }
-  return DEFAULT_CONFIG;
+
+  // Auto-heal: Fix capital 'I' vs lowercase 'l' in password #1
+  if (cfg.password1 === 'wrSA1jRIGW1PDSLri694' || !cfg.password1) {
+    cfg.password1 = 'wrSA1jRlGW1PDSLri694';
+  }
+
+  return cfg;
 }
 
 export function saveRobokassaConfig(config: Partial<RobokassaConfig>): RobokassaConfig {
