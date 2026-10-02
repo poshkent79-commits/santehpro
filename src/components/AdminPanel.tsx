@@ -80,6 +80,7 @@ import { CitySpecialistsWorkloadChart } from './admin/CitySpecialistsWorkloadCha
 import { SpecialistRejectionModal } from './admin/SpecialistRejectionModal';
 import { SpecialistApprovalModal } from './admin/SpecialistApprovalModal';
 import { BackupRecoveryTab } from './admin/BackupRecoveryTab';
+import { RobokassaSettingsTab } from './admin/RobokassaSettingsTab';
 import { compressImageFile } from '../utils/imageCompressor';
 import { useTimeWebSync } from '../services/timewebSyncClient';
 
@@ -125,7 +126,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   onSelectArticle,
   onOpenLoginModal,
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'requests' | 'articles' | 'files' | 'specialists' | 'questions' | 'users' | 'moderation' | 'smtp' | 'yandex' | 'timeweb' | 'backups'>('requests');
+  const [activeTab, setActiveTab] = useState<'overview' | 'requests' | 'articles' | 'files' | 'specialists' | 'questions' | 'users' | 'moderation' | 'smtp' | 'yandex' | 'timeweb' | 'backups' | 'robokassa'>('requests');
   
   // TimeWeb Cloud Live Sync
   const {
@@ -1401,6 +1402,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 <Archive className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
                 <span>Бэкапы и восстановление</span>
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              </button>
+
+              <button
+                onClick={() => setActiveTab('robokassa')}
+                className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shrink-0 whitespace-nowrap cursor-pointer ${
+                  activeTab === 'robokassa'
+                    ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-md shadow-blue-600/25'
+                    : 'text-blue-400 hover:text-white'
+                }`}
+              >
+                <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400" />
+                <span>Robokassa</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
               </button>
             </div>
           </div>
@@ -3185,6 +3199,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           onRefreshData={onRefreshSpecialists}
         />
       )}
+
+      {/* TAB: ROBOKASSA SETTINGS */}
+      {activeTab === 'robokassa' && <RobokassaSettingsTab />}
 
       {/* MODAL 1: ADD / EDIT SERVICE REQUEST */}
       {isRequestModalOpen && (
