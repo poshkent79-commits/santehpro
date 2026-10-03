@@ -175,8 +175,10 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
         }),
       });
       if (res.ok) {
-        setServicesSuccessMsg('Профиль, услуги, прайс-лист и контактные данные успешно сохранены и обновлены в каталоге специалистов!');
-        setTimeout(() => setServicesSuccessMsg(''), 5000);
+        const resData = await res.json();
+        setMasterStatus('pending');
+        setServicesSuccessMsg('Изменения успешно сохранены! Согласно правилам сервиса, обновленная анкета направлена на повторную модерацию администратору. До проверки профиль будет на подтверждении.');
+        setTimeout(() => setServicesSuccessMsg(''), 7000);
         onRefreshSpecialist?.();
       } else {
         const data = await res.json();
@@ -1026,6 +1028,16 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
             >
               Включить показ
             </button>
+          </div>
+        )}
+
+        {/* Pending Moderation Notice if Profile is Under Review */}
+        {masterStatus === 'pending' && (
+          <div className="mt-4 p-4 rounded-2xl bg-sky-500/15 border-2 border-sky-500/40 text-sky-200 text-xs sm:text-sm flex items-center gap-3">
+            <Clock className="w-5 h-5 text-sky-400 shrink-0" />
+            <div>
+              <strong>Анкета находится на повторной модерации:</strong> Ваши недавние изменения сохранены и переданы администратору на проверку. До момента подтверждения профиль скрыт от обычных посетителей в каталоге.
+            </div>
           </div>
         )}
 

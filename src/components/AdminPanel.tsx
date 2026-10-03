@@ -139,6 +139,30 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [cloudUsers, setCloudUsers] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [usersSearch, setUsersSearch] = useState('');
+  const [isCleaningDemo, setIsCleaningDemo] = useState(false);
+
+  const handleCleanDemoData = async () => {
+    if (!window.confirm('Очистить систему от всех тестовых/демо-заявок и демо-профилей мастеров, оставив только реальных специалистов и устранив дубликаты?')) {
+      return;
+    }
+    setIsCleaningDemo(true);
+    try {
+      const res = await fetch('/api/admin/clean-demo-data', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message || 'Система успешно очищена от демо-данных!');
+        onRefreshSpecialists();
+        onRefreshServiceRequests?.();
+        loadCloudUsers();
+      } else {
+        showToast(data.error || 'Ошибка очистки демо-данных', 'error');
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Ошибка связи с сервером', 'error');
+    } finally {
+      setIsCleaningDemo(false);
+    }
+  };
 
   const loadCloudUsers = async () => {
     setLoadingUsers(true);
@@ -371,6 +395,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         bio: specBio.trim(),
         services: servicesArr.length > 0 ? servicesArr : ['Установка сантехники', 'Ремонт разводки'],
         status: specStatus,
+        isAdminEdit: true,
       };
 
       let res;
@@ -1228,6 +1253,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               <span className="text-slate-400 font-mono text-[10px] hidden md:inline">({timeWebPingMs} мс)</span>
             </button>
 
+            {/* Clean Demo & Test Data Button */}
+            <button
+              type="button"
+              onClick={handleCleanDemoData}
+              disabled={isCleaningDemo}
+              className="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-bold flex items-center space-x-1.5 transition cursor-pointer shadow-sm hover:border-amber-400/50 disabled:opacity-50"
+              title="Очистить систему от демо-заявок, тестовых мастеров и устранить дубликаты"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden md:inline">{isCleaningDemo ? 'Очистка...' : 'Очистить демо'}</span>
+            </button>
+
             <button
               onClick={() => setIsAdmin(false)}
               className="px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-slate-800/90 hover:bg-rose-500/20 text-slate-300 hover:text-rose-300 hover:border-rose-500/40 text-xs font-semibold transition flex items-center space-x-1.5 border border-slate-700/80 shrink-0 cursor-pointer shadow-sm"
@@ -1336,8 +1373,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                <Database className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span>Cloud SQL ({cloudUsers.length})</span>
+                <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span>Пользователи ({cloudUsers.length})</span>
               </button>
 
               <button
@@ -2963,17 +3000,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center space-x-3.5">
                 <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0">
-                  <Database className="w-6 h-6" />
+                  <Users className="w-6 h-6" />
                 </div>
                 <div>
                   <div className="flex items-center space-x-2 flex-wrap gap-y-1">
-                    <h2 className="text-base font-bold text-white">База данных пользователей Cloud SQL (PostgreSQL)</h2>
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                      Только для администратора и разработчика
+                    <h2 className="text-base font-bold text-white">База данных пользователей сервера</h2>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      Автономное хранилище Timeweb
                     </span>
                   </div>
                   <p className="text-xs text-slate-400 mt-1">
-                    Все системные параметры учетных записей хранятся в реляционной базе данных и скрыты от обычных пользователей
+                    Все профили и системные параметры хранятся в защищённой базе данных вашего сервера. Внешние базы Google не используются.
                   </p>
                 </div>
               </div>

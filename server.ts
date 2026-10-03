@@ -182,8 +182,11 @@ let diagnosticSessionsStore: DiagnosticSession[] = [...INITIAL_DIAGNOSTIC_SESSIO
 getDbSpecialists()
   .then((dbSpecs) => {
     if (Array.isArray(dbSpecs) && dbSpecs.length > 0) {
-      specialistsStore = dbSpecs;
-      console.log(`[Specialists] Synced ${specialistsStore.length} specialists from DB.`);
+      // Filter out old demo mock specialists and deduplicate
+      specialistsStore = deduplicateSpecialistsList(
+        dbSpecs.filter(s => !['spec-2', 'spec-3', 'spec-4', 'spec-5'].includes(s.id))
+      );
+      console.log(`[Specialists] Synced ${specialistsStore.length} real specialists from DB.`);
     } else {
       specialistsStore = [...INITIAL_SPECIALISTS];
     }
@@ -193,11 +196,15 @@ getDbSpecialists()
     specialistsStore = [...INITIAL_SPECIALISTS];
   });
 
-// Asynchronously sync service requests from DB on startup
+// Asynchronously sync service requests from DB on startup (clearing demo/test calls)
 getDbServiceRequests()
   .then((dbReqs) => {
     if (Array.isArray(dbReqs)) {
-      serviceRequestsStore = dbReqs;
+      serviceRequestsStore = dbReqs.filter(r => 
+        !r.clientName?.toLowerCase().includes('тест') &&
+        !r.clientName?.toLowerCase().includes('демо') &&
+        !r.problemDescription?.toLowerCase().includes('тестовая')
+      );
       console.log(`[ServiceRequests] Synced ${serviceRequestsStore.length} real service requests from DB.`);
     }
   })
@@ -1594,27 +1601,72 @@ app.get('/api/timeweb/export', async (_req, res) => {
 });
 
 
+// Helper to deduplicate specialists: 1 master = strictly 1 card in UI
+function deduplicateSpecialistsList(list: PlumbingSpecialist[]): PlumbingSpecialist[] {
+  const seenIds = new Set<string>();
+  const seenUids = new Set<string>();
+  const seenPhones = new Set<string>();
+  const seenEmails = new Set<string>();
+  const result: PlumbingSpecialist[] = [];
+
+  for (const s of list) {
+    if (!s || !s.id || s.status === 'deleted') continue;
+
+    // Filter out old demo mock specialists
+    if (['spec-2', 'spec-3', 'spec-4', 'spec-5'].includes(s.id)) continue;
+
+    const cleanPhone = (s.phone || '').replace(/\D/g, '').slice(-10);
+    const cleanEmail = (s.email || '').trim().toLowerCase();
+    const uid = (s.userUid || '').trim();
+
+    // Check if duplicate
+    if (seenIds.has(s.id)) continue;
+    if (uid && seenUids.has(uid)) continue;
+    if (cleanPhone && cleanPhone.length === 10 && seenPhones.has(cleanPhone)) continue;
+    if (cleanEmail && seenEmails.has(cleanEmail)) continue;
+
+    // Record seen identifiers
+    seenIds.add(s.id);
+    if (uid) seenUids.add(uid);
+    if (cleanPhone && cleanPhone.length === 10) seenPhones.add(cleanPhone);
+    if (cleanEmail) seenEmails.add(cleanEmail);
+
+    result.push(s);
+  }
+  return result;
+}
+
 // GET Specialists (public filtered or admin all)
 app.get('/api/specialists', async (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   const city = req.query.city as string;
+  const isAdmin = req.query.admin === 'true';
 
   try {
     const all = await getDbSpecialists();
-    let result = (all && all.length > 0) ? all : [...INITIAL_SPECIALISTS];
+    let rawList = (all && all.length > 0) ? all : [...INITIAL_SPECIALISTS];
+
+    // Filter out deleted and deduplicate so each master has strictly 1 card
+    let uniqueList = deduplicateSpecialistsList(rawList);
+
+    // For public users (non-admin), ONLY return APPROVED specialists!
+    // Pending or rejected profiles undergo moderation and are hidden from public directory
+    if (!isAdmin) {
+      uniqueList = uniqueList.filter(s => s.status === 'approved');
+    }
 
     if (city && city !== 'Все города') {
       const cleanTarget = city.replace(/^г\.\s*/i, '').trim().toLowerCase();
-      result = result.filter(s => {
+      uniqueList = uniqueList.filter(s => {
         const cleanCity = s.city.replace(/^г\.\s*/i, '').trim().toLowerCase();
         return cleanCity === cleanTarget;
       });
     }
 
-    res.json(result);
+    res.json(uniqueList);
   } catch (error) {
     console.error('Error fetching specialists:', error);
-    res.json(INITIAL_SPECIALISTS);
+    res.json(INITIAL_SPECIALISTS.filter(s => s.status === 'approved'));
   }
 });
 
@@ -1874,20 +1926,57 @@ app.post('/api/specialists', async (req, res) => {
   }
 });
 
-// PUT Admin update specialist full profile
+// PUT Update specialist profile (with automatic re-moderation for master self-edits)
 app.put('/api/specialists/:id', async (req, res) => {
   const { id } = req.params;
+  const isAdminEdit = Boolean(req.body.isAdminEdit);
+
   try {
-    const updated = await updateDbSpecialist(id, req.body);
+    const payload = { ...req.body };
+    delete payload.isAdminEdit;
+
+    // If edited by the master (not admin), enforce mandatory re-moderation:
+    // profile status changes to 'pending' and is hidden from public catalog until approved
+    if (!isAdminEdit) {
+      payload.status = 'pending';
+      payload.verified = false;
+      payload.moderationComment = 'Анкета отредактирована мастером и ожидает повторной проверки администратором';
+      payload.appliedAt = new Date().toISOString().split('T')[0];
+    }
+
+    const updated = await updateDbSpecialist(id, payload);
     if (!updated) {
       return res.status(404).json({ error: 'Специалист не найден' });
     }
+
+    // Broadcast real-time events to all connected clients and admin panels
     broadcastRealtimeEvent({
       type: 'specialist:updated',
       data: updated,
     });
+    broadcastRealtimeEvent({
+      type: 'specialists:refresh',
+      data: { id: updated.id, status: updated.status },
+    });
+
     syncEntityToTimeWebCloud('specialists', 'update', id, updated).catch(() => {});
-    res.json(updated);
+
+    // If master updated profile, notify admin by email
+    if (!isAdminEdit) {
+      try {
+        await sendSpecialistModerationNotification(updated);
+      } catch (emailErr) {
+        console.warn('Failed to send re-moderation email notification:', emailErr);
+      }
+    }
+
+    res.json({
+      ...updated,
+      requiresModeration: !isAdminEdit,
+      message: !isAdminEdit
+        ? 'Изменения сохранены! Согласно правилам сервиса, анкета направлена на повторную модерацию администратору.'
+        : 'Профиль специалиста успешно обновлен администратором.',
+    });
   } catch (error) {
     console.error('Error updating specialist:', error);
     res.status(500).json({ error: 'Ошибка обновления данных специалиста' });
@@ -1951,6 +2040,10 @@ app.put('/api/specialists/:id/status', async (req, res) => {
       type: 'specialist:updated',
       data: updated,
     });
+    broadcastRealtimeEvent({
+      type: 'specialists:refresh',
+      data: { id: updated.id, status: updated.status },
+    });
     syncEntityToTimeWebCloud('specialists', 'status', id, updated).catch(() => {});
     res.json(updated);
   } catch (error) {
@@ -1990,6 +2083,43 @@ app.get('/api/specialists/deleted', async (_req, res) => {
   } catch (error) {
     console.error('Error fetching deleted specialists:', error);
     res.json([]);
+  }
+});
+
+// POST Clean Demo & Test Data (Admin Maintenance)
+app.post('/api/admin/clean-demo-data', async (_req, res) => {
+  try {
+    // 1. Clean and deduplicate specialists
+    const allSpecs = await getDbSpecialists();
+    const realSpecs = deduplicateSpecialistsList(
+      allSpecs.filter(s => !['spec-2', 'spec-3', 'spec-4', 'spec-5'].includes(s.id))
+    );
+    specialistsStore = realSpecs;
+    saveCachedSpecialists(realSpecs);
+
+    // 2. Clean service requests from test/demo calls
+    const allReqs = await getDbServiceRequests();
+    const realReqs = allReqs.filter(r => 
+      !r.clientName?.toLowerCase().includes('тест') &&
+      !r.clientName?.toLowerCase().includes('демо') &&
+      !r.problemDescription?.toLowerCase().includes('тестовая') &&
+      !r.problemDescription?.toLowerCase().includes('демо')
+    );
+    serviceRequestsStore = realReqs;
+
+    // 3. Broadcast real-time refresh to all connected interfaces
+    broadcastRealtimeEvent({ type: 'specialists:refresh', data: { count: realSpecs.length } });
+    broadcastRealtimeEvent({ type: 'requests:refresh', data: { count: realReqs.length } });
+
+    res.json({
+      success: true,
+      message: 'Система успешно очищена от демо-заявок, тестовых профилей и дубликатов специалистов.',
+      activeSpecialistsCount: realSpecs.length,
+      activeRequestsCount: realReqs.length,
+    });
+  } catch (error: any) {
+    console.error('Error cleaning demo data:', error);
+    res.status(500).json({ error: error.message || 'Ошибка очистки демо-данных' });
   }
 });
 
