@@ -1323,8 +1323,8 @@ function AppContent() {
           {/* Header Brand and Description */}
           <div className="flex flex-col items-center justify-center text-center space-y-2">
             <div className="flex items-center space-x-2.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-red-500 to-blue-600 flex items-center justify-center text-white font-bold shadow-lg shadow-blue-950/40">
-                <Wrench className="w-5 h-5" />
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-rose-500 via-red-500 to-indigo-500 flex items-center justify-center text-white font-bold shadow-md shadow-rose-500/35 border border-white/20">
+                <Wrench className="w-5 h-5 text-white stroke-[2.2]" />
               </div>
               <span className="text-lg font-black tracking-tight">
                 <span className="text-red-500">Сантех</span>
@@ -1342,11 +1342,12 @@ function AppContent() {
             <button
               type="button"
               onClick={() => setIsDonationModalOpen(true)}
-              className="px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 active:scale-95 text-rose-300 hover:text-white border border-rose-500/30 hover:border-rose-400 text-xs font-bold flex items-center space-x-2 transition shadow-sm cursor-pointer"
-              title="Поддержать проект СантехПро"
+              className="relative group flex items-center gap-1.5 px-4 py-2 rounded-full bg-gradient-to-r from-rose-500 via-pink-500 to-amber-500 text-white font-extrabold text-xs shadow-md shadow-rose-500/30 hover:shadow-rose-500/50 border border-rose-400/40 hover:scale-105 active:scale-95 transition cursor-pointer"
+              title="Поддержать проект СантехПро (добровольный взнос)"
             >
-              <Heart className="w-3.5 h-3.5 fill-rose-400 text-rose-400" />
+              <Heart className="w-3.5 h-3.5 fill-white text-white shrink-0" />
               <span>Поддержать проект</span>
+              <span className="text-rose-100 text-[10px] font-semibold bg-white/20 px-1.5 py-0.5 rounded-full">• Клуб</span>
             </button>
 
             <button

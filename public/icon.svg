@@ -1,112 +1,34 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <!-- Background Gradient: Deep Luxury Navy -->
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#142036" />
-      <stop offset="50%" stop-color="#0e1726" />
-      <stop offset="100%" stop-color="#080e18" />
+    <!-- Signature Rose-Red to Indigo Gradient -->
+    <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f43f5e" />
+      <stop offset="40%" stop-color="#ef4444" />
+      <stop offset="100%" stop-color="#6366f1" />
     </linearGradient>
 
-    <!-- Squircle clip path -->
-    <clipPath id="squircleClip">
-      <rect x="0" y="0" width="512" height="512" rx="112" ry="112" />
-    </clipPath>
-
-    <!-- Subtle soft drop shadow -->
-    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="130%">
-      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.6" />
+    <!-- Subtle soft shadow for the wrench -->
+    <filter id="wrenchGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000000" flood-opacity="0.35" />
     </filter>
   </defs>
 
-  <!-- Background Base with rounded squircle -->
-  <g clip-path="url(#squircleClip)">
-    <rect width="512" height="512" fill="url(#bgGrad)" />
-    
-    <!-- Thin elegant border -->
-    <rect x="1.5" y="1.5" width="509" height="509" rx="110" fill="none" stroke="#ffffff" stroke-opacity="0.08" stroke-width="2" />
+  <!-- Rounded Squircle Background (matches rounded-xl / Android squircle) -->
+  <rect width="512" height="512" rx="115" ry="115" fill="url(#brandGrad)" />
 
-    <!-- EMBLEM: Stylized Wrench embracing House with 4 Windows -->
-    <g transform="translate(186, 70)" filter="url(#softShadow)">
-      <!-- House silhouette (Right side) in Coral-Red -->
-      <path d="M 45 10 
-               L 115 72 
-               L 100 85 
-               L 100 135 
-               L 55 135 
-               L 55 120 
-               L 85 120 
-               L 85 80 
-               L 45 44 
-               L 20 67
-               L 5 53 Z" 
-            fill="#ee3b3b" />
-      
-      <!-- Chimney on roof -->
-      <rect x="80" y="24" width="16" height="32" rx="2" fill="#ee3b3b" />
+  <!-- Translucent White Border (border border-white/20) -->
+  <rect x="3" y="3" width="506" height="506" rx="112" ry="112" fill="none" stroke="#ffffff" stroke-opacity="0.25" stroke-width="6" />
 
-      <!-- 4 Window Panes in House -->
-      <rect x="62" y="70" width="10" height="10" rx="1.5" fill="#fca5a5" />
-      <rect x="76" y="70" width="10" height="10" rx="1.5" fill="#fca5a5" />
-      <rect x="62" y="84" width="10" height="10" rx="1.5" fill="#fca5a5" />
-      <rect x="76" y="84" width="10" height="10" rx="1.5" fill="#fca5a5" />
-
-      <!-- Wrench head and handle in Steel-Cyan embracing house (Left side) -->
-      <path d="M 12 35 
-               C 12 15, 32 0, 52 5 
-               C 42 16, 42 32, 54 40
-               C 40 48, 28 62, 35 78
-               L 52 98
-               C 56 102, 54 110, 48 114
-               L 28 128
-               C 22 132, 14 130, 10 124
-               L -5 104
-               C -9 98, -8 90, -2 84
-               L 8 74
-               C 0 62, 2 48, 12 35 Z" 
-            fill="#38bdf8" />
-      
-      <!-- Wrench inner jaw cutout -->
-      <path d="M 24 22 C 18 30, 20 42, 28 48 C 34 38, 32 26, 24 22 Z" fill="#0e1726" />
-    </g>
-
-    <!-- MAIN TITLE: САНТЕХ (Clean Red) -->
-    <g filter="url(#softShadow)">
-      <text x="256" y="278" 
-            text-anchor="middle" 
-            font-family="system-ui, -apple-system, 'SF Pro Display', Roboto, 'Segoe UI', Arial, sans-serif" 
-            font-size="82" 
-            font-weight="900" 
-            letter-spacing="2" 
-            fill="#ee3838">САНТЕХ</text>
-    </g>
-
-    <!-- MAIN TITLE: ПРО (Clean Blue) -->
-    <g filter="url(#softShadow)">
-      <text x="256" y="372" 
-            text-anchor="middle" 
-            font-family="system-ui, -apple-system, 'SF Pro Display', Roboto, 'Segoe UI', Arial, sans-serif" 
-            font-size="94" 
-            font-weight="900" 
-            letter-spacing="4" 
-            fill="#3b82f6">ПРО</text>
-    </g>
-
-    <!-- SUBTITLE: Твой карманный помощник по сантехнике (Crisp White) -->
-    <g filter="url(#softShadow)">
-      <text x="256" y="424" 
-            text-anchor="middle" 
-            font-family="system-ui, -apple-system, 'SF Pro Text', Roboto, 'Segoe UI', Arial, sans-serif" 
-            font-size="21" 
-            font-weight="700" 
-            letter-spacing="0.5" 
-            fill="#ffffff">Твой карманный</text>
-      <text x="256" y="454" 
-            text-anchor="middle" 
-            font-family="system-ui, -apple-system, 'SF Pro Text', Roboto, 'Segoe UI', Arial, sans-serif" 
-            font-size="21" 
-            font-weight="700" 
-            letter-spacing="0.5" 
-            fill="#ffffff">помощник по сантехнике</text>
-    </g>
+  <!-- Centered Lucide Wrench with stroke-width 2.2 and rounded stroke linecap/linejoin -->
+  <!-- 24x24 scaled by 13x (width 312, height 312, translated to cx 256, cy 256) -->
+  <g transform="translate(100, 100) scale(13)" filter="url(#wrenchGlow)">
+    <path
+      d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z"
+      fill="none"
+      stroke="#ffffff"
+      stroke-width="2.2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
   </g>
 </svg>

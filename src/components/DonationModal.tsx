@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   Heart,
-  Sparkles,
+  Wrench,
   CreditCard,
   Copy,
   Check,
@@ -311,7 +311,9 @@ export const DonationModal: React.FC<DonationModalProps> = ({
           {/* Manifesto Box */}
           <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2.5 text-xs sm:text-sm">
             <div className="flex items-center space-x-2 text-amber-400 font-bold">
-              <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+              <div className="w-5 h-5 rounded-md bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                <Wrench className="w-3.5 h-3.5" />
+              </div>
               <span>Польза для клиентов, заказы и расчёты для мастеров</span>
             </div>
             <p className="text-slate-300 leading-relaxed text-[12px] sm:text-[13px]">

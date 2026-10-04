@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, UserPlus, LogIn, X } from 'lucide-react';
+import { Wrench, UserPlus, LogIn, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 interface RegistrationPromptBannerProps {
@@ -24,10 +24,10 @@ export const RegistrationPromptBanner: React.FC<RegistrationPromptBannerProps> =
   return (
     <div className="mb-4 p-2.5 sm:p-3 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-sm relative overflow-hidden animate-in fade-in duration-200">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 relative z-10">
-        {/* Left: Sparkles + Concise Text */}
+        {/* Left: Plumbing Wrench + Concise Text */}
         <div className="flex items-center space-x-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center shrink-0 text-cyan-400">
-            <Sparkles className="w-4 h-4" />
+          <div className="w-8 h-8 rounded-xl bg-cyan-500/15 border border-cyan-500/30 shadow-xs flex items-center justify-center shrink-0 text-cyan-400">
+            <Wrench className="w-4 h-4" />
           </div>
 
           <div className="min-w-0">

@@ -36,7 +36,12 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
         body: JSON.stringify({ password: password.trim() }),
       });
 
-      const data = await res.json().catch(() => ({}));
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        data = {};
+      }
 
       if (res.ok && data.success) {
         if (data.token) {
@@ -48,6 +53,8 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
         setPassword('');
         onLoginSuccess();
         onClose();
+      } else if (res.status >= 500) {
+        setError(`Сервер временно недоступен (код ${res.status} Bad Gateway). Пожалуйста, запустите команду "pm2 restart all" в консоли TimeWeb.`);
       } else {
         setError(data.error || 'Неверный пароль администратора!');
       }

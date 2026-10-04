@@ -4,7 +4,14 @@ if (typeof dns.setDefaultResultOrder === 'function') {
 }
 
 import express from 'express';
-import compression from 'compression';
+let compressionMiddleware: any = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const comp = require('compression');
+  compressionMiddleware = comp?.default || comp;
+} catch {
+  // compression is optional - Nginx already compresses responses
+}
 import http from 'http';
 import path from 'path';
 import fs from 'fs';
@@ -98,18 +105,20 @@ const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 // Enable gzip/deflate compression for production and API routes, avoiding interference with Vite dev server module streaming
-app.use((req, res, next) => {
-  if (process.env.NODE_ENV !== 'production' && !req.path.startsWith('/api')) {
-    return next();
-  }
-  return compression({
-    threshold: 1024, // Only compress responses larger than 1KB
-    filter: (req, res) => {
-      if (req.headers['x-no-compression']) return false;
-      return compression.filter(req, res);
+if (compressionMiddleware) {
+  app.use((req, res, next) => {
+    if (process.env.NODE_ENV !== 'production' && !req.path.startsWith('/api')) {
+      return next();
     }
-  })(req, res, next);
-});
+    return compressionMiddleware({
+      threshold: 1024, // Only compress responses larger than 1KB
+      filter: (req: any, res: any) => {
+        if (req.headers['x-no-compression']) return false;
+        return compressionMiddleware.filter ? compressionMiddleware.filter(req, res) : true;
+      }
+    })(req, res, next);
+  });
+}
 
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
