@@ -31,48 +31,17 @@ const SmallAppLogo: React.FC<{ size?: 'sm' | 'md' | 'lg' }> = ({ size = 'md' }) 
   const isLg = size === 'lg';
 
   const containerClasses = isSm
-    ? 'w-10 h-10 rounded-xl p-1'
+    ? 'w-10 h-10 rounded-xl'
     : isLg
-    ? 'w-14 h-14 rounded-2xl p-1.5'
-    : 'w-12 h-12 rounded-2xl p-1';
+    ? 'w-14 h-14 rounded-2xl'
+    : 'w-12 h-12 rounded-2xl';
 
   return (
-    <div
-      className={`${containerClasses} bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 border border-slate-700/80 shadow-lg shadow-black/50 shrink-0 relative overflow-hidden flex flex-col justify-between select-none group`}
-    >
-      {/* Soft ambient glows */}
-      <div className="absolute -top-3 -right-3 w-8 h-8 bg-blue-500/20 rounded-full blur-md pointer-events-none" />
-      <div className="absolute -bottom-3 -left-3 w-8 h-8 bg-red-500/20 rounded-full blur-md pointer-events-none" />
-
-      {/* Top row: Mini wrench badge + "Сантех" on top */}
-      <div className="flex items-center space-x-1 relative z-10">
-        <div
-          className={`${
-            isSm ? 'w-3.5 h-3.5 rounded-md' : 'w-4 h-4 rounded-md'
-          } bg-gradient-to-br from-red-500 to-blue-600 flex items-center justify-center text-white shrink-0 shadow-xs`}
-        >
-          <Wrench className={`${isSm ? 'w-2 h-2' : 'w-2.5 h-2.5'} text-white`} />
-        </div>
-        <span
-          className={`${
-            isSm ? 'text-[10px]' : isLg ? 'text-xs' : 'text-[11px]'
-          } font-black text-red-500 leading-none tracking-tight drop-shadow-sm`}
-        >
-          Сантех
-        </span>
-      </div>
-
-      {/* Bottom row: "Про" shifted down and a bit to the right */}
-      <div className="flex justify-end relative z-10 pr-0.5">
-        <span
-          className={`${
-            isSm ? 'text-[9px]' : isLg ? 'text-[11px]' : 'text-[10px]'
-          } font-black text-blue-500 leading-none tracking-wider uppercase drop-shadow-sm`}
-        >
-          Про
-        </span>
-      </div>
-    </div>
+    <img
+      src="/icon.svg"
+      alt="СантехПро"
+      className={`${containerClasses} object-contain shadow-md shadow-black/50 border border-slate-700/80 shrink-0 select-none bg-slate-950`}
+    />
   );
 };
 
