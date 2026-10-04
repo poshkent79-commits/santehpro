@@ -18,9 +18,7 @@ import {
   ChevronUp,
   Info,
   FileDown,
-  Loader2,
-  Share2,
-  Send
+  Loader2
 } from 'lucide-react';
 import { SavedEstimate } from '../types';
 import { downloadUnderfloorHeatingPdf } from '../utils/pdfGenerator';
@@ -53,11 +51,9 @@ export const UnderfloorHeatingCalculator: React.FC<UnderfloorHeatingCalculatorPr
   const [cabinetType, setCabinetType] = useState<'built_in' | 'wall_mounted'>('built_in');
   const [includeMixingUnit, setIncludeMixingUnit] = useState<boolean>(true);
   const [includeScreedAdditives, setIncludeScreedAdditives] = useState<boolean>(true);
-  const [includeLabor, setIncludeLabor] = useState<boolean>(false); // По умолчанию только материалы
-  const [laborCalcType, setLaborCalcType] = useState<'contract_sum' | 'per_m2'>('contract_sum');
-  const [customContractLabor, setCustomContractLabor] = useState<number>(130000); // 130 000 ₽ по умолчанию
+  const [includeLabor, setIncludeLabor] = useState<boolean>(true);
   const [laborTier, setLaborTier] = useState<'economy' | 'standard' | 'premium' | 'custom'>('standard');
-  const [customLaborRate, setCustomLaborRate] = useState<number>(1500);
+  const [customLaborRate, setCustomLaborRate] = useState<number>(850);
   const [includeScreedPouring, setIncludeScreedPouring] = useState<boolean>(false);
   const [isLaborExplanationOpen, setIsLaborExplanationOpen] = useState<boolean>(true);
 
@@ -448,9 +444,9 @@ export const UnderfloorHeatingCalculator: React.FC<UnderfloorHeatingCalculatorPr
   }, [activeSpecification]);
 
   const effectiveLaborRatePerM2 = useMemo(() => {
-    if (laborTier === 'economy') return 1100;
-    if (laborTier === 'standard') return 1500;
-    if (laborTier === 'premium') return 2100;
+    if (laborTier === 'economy') return 650;
+    if (laborTier === 'standard') return 850;
+    if (laborTier === 'premium') return 1250;
     return customLaborRate;
   }, [laborTier, customLaborRate]);
 
@@ -460,20 +456,20 @@ export const UnderfloorHeatingCalculator: React.FC<UnderfloorHeatingCalculatorPr
 
   const laborOperationsBreakdown = useMemo(() => {
     if (floorType === 'water') {
-      const prepAndInsulation = Math.round(totalGrossArea * 300);
-      const pipeLaying = Math.round(totalGrossArea * (effectiveLaborRatePerM2 - 300 - 200));
-      const collectorAndTesting = Math.round(totalGrossArea * 200 + 12000);
+      const prepAndInsulation = Math.round(totalGrossArea * 250);
+      const pipeLaying = Math.round(totalGrossArea * (effectiveLaborRatePerM2 - 250 - 150));
+      const collectorAndTesting = Math.round(totalGrossArea * 150 + 6500);
       return [
         {
           name: 'Подготовка основания, монтаж демпферной ленты и теплоизоляции / матов',
           volume: `${totalGrossArea} м²`,
-          unitRate: '300 ₽/м²',
+          unitRate: '250 ₽/м²',
           cost: prepAndInsulation,
         },
         {
           name: `Раскладка и надежная фиксация греющей трубы (улитка/змейка, ${totalPipesLength} м)`,
           volume: `${totalGrossArea} м²`,
-          unitRate: `${Math.max(400, effectiveLaborRatePerM2 - 500)} ₽/м²`,
+          unitRate: `${effectiveLaborRatePerM2 - 400} ₽/м²`,
           cost: pipeLaying,
         },
         {
@@ -495,7 +491,7 @@ export const UnderfloorHeatingCalculator: React.FC<UnderfloorHeatingCalculatorPr
       ];
     } else {
       const matLaying = Math.round(totalNetArea * effectiveLaborRatePerM2);
-      const thermostatWiring = rooms.length * 2000;
+      const thermostatWiring = rooms.length * 1500;
       return [
         {
           name: `Раскладка и фиксация нагревательного мата/кабеля (${totalNetArea} м²)`,
@@ -506,7 +502,7 @@ export const UnderfloorHeatingCalculator: React.FC<UnderfloorHeatingCalculatorPr
         {
           name: `Установка датчиков температуры в гофротрубке и подключение ${rooms.length} терморегуляторов`,
           volume: `${rooms.length} шт`,
-          unitRate: '2 000 ₽/шт',
+          unitRate: '1 500 ₽/шт',
           cost: thermostatWiring,
         },
       ];
@@ -515,15 +511,12 @@ export const UnderfloorHeatingCalculator: React.FC<UnderfloorHeatingCalculatorPr
 
   const laborCost = useMemo(() => {
     if (!includeLabor) return 0;
-    if (laborCalcType === 'contract_sum') {
-      return customContractLabor + screedLaborCost;
-    }
     if (floorType === 'water') {
-      return Math.round(totalGrossArea * effectiveLaborRatePerM2 + 12000 + screedLaborCost);
+      return Math.round(totalGrossArea * effectiveLaborRatePerM2 + 6500 + screedLaborCost);
     } else {
-      return Math.round(totalNetArea * effectiveLaborRatePerM2 + rooms.length * 2000);
+      return Math.round(totalNetArea * effectiveLaborRatePerM2 + rooms.length * 1500);
     }
-  }, [includeLabor, laborCalcType, customContractLabor, floorType, totalGrossArea, totalNetArea, effectiveLaborRatePerM2, screedLaborCost, rooms.length]);
+  }, [includeLabor, floorType, totalGrossArea, totalNetArea, effectiveLaborRatePerM2, screedLaborCost, rooms.length]);
 
   const grandTotal = totalMaterialsCost + laborCost;
 
@@ -606,33 +599,6 @@ export const UnderfloorHeatingCalculator: React.FC<UnderfloorHeatingCalculatorPr
       setTimeout(() => setCopied(false), 2500);
       showToast('Спецификация тёплого пола скопирована!');
     });
-  };
-
-  const handleShareWhatsApp = () => {
-    let msg = `Здравствуйте! Направляю вам расчёт сметы тёплого пола:\n`;
-    msg += `• Тип: ${floorType === 'water' ? 'Водяной тёплый пол' : 'Электрический тёплый пол'}\n`;
-    msg += `• Общая площадь: ${totalGrossArea} м² (чистый обогрев: ${totalNetArea} м², комнат: ${rooms.length})\n`;
-    if (floorType === 'water') {
-      msg += `• Контуров: ${totalLoopsCount} шт, метраж трубы: ${totalPipesLength} м\n`;
-    }
-    msg += `• Материалы и оборудование: ${totalMaterialsCost.toLocaleString('ru-RU')} ₽\n`;
-    if (includeLabor) {
-      msg += `• Монтажные работы под ключ: ${laborCost.toLocaleString('ru-RU')} ₽\n`;
-    }
-    msg += `• ИТОГО ПО СМЕТЕ: ${grandTotal.toLocaleString('ru-RU')} ₽\n\n`;
-    msg += `Сформировано сервисом «СантехПро».`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
-  };
-
-  const handleShareTelegram = () => {
-    let msg = `Смета тёплого пола (${floorType === 'water' ? 'водяной' : 'электрический'}):\n`;
-    msg += `Площадь: ${totalGrossArea} м² (${rooms.length} комн.)\n`;
-    msg += `Материалы: ${totalMaterialsCost.toLocaleString('ru-RU')} ₽\n`;
-    if (includeLabor) {
-      msg += `Монтаж: ${laborCost.toLocaleString('ru-RU')} ₽\n`;
-    }
-    msg += `ИТОГО: ${grandTotal.toLocaleString('ru-RU')} ₽`;
-    window.open(`https://t.me/share/url?url=${encodeURIComponent(window.location.origin)}&text=${encodeURIComponent(msg)}`, '_blank');
   };
 
   const handlePrint = () => {
@@ -1122,84 +1088,12 @@ export const UnderfloorHeatingCalculator: React.FC<UnderfloorHeatingCalculatorPr
 
             {includeLabor && (
               <div className="space-y-4 animate-in fade-in duration-200">
-                {/* Method selector tabs */}
-                <div className="flex p-1 bg-slate-950 rounded-2xl border border-slate-800 mb-3">
-                  <button
-                    type="button"
-                    onClick={() => setLaborCalcType('contract_sum')}
-                    className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center space-x-1.5 ${
-                      laborCalcType === 'contract_sum'
-                        ? 'bg-amber-500 text-slate-950 font-black shadow-md'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <span>✍️ Договорная цена за объект</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLaborCalcType('per_m2')}
-                    className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center space-x-1.5 ${
-                      laborCalcType === 'per_m2'
-                        ? 'bg-amber-500 text-slate-950 font-black shadow-md'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <span>📐 По ставке за м²</span>
-                  </button>
-                </div>
-
-                {laborCalcType === 'contract_sum' ? (
-                  /* Option A: Fixed Contract Sum by Executor */
-                  <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-200">
-                        Стоимость монтажа под ключ за весь объём ({totalGrossArea} м²):
-                      </span>
-                      <span className="text-sm font-black text-amber-400">
-                        {customContractLabor.toLocaleString('ru-RU')} ₽
-                      </span>
-                    </div>
-
-                    <div className="flex items-center space-x-2 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 focus-within:border-amber-400">
-                      <input
-                        type="number"
-                        min="0"
-                        step="1000"
-                        placeholder="130000"
-                        value={customContractLabor === 0 ? '' : customContractLabor}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setCustomContractLabor(v === '' ? 0 : Math.max(0, parseInt(v, 10) || 0));
-                        }}
-                        className="w-full bg-transparent text-base text-white font-extrabold outline-none"
-                      />
-                      <span className="text-xs text-amber-400 font-bold">₽ за объект</span>
-                    </div>
-
-                    <div className="flex flex-wrap gap-1.5 pt-1">
-                      <span className="text-[10px] text-slate-500 self-center mr-1">Быстрый выбор:</span>
-                      {[70000, 100000, 130000, 160000, 200000].map((preset) => (
-                        <button
-                          key={preset}
-                          type="button"
-                          onClick={() => setCustomContractLabor(preset)}
-                          className={`text-[10px] px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ${
-                            customContractLabor === preset
-                              ? 'bg-amber-500 text-slate-950 font-black'
-                              : 'bg-slate-900 text-slate-300 hover:bg-slate-800'
-                          }`}
-                        >
-                          {(preset / 1000).toFixed(0)}k ₽
-                        </button>
-                      ))}
-                    </div>
+                {/* Tariff Selection Grid */}
+                <div>
+                  <div className="text-xs font-bold text-slate-300 mb-2 flex items-center justify-between">
+                    <span>Выберите тариф сложности работ:</span>
+                    <span className="text-amber-400 font-extrabold">{effectiveLaborRatePerM2} ₽/м²</span>
                   </div>
-                ) : (
-                  <div>
-                    <div className="text-xs font-bold text-slate-300 mb-2 flex items-center justify-between">
-                      <span>Выберите тариф сложности работ:</span>
-                      <span className="text-amber-400 font-extrabold">{effectiveLaborRatePerM2} ₽/м²</span>
-                    </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     <button
@@ -1213,10 +1107,10 @@ export const UnderfloorHeatingCalculator: React.FC<UnderfloorHeatingCalculatorPr
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-black text-white">⚡ Базовый</span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-bold">1 100 ₽/м²</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-bold">650 ₽/м²</span>
                       </div>
                       <p className="text-[10px] text-slate-400 mt-1 leading-snug">
-                        Монтаж на подготовленное ровное основание, шаг 150 мм
+                        Монтаж на подготовленное ровное основание, прямоугольные комнаты
                       </p>
                     </button>
 
@@ -1231,10 +1125,10 @@ export const UnderfloorHeatingCalculator: React.FC<UnderfloorHeatingCalculatorPr
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-black text-amber-300">⭐ Стандарт под ключ</span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold">1 500 ₽/м²</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold">850 ₽/м²</span>
                       </div>
                       <p className="text-[10px] text-slate-400 mt-1 leading-snug">
-                        Маты, демпфер, раскладка трубы, смесительный узел, опрессовка
+                        Маты, демпфер, раскладка трубы, навеска шкафа, опрессовка 6 бар
                       </p>
                     </button>
 
@@ -1249,10 +1143,10 @@ export const UnderfloorHeatingCalculator: React.FC<UnderfloorHeatingCalculatorPr
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-black text-white">🏆 Премиум / Сложный</span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-bold">2 100 ₽/м²</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-bold">1 250 ₽/м²</span>
                       </div>
                       <p className="text-[10px] text-slate-400 mt-1 leading-snug">
-                        Эркеры, шаг 100 мм, проход стен в гильзах, автоматика и сервоприводы
+                        Эркеры, шаг 100 мм, проход стен в гильзах, смесительный узел, сервоприводы
                       </p>
                     </button>
                   </div>
@@ -1293,11 +1187,9 @@ export const UnderfloorHeatingCalculator: React.FC<UnderfloorHeatingCalculatorPr
                         }}
                         className="w-full accent-amber-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg"
                       />
-                      <span className="text-[10px] text-slate-500">3 500 ₽</span>
+                      <span className="text-[10px] text-slate-500">2000 ₽</span>
                     </div>
                   </div>
-                </div>
-              )}
 
                   {/* Screed Addon Checkbox */}
                   {floorType === 'water' && (
@@ -1323,6 +1215,7 @@ export const UnderfloorHeatingCalculator: React.FC<UnderfloorHeatingCalculatorPr
                       </span>
                     </div>
                   )}
+                </div>
 
                 {/* Operations Breakdown Table */}
                 <div className="p-3.5 rounded-2xl bg-slate-950/90 border border-slate-800 space-y-2">
@@ -1614,25 +1507,7 @@ export const UnderfloorHeatingCalculator: React.FC<UnderfloorHeatingCalculatorPr
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 sm:p-5 border-t border-slate-800 bg-slate-950 flex flex-wrap gap-2 justify-end">
-              <button
-                type="button"
-                onClick={handleShareWhatsApp}
-                className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center space-x-1.5 transition cursor-pointer shadow-md"
-                title="Отправить смету заказчику в WhatsApp"
-              >
-                <Share2 className="w-3.5 h-3.5" />
-                <span>WhatsApp</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleShareTelegram}
-                className="px-3.5 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs flex items-center space-x-1.5 transition cursor-pointer shadow-md"
-                title="Отправить смету заказчику в Telegram"
-              >
-                <Send className="w-3.5 h-3.5" />
-                <span>Telegram</span>
-              </button>
+            <div className="p-4 sm:p-5 border-t border-slate-800 bg-slate-950 flex flex-wrap gap-2.5 justify-end">
               <button
                 type="button"
                 disabled={isGeneratingPdf}
@@ -1654,15 +1529,15 @@ export const UnderfloorHeatingCalculator: React.FC<UnderfloorHeatingCalculatorPr
               <button
                 type="button"
                 onClick={handleDownloadTxt}
-                className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center space-x-1.5 transition cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center space-x-1.5 transition cursor-pointer"
               >
                 <FileText className="w-3.5 h-3.5" />
-                <span>TXT</span>
+                <span>Скачать TXT</span>
               </button>
               <button
                 type="button"
                 onClick={handlePrint}
-                className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center space-x-1.5 transition cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center space-x-1.5 transition cursor-pointer"
               >
                 <Printer className="w-3.5 h-3.5" />
                 <span>Печать</span>
@@ -1670,7 +1545,7 @@ export const UnderfloorHeatingCalculator: React.FC<UnderfloorHeatingCalculatorPr
               <button
                 type="button"
                 onClick={handleSaveToEstimates}
-                className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold text-xs flex items-center space-x-1.5 transition cursor-pointer border border-slate-700"
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold text-xs flex items-center space-x-1.5 transition cursor-pointer border border-slate-700"
               >
                 <Save className="w-3.5 h-3.5" />
                 <span>В сметы</span>
