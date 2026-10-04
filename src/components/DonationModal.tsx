@@ -34,40 +34,61 @@ const PRESET_AMOUNTS = [
 ];
 
 /**
- * Authentic Russian SBP (Система быстрых платежей) emblem matching Screenshot 1
+ * Authentic Russian SBP (Система быстрых платежей) full official vector logo
+ * featuring the exact 8-color geometric triangles and official 'сбп' typography
  */
-const SbpLogo: React.FC<{ className?: string }> = ({ className = 'w-7 h-7' }) => (
+const SbpFullLogo: React.FC<{ className?: string; textColor?: string }> = ({
+  className = 'h-4 w-auto',
+  textColor = '#ffffff',
+}) => (
   <svg
-    viewBox="0 0 100 100"
+    viewBox="0 0 215 120"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
     className={className}
     role="img"
-    aria-label="Логотип СБП"
+    aria-label="СБП — Система быстрых платежей"
   >
-    {/* Left arrow: purple / violet */}
-    <polygon points="6,50 18,25 35,46" fill="#4B3F8A" />
-    <polygon points="6,50 18,75 35,54" fill="#882C7C" />
+    {/* Official 8-color SBP dynamic geometric triangles */}
+    <path d="M0 26.12l14.532 25.975v15.844L.017 93.863 0 26.12z" fill="#5B57A2" />
+    <path d="M55.797 42.643l13.617-8.346 27.868-.026-41.485 25.414V42.643z" fill="#D90751" />
+    <path d="M55.72 25.967l.077 34.39-14.566-8.95V0l14.49 25.967z" fill="#FAB718" />
+    <path d="M97.282 34.271l-27.869.026-13.693-8.33L41.231 0l56.05 34.271z" fill="#ED6F26" />
+    <path d="M55.797 94.007V77.322l-14.566-8.78.008 51.465 14.558-26z" fill="#63B22F" />
+    <path d="M69.38 85.737L14.531 52.095 0 26.12l97.282 59.617h-27.902z" fill="#1487C9" />
+    <path d="M41.24 120l14.556-25.993 13.583-8.27 27.903-.02-56.042 34.283z" fill="#017F36" />
+    <path d="M.017 93.863l41.333-25.32-13.896-8.526-12.923 7.876v-15.798z" fill="#984995" />
 
-    {/* Top vertical arrow: gold-yellow / orange */}
-    <polygon points="50,5 36,28 50,49" fill="#FAB614" />
-    <polygon points="50,5 68,25 50,33" fill="#F47B20" />
-
-    {/* Top-right arrow: red-orange / crimson */}
-    <polygon points="95,33 68,25 50,33" fill="#ED5729" />
-    <polygon points="95,33 68,44 50,33" fill="#D3254B" />
-
-    {/* Interlocking central diagonal ribbon: cyan / sky-blue */}
-    <polygon points="18,25 95,71 78,81 6,35" fill="#00A2E2" />
-    <polygon points="35,46 95,71 78,81 20,56" fill="#0077B6" />
-
-    {/* Bottom vertical arrow: lime green / forest green */}
-    <polygon points="50,95 36,72 50,51" fill="#78BE20" />
-    <polygon points="50,95 68,75 50,67" fill="#009A44" />
-
-    {/* Bottom-right teal facet */}
-    <polygon points="95,71 68,75 50,67" fill="#007A3D" />
+    {/* Letter 'с' */}
+    <path
+      d="m 128.81762,53.769692 c 0,0 -2.474,1.426 -6.169,1.696 -4.248,0.126 -8.033,-2.557 -8.033,-7.324 0,-4.65 3.34,-7.315 7.926,-7.315 2.812,0 6.532,1.949 6.532,1.949 0,0 2.722,-4.995 4.132,-7.493 -2.582,-1.957 -6.021,-3.03 -10.021,-3.03 -10.095,0 -17.914,6.582 -17.914,15.83 0,9.366 7.349,15.795 17.914,15.601 2.953,-0.11 7.027,-1.147 9.51,-2.742 z"
+      fill={textColor}
+    />
+    {/* Letter 'б' */}
+    <path
+      d="m 154.11062,64.640692 c 9.378,0 16.342,-5.75 16.342,-14.467 0,-8.437 -5.138,-13.915 -13.725,-13.915 -3.963,0 -7.233,1.395 -9.696,3.802 0.588,-4.975 4.795,-8.607 9.427,-8.607 1.069,0 9.117,-0.017 9.117,-0.017 l 4.551,-8.709 c 0,0 -10.104,0.23 -14.801,0.23 -10.732,0.187 -17.981,9.942 -17.981,21.79 0,13.803 7.07,19.893 16.766,19.893 z m 0.057,-20.668 c 3.482,0 5.896,2.288 5.896,6.2 0,3.521 -2.145,6.422 -5.896,6.43 -3.588,0 -6.002,-2.688 -6.002,-6.37 0,-3.913 2.414,-6.26 6.002,-6.26 z"
+      fill={textColor}
+      fillRule="evenodd"
+      clipRule="evenodd"
+    />
+    {/* Letter 'п' */}
+    <path
+      d="m 206.66462,34.253692 v 29.338 h -10.476 v -20.58 h -10.087 v 20.58 h -10.476 v -29.34 h 31.039 z"
+      fill={textColor}
+    />
   </svg>
+);
+
+/**
+ * Authentic SBP pill badge matching T-Pay and Screenshot 1
+ */
+const SbpBadge: React.FC<{ className?: string }> = ({ className = '' }) => (
+  <div
+    className={`inline-flex items-center px-2.5 py-1.5 rounded-full bg-[#202022] border border-slate-700/80 shadow-md ${className}`}
+    title="СБП"
+  >
+    <SbpFullLogo className="h-4 w-auto" textColor="#ffffff" />
+  </div>
 );
 
 /**
@@ -453,14 +474,12 @@ export const DonationModal: React.FC<DonationModalProps> = ({
                       ✓
                     </span>
                   )}
-                  <div className="w-10 h-10 rounded-xl bg-white p-1.5 flex items-center justify-center shadow-md shadow-emerald-500/20 shrink-0">
-                    <SbpLogo className="w-full h-full" />
+                  <div className="shrink-0">
+                    <SbpBadge />
                   </div>
                   <div className="min-w-0">
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs sm:text-sm font-black text-white truncate">СБП 0%</span>
-                    </div>
-                    <div className="text-[11px] font-medium text-emerald-400 truncate">По QR-коду</div>
+                    <div className="text-xs sm:text-sm font-black text-white truncate">СБП</div>
+                    <div className="text-[11px] font-medium text-emerald-400 truncate">Без комиссии • 0%</div>
                   </div>
                 </button>
 
