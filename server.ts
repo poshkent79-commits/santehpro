@@ -4,6 +4,7 @@ if (typeof dns.setDefaultResultOrder === 'function') {
 }
 
 import express from 'express';
+import compression from 'compression';
 import http from 'http';
 import path from 'path';
 import fs from 'fs';
@@ -95,6 +96,20 @@ const currentDirname = typeof __dirname !== 'undefined' ? __dirname : process.cw
 
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+
+// Enable gzip/deflate compression for production and API routes, avoiding interference with Vite dev server module streaming
+app.use((req, res, next) => {
+  if (process.env.NODE_ENV !== 'production' && !req.path.startsWith('/api')) {
+    return next();
+  }
+  return compression({
+    threshold: 1024, // Only compress responses larger than 1KB
+    filter: (req, res) => {
+      if (req.headers['x-no-compression']) return false;
+      return compression.filter(req, res);
+    }
+  })(req, res, next);
+});
 
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
@@ -5025,7 +5040,7 @@ ${publishedArticles
   const distPath = path.join(process.cwd(), 'dist');
   const distIndex = path.join(distPath, 'index.html');
   const hasDistFolder = fs.existsSync(distIndex);
-  const isProduction = (process.env.NODE_ENV === 'production' || isDistBundle) && hasDistFolder;
+  const isProduction = hasDistFolder || process.env.NODE_ENV === 'production' || isDistBundle;
 
   // Social Crawler Interceptor (Telegram, WhatsApp, VK, Twitter, Facebook, etc.)
   app.use((req, res, next) => {
@@ -5100,7 +5115,7 @@ ${publishedArticles
     app.use(express.static(distPath, {
       maxAge: '1h',
       setHeaders: (res, filePath) => {
-        if (filePath.endsWith('.html') || filePath.endsWith('.json') || filePath.endsWith('.webmanifest') || filePath.endsWith('sw.js')) {
+        if (filePath.endsWith('.html')) {
           res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
         }
       }

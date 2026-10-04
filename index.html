@@ -87,16 +87,45 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="СантехПро" />
-    <link rel="manifest" href="/manifest.json?v=2" />
-    <link rel="shortcut icon" href="/favicon.ico?v=2" />
-    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2" />
-    <link rel="icon" type="image/png" sizes="512x512" href="/icon.png?v=2" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/pwa-192x192.png?v=2" />
-    <link rel="icon" type="image/svg+xml" href="/icon.svg?v=2" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/pwa-192x192.png" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <!-- VK ID Official SDK for fast single-tap and OAuth authorization -->
-    <script src="https://unpkg.com/@vkid/sdk@<3.0.0/dist-sdk/umd/index.js"></script>
+    <script defer src="https://unpkg.com/@vkid/sdk@2.6.8/dist-sdk/umd/index.js"></script>
     <script>
+      // Safe localStorage polyfill against cross-origin mobile iframe restrictions
+      (function() {
+        try {
+          var test = '__test_storage__';
+          window.localStorage.setItem(test, '1');
+          window.localStorage.removeItem(test);
+        } catch(e) {
+          console.warn('localStorage is restricted in this context, installing in-memory storage fallback');
+          var mem = {};
+          var fake = {
+            getItem: function(k) { return mem[k] || null; },
+            setItem: function(k, v) { mem[k] = String(v); },
+            removeItem: function(k) { delete mem[k]; },
+            clear: function() { mem = {}; },
+            key: function(i) { return Object.keys(mem)[i] || null; },
+            get length() { return Object.keys(mem).length; }
+          };
+          try {
+            Object.defineProperty(window, 'localStorage', {
+              value: fake,
+              configurable: true,
+              writable: true
+            });
+          } catch(err) {
+            try { window.localStorage = fake; } catch(x) {}
+          }
+        }
+      })();
+
       // Early capture of PWA beforeinstallprompt event (for Yandex Browser, Chrome, Edge)
       window.addEventListener('beforeinstallprompt', function(e) {
         e.preventDefault();
@@ -104,7 +133,7 @@
       });
     </script>
   </head>
-  <body>
+  <body style="background-color: #0f172a; margin: 0; min-height: 100vh; overflow-x: hidden; color: #f8fafc;">
     <div id="root"></div>
 
     <div id="initial-splash" style="position:fixed;inset:0;background-color:#0f172a;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#f8fafc;-webkit-font-smoothing:antialiased;padding:20px;transition:opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1), transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);will-change:opacity, transform;">
@@ -123,6 +152,23 @@
           100% { left: 100%; width: 40%; }
         }
       </style>
+      <script>
+        (function() {
+          window.__dismissSplash = function() {
+            var splash = document.getElementById('initial-splash');
+            if (splash && splash.style.opacity !== '0') {
+              splash.style.opacity = '0';
+              splash.style.pointerEvents = 'none';
+              setTimeout(function() {
+                try { if (splash && splash.parentNode) splash.parentNode.removeChild(splash); } catch(e) {}
+              }, 450);
+            }
+          };
+          setTimeout(function() {
+            if (typeof window.__dismissSplash === 'function') window.__dismissSplash();
+          }, 3500);
+        })();
+      </script>
     </div>
 
     <script type="module" src="/src/main.tsx"></script>
