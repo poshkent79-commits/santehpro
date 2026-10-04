@@ -876,8 +876,12 @@ export const ContractBuilderModal: React.FC<ContractBuilderModalProps> = ({
                     type="number"
                     min="0"
                     step="500"
-                    value={totalPrice}
-                    onChange={(e) => setTotalPrice(Number(e.target.value) || 0)}
+                    placeholder="0"
+                    value={totalPrice === 0 ? '' : totalPrice}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setTotalPrice(v === '' ? 0 : Math.max(0, parseInt(v, 10) || 0));
+                    }}
                     required
                     className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-black text-blue-700 focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
                   />
@@ -890,9 +894,12 @@ export const ContractBuilderModal: React.FC<ContractBuilderModalProps> = ({
                     type="number"
                     min="0"
                     step="500"
-                    value={advancePayment}
-                    onChange={(e) => setAdvancePayment(Number(e.target.value) || 0)}
                     placeholder="0"
+                    value={advancePayment === 0 ? '' : advancePayment}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setAdvancePayment(v === '' ? 0 : Math.max(0, parseInt(v, 10) || 0));
+                    }}
                     className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 font-semibold focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
                   />
                 </div>

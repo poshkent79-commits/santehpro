@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Материалы для публикации СантехПро в RuStore</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { background: #090d16; color: #f1f5f9; padding: 20px; line-height: 1.5; }
+    .container { max-width: 600px; margin: 0 auto; }
+    .badge { display: inline-block; background: #0284c7; color: #fff; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 20px; text-transform: uppercase; margin-bottom: 12px; }
+    h1 { font-size: 22px; font-weight: 900; margin-bottom: 8px; color: #fff; }
+    p.lead { font-size: 13px; color: #94a3b8; margin-bottom: 24px; }
+    .section-title { font-size: 15px; font-weight: 800; color: #38bdf8; margin: 24px 0 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .card { background: #131c2e; border: 1px solid #1e293b; border-radius: 16px; padding: 16px; margin-bottom: 16px; }
+    .icon-preview { width: 120px; height: 120px; border-radius: 26px; border: 2px solid #38bdf8; display: block; margin: 12px auto; box-shadow: 0 10px 25px rgba(2,132,199,0.3); }
+    .screenshot-preview { width: 100%; max-width: 280px; border-radius: 16px; border: 1px solid #334155; display: block; margin: 12px auto; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+    .btn { display: block; width: 100%; text-align: center; background: #0284c7; color: #fff; font-weight: 800; font-size: 14px; padding: 12px 20px; border-radius: 12px; text-decoration: none; margin-top: 10px; transition: 0.2s; }
+    .btn:hover { background: #0369a1; }
+    .btn-green { background: #10b981; }
+    .btn-green:hover { background: #059669; }
+    .info { font-size: 12px; color: #94a3b8; margin-top: 6px; text-align: center; }
+    .tip { background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 12px; font-size: 12px; color: #bae6fd; margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <span class="badge">RuStore Console</span>
+    <h1>Медиафайлы для RuStore</h1>
+    <p class="lead">Все изображения строго соответствуют требованиям консоли RuStore (512x512 px для иконки и пропорции 9:16 для мобильных скриншотов).</p>
+
+    <div class="tip">
+      💡 <strong>Как загрузить с телефона:</strong> Нажмите кнопку <strong>«Скачать»</strong> под каждым файлом (или зажмите картинку пальцем и выберите «Сохранить изображение»), затем вернитесь во вкладку <strong>console.rustore.ru</strong> и выберите сохраненные файлы из галереи.
+    </div>
+
+    <!-- ICON -->
+    <div class="section-title">1. Иконка приложения (512x512 px)</div>
+    <div class="card">
+      <img src="icon-512x512.png" alt="Иконка СантехПро" class="icon-preview">
+      <div class="info">PNG, 512×512 px, 50 КБ (требование RuStore: 1:1, от 32 до 512 px, до 1 МБ)</div>
+      <a href="icon-512x512.png" download="santehpro-icon-512.png" class="btn btn-green">Скачать иконку (512x512 PNG)</a>
+    </div>
+
+    <!-- SCREENSHOTS -->
+    <div class="section-title">2. Скриншоты для телефонов (9:16)</div>
+    <p class="lead">RuStore требует минимум 3 скриншота. Здесь подготовлены 4 готовых вертикальных экрана:</p>
+
+    <!-- Screen 1 -->
+    <div class="card">
+      <strong style="color: #f8fafc; font-size: 14px;">Скриншот 1: Главный экран и поиск</strong>
+      <img src="screenshot-1-main.jpg" alt="Главный экран" class="screenshot-preview">
+      <div class="info">JPG, 768×1376 px (9:16), ~570 КБ</div>
+      <a href="screenshot-1-main.jpg" download="santehpro-screen-1-main.jpg" class="btn">Скачать скриншот 1</a>
+    </div>
+
+    <!-- Screen 2 -->
+    <div class="card">
+      <strong style="color: #f8fafc; font-size: 14px;">Скриншот 2: Каталог проверенных мастеров</strong>
+      <img src="screenshot-2-catalog.jpg" alt="Каталог мастеров" class="screenshot-preview">
+      <div class="info">JPG, 768×1376 px (9:16), ~570 КБ</div>
+      <a href="screenshot-2-catalog.jpg" download="santehpro-screen-2-catalog.jpg" class="btn">Скачать скриншот 2</a>
+    </div>
+
+    <!-- Screen 3 -->
+    <div class="card">
+      <strong style="color: #f8fafc; font-size: 14px;">Скриншот 3: Интерактивный калькулятор сметы</strong>
+      <img src="screenshot-3-calculator.jpg" alt="Калькулятор сметы" class="screenshot-preview">
+      <div class="info">JPG, 768×1376 px (9:16), ~480 КБ</div>
+      <a href="screenshot-3-calculator.jpg" download="santehpro-screen-3-calculator.jpg" class="btn">Скачать скриншот 3</a>
+    </div>
+
+    <!-- Screen 4 -->
+    <div class="card">
+      <strong style="color: #f8fafc; font-size: 14px;">Скриншот 4: Интерактивная диагностика поломок 24/7</strong>
+      <img src="screenshot-4-diagnostics.jpg" alt="Диагностика поломок" class="screenshot-preview">
+      <div class="info">JPG, 768×1376 px (9:16), ~530 КБ</div>
+      <a href="screenshot-4-diagnostics.jpg" download="santehpro-screen-4-diagnostics.jpg" class="btn">Скачать скриншот 4</a>
+    </div>
+
+    <!-- Instructions for next steps -->
+    <div class="section-title">Что заполнять дальше в RuStore:</div>
+    <div class="card" style="font-size: 13px; color: #cbd5e1; line-height: 1.6;">
+      <p style="margin-bottom: 8px;"><strong>1. Скриншоты для планшетов:</strong> можно оставить пустым (в RuStore написано «необязательно»).</p>
+      <p style="margin-bottom: 8px;"><strong>2. Ссылка на видео:</strong> можно оставить пустым (необязательно).</p>
+      <p style="margin-bottom: 8px;"><strong>3. Нажмите внизу кнопку «Сохранить» / «Далее».</strong></p>
+      <p style="margin-bottom: 8px;"><strong>4. Следующий шаг — «О приложении» / «Версия приложения»:</strong></p>
+      <ul style="padding-left: 20px; margin-bottom: 12px;">
+        <li><strong>Категория:</strong> Услуги / Инструменты / Дом и быт</li>
+        <li><strong>Возрастной рейтинг:</strong> 3+ или 12+</li>
+        <li><strong>Политика конфиденциальности:</strong> https://santehpro.info/privacy</li>
+        <li><strong>Загрузка APK / AAB сборки:</strong> если требуется файл сборки, мы подготовим актуальный APK для RuStore.</li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>

@@ -594,8 +594,9 @@ export const MasterEstimateBuilderModal: React.FC<MasterEstimateBuilderModalProp
                           type="number"
                           min="0.1"
                           step="any"
-                          value={item.quantity}
-                          onChange={(e) => handleUpdateItem(item.id, 'quantity', e.target.value)}
+                          placeholder="1"
+                          value={item.quantity === 0 ? '' : item.quantity}
+                          onChange={(e) => handleUpdateItem(item.id, 'quantity', e.target.value === '' ? 0 : e.target.value)}
                           className="w-16 bg-slate-900 border border-slate-700 text-white text-center rounded-xl px-1.5 py-1.5 text-xs focus:outline-none focus:border-blue-500 font-semibold"
                         />
                         <select
@@ -618,8 +619,9 @@ export const MasterEstimateBuilderModal: React.FC<MasterEstimateBuilderModalProp
                           type="number"
                           min="0"
                           step="50"
-                          value={item.price}
-                          onChange={(e) => handleUpdateItem(item.id, 'price', e.target.value)}
+                          placeholder="0"
+                          value={item.price === 0 ? '' : item.price}
+                          onChange={(e) => handleUpdateItem(item.id, 'price', e.target.value === '' ? 0 : e.target.value)}
                           className="w-20 bg-slate-900 border border-slate-700 text-white text-right rounded-xl px-2 py-1.5 text-xs focus:outline-none focus:border-blue-500 font-semibold"
                         />
                         <span className="text-slate-400 text-xs">₽</span>
@@ -736,9 +738,9 @@ export const MasterEstimateBuilderModal: React.FC<MasterEstimateBuilderModalProp
                 <input
                   type="number"
                   min="0"
-                  value={discountValue}
-                  onChange={(e) => setDiscountValue(Number(e.target.value) || 0)}
                   placeholder="0"
+                  value={discountValue === 0 ? '' : discountValue}
+                  onChange={(e) => setDiscountValue(e.target.value === '' ? 0 : Math.max(0, parseFloat(e.target.value) || 0))}
                   className="w-24 bg-slate-900 border border-slate-700 text-white text-center rounded-xl px-2 py-1 text-xs font-bold focus:outline-none focus:border-blue-500"
                 />
                 {discountAmount > 0 && (
@@ -754,9 +756,9 @@ export const MasterEstimateBuilderModal: React.FC<MasterEstimateBuilderModalProp
                   type="number"
                   min="0"
                   step="500"
-                  value={advancePayment}
-                  onChange={(e) => setAdvancePayment(Number(e.target.value) || 0)}
                   placeholder="0"
+                  value={advancePayment === 0 ? '' : advancePayment}
+                  onChange={(e) => setAdvancePayment(e.target.value === '' ? 0 : Math.max(0, parseFloat(e.target.value) || 0))}
                   className="w-28 bg-slate-900 border border-slate-700 text-white text-center rounded-xl px-2 py-1 text-xs font-bold focus:outline-none focus:border-blue-500"
                 />
                 <span className="text-xs text-slate-400">₽</span>

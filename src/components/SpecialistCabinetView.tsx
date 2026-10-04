@@ -1445,8 +1445,13 @@ export const SpecialistCabinetView: React.FC<SpecialistCabinetViewProps> = ({
                 <label className="text-xs font-bold text-slate-300">Минимальная стоимость вызова (₽)</label>
                 <input
                   type="number"
-                  value={masterMinPrice}
-                  onChange={(e) => setMasterMinPrice(Number(e.target.value))}
+                  min="0"
+                  placeholder="0"
+                  value={masterMinPrice === 0 ? '' : masterMinPrice}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setMasterMinPrice(v === '' ? 0 : parseInt(v, 10) || 0);
+                  }}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:border-cyan-500 focus:outline-none"
                 />
               </div>

@@ -1,4 +1,4 @@
-import { db, withDbRetry } from './index.ts';
+import { db, withDbRetry, isSqlConfigured } from './index.ts';
 import { userFavorites } from './schema.ts';
 import { eq, desc, and } from 'drizzle-orm';
 import { UserFavorite } from '../types.ts';
@@ -32,6 +32,10 @@ function saveCachedFavorites(favorites: UserFavorite[]) {
 }
 
 export async function getUserFavoritesByUid(userUid: string): Promise<UserFavorite[]> {
+  if (!isSqlConfigured()) {
+    return getCachedFavorites().filter((f) => f.userUid === userUid);
+  }
+
   try {
     const list = await withDbRetry(async () => {
       const rows = await db
@@ -61,8 +65,7 @@ export async function getUserFavoritesByUid(userUid: string): Promise<UserFavori
     }
 
     return list;
-  } catch (error) {
-    console.warn('Database note in getUserFavoritesByUid, serving local cache:', (error as any)?.message || error);
+  } catch (_error) {
     return getCachedFavorites().filter((f) => f.userUid === userUid);
   }
 }
@@ -104,35 +107,38 @@ export async function toggleUserFavorite(data: {
     // ignore
   }
 
-  try {
-    return await withDbRetry(async () => {
-      const existing = await db
-        .select()
-        .from(userFavorites)
-        .where(and(eq(userFavorites.userUid, data.userUid), eq(userFavorites.articleId, data.articleId)));
+  if (isSqlConfigured()) {
+    try {
+      return await withDbRetry(async () => {
+        const existing = await db
+          .select()
+          .from(userFavorites)
+          .where(and(eq(userFavorites.userUid, data.userUid), eq(userFavorites.articleId, data.articleId)));
 
-      if (existing.length > 0) {
-        await db.delete(userFavorites).where(eq(userFavorites.id, existing[0].id));
-        return { added: false };
-      } else {
-        const id = newId || `fav-${Date.now()}`;
-        await db.insert(userFavorites).values({
-          id,
-          userUid: data.userUid,
-          articleId: data.articleId,
-          articleTitle: data.articleTitle,
-          category: data.category || null,
-          coverImage: data.coverImage || null,
-          type: data.type || null,
-          createdAt: new Date(),
-        });
-        return { added: true, id };
-      }
-    });
-  } catch (error) {
-    console.warn('Could not sync favorite to Cloud SQL immediately, cached locally:', (error as any)?.message || error);
-    return { added: isAdded, id: newId };
+        if (existing.length > 0) {
+          await db.delete(userFavorites).where(eq(userFavorites.id, existing[0].id));
+          return { added: false };
+        } else {
+          const id = newId || `fav-${Date.now()}`;
+          await db.insert(userFavorites).values({
+            id,
+            userUid: data.userUid,
+            articleId: data.articleId,
+            articleTitle: data.articleTitle,
+            category: data.category || null,
+            coverImage: data.coverImage || null,
+            type: data.type || null,
+            createdAt: new Date(),
+          });
+          return { added: true, id };
+        }
+      });
+    } catch (_error) {
+      // Graceful fallback to local cache
+    }
   }
+
+  return { added: isAdded, id: newId };
 }
 
 export async function deleteUserFavorite(userUid: string, articleId: string): Promise<void> {
@@ -144,13 +150,15 @@ export async function deleteUserFavorite(userUid: string, articleId: string): Pr
     // ignore
   }
 
-  try {
-    await withDbRetry(async () => {
-      await db
-        .delete(userFavorites)
-        .where(and(eq(userFavorites.userUid, userUid), eq(userFavorites.articleId, articleId)));
-    });
-  } catch (error) {
-    console.warn('Could not delete favorite from Cloud SQL immediately, deleted from local cache:', (error as any)?.message || error);
+  if (isSqlConfigured()) {
+    try {
+      await withDbRetry(async () => {
+        await db
+          .delete(userFavorites)
+          .where(and(eq(userFavorites.userUid, userUid), eq(userFavorites.articleId, articleId)));
+      });
+    } catch (_error) {
+      // Graceful fallback to local cache
+    }
   }
 }

@@ -168,24 +168,24 @@ export function generateRobokassaPaymentUrl(options: CreatePaymentOptions): { pa
 
   const receiptObj = {
     items: items.map((it) => ({
-      name: it.name.replace(/[^\w\sа-яА-ЯёЁ.,!?-]/gi, ' ').trim().slice(0, 128),
+      name: it.name.replace(/[^\w\sа-яА-ЯёЁ.,!?-]/gi, ' ').trim().slice(0, 128) || 'Добровольное пожертвование на развитие сервиса',
       quantity: it.quantity || 1,
-      sum: Number(it.sum || options.outSum).toFixed(2),
+      sum: Number(it.sum || options.outSum),
       payment_method: it.payment_method || 'full_payment',
       payment_object: it.payment_object || 'service',
       tax: 'none',
     })),
   };
 
+  const receiptJson = JSON.stringify(receiptObj);
+
   // Sort shp_ parameters alphabetically
   const sortedShpKeys = Object.keys(shpParams).sort();
   const shpSignaturePart = sortedShpKeys.map((k) => `${k}=${shpParams[k]}`).join(':');
 
-  // Signature calculation:
-  // Standard Robokassa format: MD5(MerchantLogin:OutSum:InvId:Password1[:shp_1=val1:...])
-  // Note: When "Робочеки" (онлайн-касса) включена в личном кабинете Robokassa, Robokassa автоматически формирует
-  // фискальный чек из Description и OutSum. Ручная передача Receipt не требуется и вызывает ошибку 29 при несоответствии.
-  const signatureRaw = `${config.merchantLogin}:${outSumFormatted}:${invId}:${pass1}${shpSignaturePart ? `:${shpSignaturePart}` : ''}`;
+  // Signature calculation with 54-ФЗ fiscal receipt for «Робочеки» and «Мой налог» (СМЗ):
+  // Formula: MD5(MerchantLogin:OutSum:InvId:Receipt:Password1[:shp_1=val1:...])
+  const signatureRaw = `${config.merchantLogin}:${outSumFormatted}:${invId}:${receiptJson}:${pass1}${shpSignaturePart ? `:${shpSignaturePart}` : ''}`;
   const signature = crypto.createHash('md5').update(signatureRaw).digest('hex');
 
   // Build query string for redirection
@@ -194,6 +194,7 @@ export function generateRobokassaPaymentUrl(options: CreatePaymentOptions): { pa
     OutSum: outSumFormatted,
     InvId: String(invId),
     Description: options.description.slice(0, 100),
+    Receipt: receiptJson,
     SignatureValue: signature,
   });
 

@@ -39,6 +39,8 @@ import {
 import { SavedEstimate } from '../types';
 import { MaterialsSelectionModal, PlumbingItem } from './MaterialsSelectionModal';
 import { FullPlumbingKitsView } from './FullPlumbingKitsView';
+import { CollectorUnitBuilder } from './CollectorUnitBuilder';
+import { UnderfloorHeatingCalculator } from './UnderfloorHeatingCalculator';
 import { useFavoriteMaterials } from '../hooks/useFavoriteMaterials';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -143,7 +145,7 @@ export const MaterialsCalculator: React.FC<MaterialsCalculatorProps> = ({
   const [estimateNameInput, setEstimateNameInput] = useState<string>('');
   const [savedSearchQuery, setSavedSearchQuery] = useState<string>('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [materialsMode, setMaterialsMode] = useState<'kits' | 'calculator'>('kits');
+  const [materialsMode, setMaterialsMode] = useState<'kits' | 'collector_unit' | 'underfloor_heating' | 'calculator'>('kits');
   
   // Favorites hook
   const { isFavorite, toggleFavorite } = useFavoriteMaterials();
@@ -935,8 +937,34 @@ export const MaterialsCalculator: React.FC<MaterialsCalculatorProps> = ({
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
               }`}
             >
-              <span>🏠🏢</span>
-              <span>Комплектация под ключ</span>
+              <span>🏠</span>
+              <span>Комплектация объектов</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setMaterialsMode('collector_unit')}
+              className={`px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl font-black text-xs transition flex items-center space-x-1.5 cursor-pointer shrink-0 ${
+                materialsMode === 'collector_unit'
+                  ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
+              }`}
+            >
+              <Wrench className="w-4 h-4" />
+              <span>Узлы ввода (Foriver)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setMaterialsMode('underfloor_heating')}
+              className={`px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl font-black text-xs transition flex items-center space-x-1.5 cursor-pointer shrink-0 ${
+                materialsMode === 'underfloor_heating'
+                  ? 'bg-orange-500 text-slate-950 shadow-lg shadow-orange-500/20'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
+              }`}
+            >
+              <Flame className="w-4 h-4" />
+              <span>Тёплый пол</span>
             </button>
 
             <button
@@ -987,10 +1015,22 @@ export const MaterialsCalculator: React.FC<MaterialsCalculatorProps> = ({
         </div>
       )}
 
-      {/* Either Full Kits View (House / Apartment) or Custom Meter Calculator Card */}
+      {/* Either Full Kits View, Collector Unit Builder, Underfloor Heating, or Custom Meter Calculator Card */}
       {!embedded && materialsMode === 'kits' ? (
         <FullPlumbingKitsView
           onSwitchToMeterCalculator={() => setMaterialsMode('calculator')}
+          onSaveEstimate={(newEst) => {
+            setSavedEstimates((prev) => [newEst, ...prev]);
+          }}
+        />
+      ) : !embedded && materialsMode === 'collector_unit' ? (
+        <CollectorUnitBuilder
+          onSaveEstimate={(newEst) => {
+            setSavedEstimates((prev) => [newEst, ...prev]);
+          }}
+        />
+      ) : !embedded && materialsMode === 'underfloor_heating' ? (
+        <UnderfloorHeatingCalculator
           onSaveEstimate={(newEst) => {
             setSavedEstimates((prev) => [newEst, ...prev]);
           }}

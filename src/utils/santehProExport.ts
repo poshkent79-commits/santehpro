@@ -1,4 +1,5 @@
 import { SantehProExportItem } from '../components/SantehProEstimateModal';
+import { downloadHtmlAsPdf } from './pdfGenerator';
 
 export interface SantehProExportOptions {
   buildingType: 'house' | 'apartment';
@@ -82,7 +83,8 @@ export function getFormattedTxtSpecification(opts: SantehProExportOptions): stri
  */
 export function downloadTxtSpecification(opts: SantehProExportOptions): void {
   const text = getFormattedTxtSpecification(opts);
-  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  // Add UTF-8 BOM (\uFEFF) to prevent Cyrillic encoding distortion on mobile & desktop text viewers
+  const blob = new Blob(['\uFEFF' + text], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -429,7 +431,22 @@ export function printPdfSpecification(opts: SantehProExportOptions): void {
     </html>
   `;
 
-  // Use hidden iframe to avoid popup blockers and print cleanly
+  // On mobile browsers window.print()/iframe.print() is often blocked or does nothing.
+  // Instead, download the actual high-quality PDF directly onto the mobile device!
+  const isMobile =
+    typeof navigator !== 'undefined' &&
+    /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+  if (isMobile) {
+    const bldShort = opts.buildingType === 'house' ? 'Дом' : 'Квартира';
+    downloadHtmlAsPdf(html, `СантехПро_Смета_${bldShort}_${Date.now().toString().slice(-4)}.pdf`).catch((e) => {
+      console.error('PDF error on mobile:', e);
+      window.print();
+    });
+    return;
+  }
+
+  // Use hidden iframe to avoid popup blockers and print cleanly on desktop
   const iframe = document.createElement('iframe');
   iframe.style.position = 'fixed';
   iframe.style.right = '0';
@@ -541,7 +558,8 @@ export function exportCalculatorSpecificationToTxt(opts: CalculatorExportOptions
   text += `======================================================================\n`;
   text += `Сформировано в приложении «СантехПро»\n`;
 
-  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  // Add UTF-8 BOM (\uFEFF) to prevent Cyrillic encoding distortion on mobile & desktop text viewers
+  const blob = new Blob(['\uFEFF' + text], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -830,6 +848,20 @@ export function exportCalculatorSpecificationToPdf(opts: CalculatorExportOptions
     </body>
     </html>
   `;
+
+  // On mobile browsers window.print()/iframe.print() is often blocked or does nothing.
+  // Instead, download the actual high-quality PDF directly onto the mobile device!
+  const isMobile =
+    typeof navigator !== 'undefined' &&
+    /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+  if (isMobile) {
+    downloadHtmlAsPdf(html, `СантехПро_Ведомость_${Date.now().toString().slice(-4)}.pdf`).catch((e) => {
+      console.error('PDF error on mobile:', e);
+      window.print();
+    });
+    return;
+  }
 
   const iframe = document.createElement('iframe');
   iframe.style.position = 'fixed';

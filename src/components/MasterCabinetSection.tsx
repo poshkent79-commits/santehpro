@@ -48,7 +48,8 @@ import {
   Upload,
   Music,
   CheckCircle2,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Sliders
 } from 'lucide-react';
 import {
   isNotificationSoundEnabled,
@@ -67,6 +68,8 @@ import { MasterEstimatesTab } from './MasterEstimatesTab';
 import { MasterEstimateBuilderModal } from './MasterEstimateBuilderModal';
 import { MasterContractsTab } from './MasterContractsTab';
 import { RequestReviewModal } from './RequestReviewModal';
+import { CollectorUnitBuilder } from './CollectorUnitBuilder';
+import { UnderfloorHeatingCalculator } from './UnderfloorHeatingCalculator';
 import { ENGINEERING_SERVICE_GROUPS, ALL_ENGINEERING_SERVICES, EngineeringServiceItem } from '../data/engineeringServices';
 import { getRuTubeEmbedUrl, getYouTubeEmbedUrl, getVkVideoEmbedUrl } from '../utils/videoUtils';
 
@@ -81,7 +84,7 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
   onRefreshSpecialist,
   onOpenArticle,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'services' | 'works' | 'messages' | 'estimates' | 'contracts' | 'articles'>('services');
+  const [activeSubTab, setActiveSubTab] = useState<'services' | 'works' | 'messages' | 'collector' | 'underfloor' | 'estimates' | 'contracts' | 'articles'>('services');
 
   // Master estimates state for contracts linking
   const [estimates, setEstimates] = useState<MasterPlumbingEstimate[]>(() => {
@@ -911,14 +914,14 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
 
         <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
           <div className="flex items-center gap-4">
-            <div className="relative">
+            <div className="relative shrink-0 w-16 h-16 sm:w-20 sm:h-20 aspect-square">
               <img
                 src={specialist.photo}
                 alt={specialist.name}
-                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-blue-400 shadow-md"
+                className="w-16 h-16 sm:w-20 sm:h-20 aspect-square rounded-2xl object-cover border-2 border-blue-400 shadow-md shrink-0 block"
               />
               <div
-                className="absolute -bottom-1 -right-1 bg-emerald-500 text-white p-1 rounded-full border-2 border-slate-900 shadow"
+                className="absolute -bottom-1 -right-1 bg-emerald-500 text-white p-1 rounded-full border-2 border-slate-900 shadow z-10"
                 title="Верифицированный профиль"
               >
                 <ShieldCheck className="w-4 h-4" />
@@ -1115,75 +1118,109 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
         )}
 
         {/* Sub-Navigation Tabs */}
-        <div className="flex items-center gap-2 mt-6 pt-5 border-t border-slate-800 overflow-x-auto">
+        <div className="flex items-center gap-1.5 sm:gap-2 mt-6 pt-5 border-t border-slate-800 overflow-x-auto no-scrollbar scroll-smooth pb-1.5">
           <button
             id="master-tab-services-btn"
             onClick={() => setActiveSubTab('services')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all shrink-0 cursor-pointer ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shrink-0 cursor-pointer ${
               activeSubTab === 'services'
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
                 : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
             }`}
           >
-            <Wrench className="w-4 h-4" />
-            <span>Профиль и услуги ({servicesList.length})</span>
+            <Wrench className="w-4 h-4 text-blue-400" />
+            <span><span className="hidden sm:inline">Профиль и </span>услуги ({servicesList.length})</span>
           </button>
 
           <button
             id="master-tab-works-btn"
             onClick={() => setActiveSubTab('works')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all shrink-0 cursor-pointer ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shrink-0 cursor-pointer ${
               activeSubTab === 'works'
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
                 : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
             }`}
           >
-            <Camera className="w-4 h-4" />
-            <span>Портфолио работ ({works.length})</span>
+            <Camera className="w-4 h-4 text-cyan-400" />
+            <span><span className="hidden sm:inline">Портфолио </span>работ ({works.length})</span>
           </button>
 
           <button
             id="master-tab-messages-btn"
             onClick={() => setActiveSubTab('messages')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all shrink-0 cursor-pointer ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shrink-0 cursor-pointer ${
               activeSubTab === 'messages'
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
                 : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
             }`}
           >
-            <MessageSquare className="w-4 h-4" />
-            <span>Заявки и сообщения ({messages.length})</span>
+            <MessageSquare className="w-4 h-4 text-emerald-400" />
+            <span>Заявки ({messages.length})</span>
             {unhandledRequests.length > 0 && (
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-slate-950 animate-pulse">
-                {unhandledRequests.length} новых
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-slate-950 animate-pulse">
+                {unhandledRequests.length} нов.
               </span>
             )}
+          </button>
+
+          {/* NEW: MASTER COLLECTOR UNIT CALCULATOR */}
+          <button
+            id="master-tab-collector-btn"
+            onClick={() => setActiveSubTab('collector')}
+            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shrink-0 cursor-pointer ${
+              activeSubTab === 'collector'
+                ? 'bg-cyan-600 text-white shadow-lg shadow-cyan-500/20'
+                : 'text-cyan-300/90 hover:text-white hover:bg-slate-800/60 border border-cyan-500/30'
+            }`}
+          >
+            <Sliders className="w-4 h-4 text-cyan-400" />
+            <span>Узел ввода</span>
+            <span className="px-1 py-0.5 rounded text-[9px] font-extrabold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+              Смета
+            </span>
+          </button>
+
+          {/* NEW: MASTER UNDERFLOOR HEATING CALCULATOR */}
+          <button
+            id="master-tab-underfloor-btn"
+            onClick={() => setActiveSubTab('underfloor')}
+            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shrink-0 cursor-pointer ${
+              activeSubTab === 'underfloor'
+                ? 'bg-amber-600 text-white shadow-lg shadow-amber-500/20'
+                : 'text-amber-300/90 hover:text-white hover:bg-slate-800/60 border border-amber-500/30'
+            }`}
+          >
+            <Flame className="w-4 h-4 text-amber-400" />
+            <span>Тёплый пол</span>
+            <span className="px-1 py-0.5 rounded text-[9px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+              Смета
+            </span>
           </button>
 
           <button
             id="master-tab-estimates-btn"
             onClick={() => setActiveSubTab('estimates')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all shrink-0 cursor-pointer ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shrink-0 cursor-pointer ${
               activeSubTab === 'estimates'
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
                 : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
             }`}
           >
             <Calculator className="w-4 h-4 text-amber-400" />
-            <span>Сметы клиентам</span>
+            <span><span className="hidden sm:inline">Сметы </span>клиентам</span>
           </button>
 
           <button
             id="master-tab-contracts-btn"
             onClick={() => setActiveSubTab('contracts')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all shrink-0 cursor-pointer ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shrink-0 cursor-pointer ${
               activeSubTab === 'contracts'
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
                 : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
             }`}
           >
             <FileCheck className="w-4 h-4 text-emerald-400" />
-            <span>Договоры и акты</span>
+            <span>Договоры<span className="hidden sm:inline"> и акты</span></span>
             <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
               B2B
             </span>
@@ -1192,17 +1229,14 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
           <button
             id="master-tab-articles-btn"
             onClick={() => setActiveSubTab('articles')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all shrink-0 cursor-pointer ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shrink-0 cursor-pointer ${
               activeSubTab === 'articles'
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
                 : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
             }`}
           >
             <GraduationCap className="w-4 h-4 text-rose-400" />
-            <span>Курсы и статьи ({masterArticles.length})</span>
-            <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-rose-500/20 text-rose-300 border border-rose-500/30">
-              Видео/Аудио
-            </span>
+            <span><span className="hidden sm:inline">Курсы и </span>статьи ({masterArticles.length})</span>
           </button>
         </div>
       </div>
@@ -1530,10 +1564,14 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
                 </label>
                 <input
                   type="number"
-                  min="1"
+                  min="0"
                   max="50"
-                  value={masterExperienceYears}
-                  onChange={(e) => setMasterExperienceYears(Number(e.target.value) || 1)}
+                  placeholder="0"
+                  value={masterExperienceYears === 0 ? '' : masterExperienceYears}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setMasterExperienceYears(v === '' ? 0 : parseInt(v, 10) || 0);
+                  }}
                   className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -1548,10 +1586,14 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
                 <div className="relative">
                   <input
                     type="number"
-                    min="500"
+                    min="0"
                     step="100"
-                    value={masterMinPrice}
-                    onChange={(e) => setMasterMinPrice(Number(e.target.value))}
+                    placeholder="0"
+                    value={masterMinPrice === 0 ? '' : masterMinPrice}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setMasterMinPrice(v === '' ? 0 : parseInt(v, 10) || 0);
+                    }}
                     className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold"
                   />
                   <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-bold">₽</span>
@@ -3027,6 +3069,142 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* TAB: COLLECTOR UNIT BUILDER FOR MASTER */}
+      {activeSubTab === 'collector' && (
+        <div className="space-y-4 animate-in fade-in duration-200">
+          <div className="bg-gradient-to-r from-cyan-950/70 via-slate-900 to-blue-950/70 border border-cyan-500/30 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                <Sliders className="w-3.5 h-3.5" />
+                <span>Инструмент мастера</span>
+              </div>
+              <h3 className="text-lg font-bold text-white">Конструктор и расчёт смет узла ввода ХВС/ГВС</h3>
+              <p className="text-xs text-slate-300">
+                Соберите конфигурацию узла на раме или кронштейнах, задайте свою договорную цену за монтаж (например, 130 000 ₽), скачайте PDF с вашими контактами мастера или отправьте клиенту в мессенджеры.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveSubTab('estimates')}
+              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition flex items-center gap-1.5 shrink-0 cursor-pointer"
+            >
+              <Calculator className="w-3.5 h-3.5 text-amber-400" />
+              <span>Реестр смет мастера →</span>
+            </button>
+          </div>
+
+          <CollectorUnitBuilder
+            onSaveEstimate={(savedEst) => {
+              const masterEst: MasterPlumbingEstimate = {
+                id: `est-collector-${Date.now()}`,
+                specialistId: specialist.id,
+                specialistName: specialist.name,
+                specialistPhone: specialist.phone,
+                specialistCity: specialist.city,
+                clientName: 'Клиент (Узел ввода)',
+                title: savedEst.name || 'Смета узла ввода ХВС/ГВС',
+                objectType: 'apartment',
+                items: [
+                  {
+                    id: 'w-1',
+                    type: 'work',
+                    category: 'Монтажные работы',
+                    name: 'Монтаж и опрессовка узла ввода ХВС/ГВС под ключ',
+                    quantity: 1,
+                    unit: 'компл',
+                    price: savedEst.totalPrice || 130000,
+                    total: savedEst.totalPrice || 130000,
+                  }
+                ],
+                materialsTotal: 0,
+                worksTotal: savedEst.totalPrice || 130000,
+                grandTotal: savedEst.totalPrice || 130000,
+                warrantyMonths: 24,
+                executionDays: '3',
+                status: 'draft',
+                createdAt: new Date().toISOString(),
+              };
+              try {
+                const existing = JSON.parse(localStorage.getItem(`santehpro_master_estimates_${specialist.id}`) || '[]');
+                existing.unshift(masterEst);
+                localStorage.setItem(`santehpro_master_estimates_${specialist.id}`, JSON.stringify(existing));
+                setEstimates(existing);
+              } catch (e) {}
+              setServicesSuccessMsg(`Смета узла ввода «${savedEst.name}» успешно сохранена в реестр смет мастера!`);
+              setTimeout(() => setServicesSuccessMsg(''), 5000);
+            }}
+          />
+        </div>
+      )}
+
+      {/* TAB: UNDERFLOOR HEATING CALCULATOR FOR MASTER */}
+      {activeSubTab === 'underfloor' && (
+        <div className="space-y-4 animate-in fade-in duration-200">
+          <div className="bg-gradient-to-r from-amber-950/70 via-slate-900 to-orange-950/70 border border-amber-500/30 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                <Flame className="w-3.5 h-3.5" />
+                <span>Инструмент мастера</span>
+              </div>
+              <h3 className="text-lg font-bold text-white">Калькулятор и расчёт смет тёплого пола</h3>
+              <p className="text-xs text-slate-300">
+                Рассчитайте метраж труб, контуры, смесительный узел и установите общую договорную цену мастера (например, 130 000 ₽) или расценку за м² для отправки заказчику.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveSubTab('estimates')}
+              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition flex items-center gap-1.5 shrink-0 cursor-pointer"
+            >
+              <Calculator className="w-3.5 h-3.5 text-amber-400" />
+              <span>Реестр смет мастера →</span>
+            </button>
+          </div>
+
+          <UnderfloorHeatingCalculator
+            onSaveEstimate={(savedEst) => {
+              const masterEst: MasterPlumbingEstimate = {
+                id: `est-floor-${Date.now()}`,
+                specialistId: specialist.id,
+                specialistName: specialist.name,
+                specialistPhone: specialist.phone,
+                specialistCity: specialist.city,
+                clientName: 'Клиент (Тёплый пол)',
+                title: savedEst.name || 'Смета тёплого пола',
+                objectType: 'apartment',
+                items: [
+                  {
+                    id: 'w-1',
+                    type: 'work',
+                    category: 'Монтажные работы',
+                    name: 'Монтаж системы тёплого пола под ключ',
+                    quantity: 1,
+                    unit: 'компл',
+                    price: savedEst.totalPrice || 130000,
+                    total: savedEst.totalPrice || 130000,
+                  }
+                ],
+                materialsTotal: 0,
+                worksTotal: savedEst.totalPrice || 130000,
+                grandTotal: savedEst.totalPrice || 130000,
+                warrantyMonths: 24,
+                executionDays: '3',
+                status: 'draft',
+                createdAt: new Date().toISOString(),
+              };
+              try {
+                const existing = JSON.parse(localStorage.getItem(`santehpro_master_estimates_${specialist.id}`) || '[]');
+                existing.unshift(masterEst);
+                localStorage.setItem(`santehpro_master_estimates_${specialist.id}`, JSON.stringify(existing));
+                setEstimates(existing);
+              } catch (e) {}
+              setServicesSuccessMsg(`Смета тёплого пола «${savedEst.name}» успешно сохранена в реестр смет мастера!`);
+              setTimeout(() => setServicesSuccessMsg(''), 5000);
+            }}
+          />
         </div>
       )}
 

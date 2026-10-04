@@ -502,38 +502,7 @@ export const INITIAL_ARTICLES: Article[] = [
   }
 ];
 
-export const INITIAL_SPECIALISTS: PlumbingSpecialist[] = [
-  {
-    id: 'spec-dostonjon',
-    name: 'Достонджон Туйчиев',
-    photo: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=600&q=80',
-    city: 'Находка',
-    experienceYears: 12,
-    rating: 5.0,
-    reviewsCount: 48,
-    phone: '+7 (924) 788-99-00',
-    email: 'poshkent79@gmail.com',
-    telegram: '@santehpro_admin',
-    whatsapp: '+79247889900',
-    services: [
-      'Монтаж отопления под ключ',
-      'Разводка труб Rehau/Tece',
-      'Установка санфаянса и инсталляций',
-      'Аварийный выезд 24/7',
-      'Комплексный ремонт санузла'
-    ],
-    minPrice: 1500,
-    emergency247: true,
-    verified: true,
-    badge: 'Ведущий инженер сервиса',
-    bio: 'Основатель и ведущий инженер открытого сервиса «СантехПро». Выполняю качественный монтаж водоснабжения, канализации и отопления с официальной гарантией.',
-    status: 'approved',
-    appliedAt: '2026-06-01',
-    userUid: 'usr-admin-master',
-    dataConsent: true,
-    legalConsent: true,
-  }
-];
+export const INITIAL_SPECIALISTS: PlumbingSpecialist[] = [];
 
 export const DIAGNOSTIC_FLOW: Record<string, DiagnosticQuestion> = {
   start: {

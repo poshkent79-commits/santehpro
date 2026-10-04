@@ -1,6 +1,11 @@
-import { db, withDbRetry } from './index.ts';
+import { db, withDbRetry, isSqlConfigured } from './index.ts';
 import { savedEstimates } from './schema.ts';
 import { eq, desc } from 'drizzle-orm';
+import fs from 'fs';
+import path from 'path';
+
+const DATA_DIR = path.resolve(process.cwd(), '.data');
+const ESTIMATES_STORE_FILE = path.join(DATA_DIR, 'saved_estimates_store.json');
 
 export interface SavedEstimateRecord {
   id: string;
@@ -11,11 +16,40 @@ export interface SavedEstimateRecord {
   createdAt?: string;
 }
 
+function getCachedEstimates(): SavedEstimateRecord[] {
+  try {
+    if (fs.existsSync(ESTIMATES_STORE_FILE)) {
+      const data = JSON.parse(fs.readFileSync(ESTIMATES_STORE_FILE, 'utf-8'));
+      if (Array.isArray(data)) return data;
+    }
+  } catch {
+    // ignore
+  }
+  return [];
+}
+
+function saveCachedEstimates(estimates: SavedEstimateRecord[]): void {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    fs.writeFileSync(ESTIMATES_STORE_FILE, JSON.stringify(estimates, null, 2), 'utf-8');
+  } catch {
+    // ignore
+  }
+}
+
+let inMemoryEstimates: SavedEstimateRecord[] = getCachedEstimates();
+
 export async function getDbSavedEstimates(): Promise<SavedEstimateRecord[]> {
+  if (!isSqlConfigured()) {
+    return inMemoryEstimates;
+  }
+
   try {
     return await withDbRetry(async () => {
       const rows = await db.select().from(savedEstimates).orderBy(desc(savedEstimates.createdAt));
-      return rows.map(r => ({
+      const mapped = rows.map(r => ({
         id: r.id,
         name: r.name,
         summary: r.summary,
@@ -23,48 +57,71 @@ export async function getDbSavedEstimates(): Promise<SavedEstimateRecord[]> {
         itemsJson: r.itemsJson,
         createdAt: r.createdAt ? r.createdAt.toISOString() : new Date().toISOString(),
       }));
+      inMemoryEstimates = mapped;
+      saveCachedEstimates(mapped);
+      return mapped;
     });
-  } catch (error) {
-    console.error('Database query note in getDbSavedEstimates:', error);
-    return [];
+  } catch (_error) {
+    return inMemoryEstimates;
   }
 }
 
 export async function createDbSavedEstimate(est: SavedEstimateRecord): Promise<SavedEstimateRecord> {
-  try {
-    return await withDbRetry(async () => {
-      await db.insert(savedEstimates).values({
-        id: est.id,
-        name: est.name,
-        summary: est.summary,
-        totalPrice: est.totalPrice,
-        itemsJson: est.itemsJson,
-        createdAt: new Date(),
+  const newEst: SavedEstimateRecord = {
+    ...est,
+    createdAt: est.createdAt || new Date().toISOString(),
+  };
+
+  inMemoryEstimates.unshift(newEst);
+  saveCachedEstimates(inMemoryEstimates);
+
+  if (isSqlConfigured()) {
+    try {
+      await withDbRetry(async () => {
+        await db.insert(savedEstimates).values({
+          id: newEst.id,
+          name: newEst.name,
+          summary: newEst.summary,
+          totalPrice: newEst.totalPrice,
+          itemsJson: newEst.itemsJson,
+          createdAt: new Date(),
+        });
       });
-      return est;
-    });
-  } catch (error) {
-    console.error('Database query failed in createDbSavedEstimate:', error);
-    throw new Error('Database query failed. Please try again later.', { cause: error });
+    } catch (_error) {
+      // Gracefully preserved in local store
+    }
   }
+
+  return newEst;
 }
 
 export async function deleteDbSavedEstimate(id: string): Promise<void> {
-  try {
-    await withDbRetry(async () => {
-      await db.delete(savedEstimates).where(eq(savedEstimates.id, id));
-    });
-  } catch (error) {
-    console.error('Database query failed in deleteDbSavedEstimate:', error);
-    throw new Error('Database query failed. Please try again later.', { cause: error });
+  inMemoryEstimates = inMemoryEstimates.filter((e) => e.id !== id);
+  saveCachedEstimates(inMemoryEstimates);
+
+  if (isSqlConfigured()) {
+    try {
+      await withDbRetry(async () => {
+        await db.delete(savedEstimates).where(eq(savedEstimates.id, id));
+      });
+    } catch (_error) {
+      // Gracefully deleted from local store
+    }
   }
 }
 
 export async function getDbSavedEstimateById(id: string): Promise<SavedEstimateRecord | null> {
+  const fromMemory = inMemoryEstimates.find((e) => e.id === id);
+  if (fromMemory) return fromMemory;
+
+  if (!isSqlConfigured()) {
+    return null;
+  }
+
   try {
     return await withDbRetry(async () => {
-      const rows = await db.select().from(savedEstimates).where(eq(savedEstimates.id, id)).limit(1);
-      if (!rows || rows.length === 0) return null;
+      const rows = await db.select().from(savedEstimates).where(eq(savedEstimates.id, id));
+      if (rows.length === 0) return null;
       const r = rows[0];
       return {
         id: r.id,
@@ -75,43 +132,38 @@ export async function getDbSavedEstimateById(id: string): Promise<SavedEstimateR
         createdAt: r.createdAt ? r.createdAt.toISOString() : new Date().toISOString(),
       };
     });
-  } catch (error) {
-    console.error('Database query error in getDbSavedEstimateById:', error);
+  } catch (_error) {
     return null;
   }
 }
 
-export async function updateDbSavedEstimate(
-  id: string,
-  updates: Partial<SavedEstimateRecord>
-): Promise<SavedEstimateRecord | null> {
-  try {
-    return await withDbRetry(async () => {
-      const existing = await db.select().from(savedEstimates).where(eq(savedEstimates.id, id)).limit(1);
-      if (!existing || existing.length === 0) return null;
+export async function updateDbSavedEstimate(id: string, updates: Partial<SavedEstimateRecord>): Promise<SavedEstimateRecord | null> {
+  let updatedRecord: SavedEstimateRecord | null = null;
 
-      const valuesToSet: Record<string, any> = {};
-      if (updates.name !== undefined) valuesToSet.name = updates.name;
-      if (updates.summary !== undefined) valuesToSet.summary = updates.summary;
-      if (updates.totalPrice !== undefined) valuesToSet.totalPrice = updates.totalPrice;
-      if (updates.itemsJson !== undefined) valuesToSet.itemsJson = updates.itemsJson;
-
-      await db.update(savedEstimates).set(valuesToSet).where(eq(savedEstimates.id, id));
-
-      const updated = await db.select().from(savedEstimates).where(eq(savedEstimates.id, id)).limit(1);
-      if (!updated || updated.length === 0) return null;
-      const r = updated[0];
-      return {
-        id: r.id,
-        name: r.name,
-        summary: r.summary,
-        totalPrice: r.totalPrice,
-        itemsJson: r.itemsJson,
-        createdAt: r.createdAt ? r.createdAt.toISOString() : new Date().toISOString(),
-      };
-    });
-  } catch (error) {
-    console.error('Database query failed in updateDbSavedEstimate:', error);
-    throw new Error('Database query failed. Please try again later.', { cause: error });
+  const idx = inMemoryEstimates.findIndex((e) => e.id === id);
+  if (idx !== -1) {
+    inMemoryEstimates[idx] = {
+      ...inMemoryEstimates[idx],
+      ...updates,
+    };
+    updatedRecord = inMemoryEstimates[idx];
+    saveCachedEstimates(inMemoryEstimates);
   }
+
+  if (isSqlConfigured()) {
+    try {
+      await withDbRetry(async () => {
+        const values: any = {};
+        if (updates.name !== undefined) values.name = updates.name;
+        if (updates.summary !== undefined) values.summary = updates.summary;
+        if (updates.totalPrice !== undefined) values.totalPrice = updates.totalPrice;
+        if (updates.itemsJson !== undefined) values.itemsJson = updates.itemsJson;
+        await db.update(savedEstimates).set(values).where(eq(savedEstimates.id, id));
+      });
+    } catch (_error) {
+      // Gracefully updated in local store
+    }
+  }
+
+  return updatedRecord;
 }

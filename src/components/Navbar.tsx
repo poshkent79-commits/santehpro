@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Users, Stethoscope, ShieldCheck, Wrench, GraduationCap, Calculator, User, MapPin, Heart, Mail } from 'lucide-react';
+import { BookOpen, Users, Stethoscope, ShieldCheck, Wrench, GraduationCap, Calculator, User, MapPin, Heart, Mail, Crown, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 interface NavbarProps {
@@ -15,6 +15,7 @@ interface NavbarProps {
   onOpenCitySelect?: () => void;
   onOpenDonation?: () => void;
   onOpenSupport?: () => void;
+  onOpenProSubscription?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -28,6 +29,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenCitySelect,
   onOpenDonation,
   onOpenSupport,
+  onOpenProSubscription,
 }) => {
   const { currentUser, openAuthModal } = useAuth();
 
@@ -61,9 +63,24 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* Upper Right: Admin badge if logged in */}
-        {isAdmin && (
-          <div className="flex items-center space-x-1.5 sm:space-x-2">
+        {/* Upper Right: PRO+ Button (like S+ in Sajda) + City + Admin badge */}
+        <div className="flex items-center space-x-2 sm:space-x-3">
+          {/* Voluntary Support / Club Pill Button (inspired by Sajda layout, compliant with Robokassa donation offer) */}
+          {onOpenDonation && (
+            <button
+              type="button"
+              onClick={onOpenDonation}
+              className="relative group flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-gradient-to-r from-rose-500 via-pink-500 to-amber-500 text-white font-extrabold text-xs shadow-md shadow-rose-500/25 hover:shadow-rose-500/40 border border-rose-400/40 hover:scale-105 active:scale-95 transition cursor-pointer shrink-0"
+              title="Поддержать проект СантехПро (добровольный взнос через Робокассу)"
+            >
+              <Heart className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-white text-white shrink-0" />
+              <span className="text-white text-xs font-black">Поддержать</span>
+              <span className="hidden sm:inline text-rose-100 text-[10px] font-medium">• Клуб</span>
+            </button>
+          )}
+
+          {/* Upper Right: Admin badge if logged in */}
+          {isAdmin && (
             <button
               onClick={() => setActiveTab('admin')}
               className="flex items-center space-x-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl text-xs font-semibold bg-amber-500 text-slate-950 hover:bg-amber-400 transition shadow-sm cursor-pointer shrink-0"
@@ -76,8 +93,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </span>
               )}
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Sub-Bar: Navigation Menu */}

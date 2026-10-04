@@ -1722,8 +1722,12 @@ export const FullPlumbingKitsView: React.FC<FullPlumbingKitsViewProps> = ({
                     type="number"
                     min="1"
                     step="1"
+                    placeholder="1"
                     value={newCustomQty}
-                    onChange={(e) => setNewCustomQty(e.target.value)}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setNewCustomQty(v === '' ? '' : v.replace(/^0+([1-9])/, '$1'));
+                    }}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:border-amber-500 focus:outline-none"
                   />
                 </div>
@@ -1755,8 +1759,12 @@ export const FullPlumbingKitsView: React.FC<FullPlumbingKitsViewProps> = ({
                     type="number"
                     min="0"
                     step="10"
+                    placeholder="0"
                     value={newCustomPrice}
-                    onChange={(e) => setNewCustomPrice(e.target.value)}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setNewCustomPrice(v === '' ? '' : v.replace(/^0+([1-9])/, '$1'));
+                    }}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:border-amber-500 focus:outline-none"
                   />
                 </div>

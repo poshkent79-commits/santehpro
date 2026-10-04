@@ -16,18 +16,24 @@ declare global {
   var _postgresPool: Pool | undefined;
 }
 
+// Check if SQL database connection is actually configured and available
+export function isSqlConfigured(): boolean {
+  const sqlHost = process.env.SQL_HOST;
+  if (!sqlHost || sqlHost.startsWith('/app/cloudsql/')) {
+    return false;
+  }
+  return Boolean(process.env.SQL_USER && process.env.SQL_PASSWORD && process.env.SQL_DB_NAME);
+}
+
 // Function to create or retrieve the connection pool.
 export const createPool = () => {
-  // If SQL_HOST points to Google Cloud SQL socket or is not defined, do NOT connect to Cloud SQL
-  const sqlHost = process.env.SQL_HOST;
-  const isCloudSqlSocket = !sqlHost || sqlHost.startsWith('/app/cloudsql/');
-  if (isCloudSqlSocket) {
-    // Return a dummy pool that immediately allows safe fallback to local disk storage
+  if (!isSqlConfigured()) {
+    // Return a dummy pool that immediately rejects without logging
     return new Pool({
       host: '127.0.0.1',
       port: 54329,
       max: 1,
-      connectionTimeoutMillis: 100,
+      connectionTimeoutMillis: 10,
     });
   }
 
@@ -75,6 +81,9 @@ export const db = drizzle(pool, { schema });
  * or connection refusals (ECONNREFUSED).
  */
 export async function withDbRetry<T>(operation: () => Promise<T>, maxRetries = 2): Promise<T> {
+  if (!isSqlConfigured()) {
+    throw new Error('SQL_NOT_CONFIGURED');
+  }
   let lastError: any;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {

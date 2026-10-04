@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Тексты для RuStore — СантехПро</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { background: #0f172a; color: #f8fafc; padding: 20px; min-height: 100vh; }
+    .container { max-width: 600px; margin: 0 auto; }
+    h1 { font-size: 20px; font-weight: 800; margin-bottom: 8px; color: #38bdf8; text-align: center; }
+    p.sub { font-size: 13px; color: #94a3b8; text-align: center; margin-bottom: 24px; }
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 16px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .card-title { font-size: 14px; font-weight: 700; color: #e2e8f0; text-transform: uppercase; letter-spacing: 0.5px; }
+    .copy-btn {
+      background: #0284c7;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .copy-btn:active { transform: scale(0.96); }
+    .copy-btn.copied { background: #10b981; }
+    textarea {
+      width: 100%;
+      background: #090d16;
+      border: 1px solid #475569;
+      border-radius: 10px;
+      color: #f1f5f9;
+      font-size: 13px;
+      line-height: 1.5;
+      padding: 12px;
+      resize: none;
+      outline: none;
+    }
+    textarea:focus { border-color: #38bdf8; }
+    .hint { font-size: 11px; color: #64748b; margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📋 Тексты для публикации в RuStore</h1>
+    <p class="sub">Нажмите синюю кнопку «Скопировать», чтобы скопировать текст в 1 клик</p>
+
+    <!-- Краткое описание -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">1. Краткое описание</span>
+        <button class="copy-btn" onclick="copyText('shortText', this)">📋 Скопировать</button>
+      </div>
+      <textarea id="shortText" rows="3" readonly>Поиск мастеров-сантехников, сметы, калькулятор материалов и 100+ инструкций.</textarea>
+      <div class="hint">Вставьте в поле «Краткое описание»</div>
+    </div>
+
+    <!-- Основное описание -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">2. Основное описание</span>
+        <button class="copy-btn" onclick="copyText('mainText', this)">📋 Скопировать</button>
+      </div>
+      <textarea id="mainText" rows="14" readonly>«СантехПро» — всероссийский открытый сервис и профессиональный справочник по сантехнике.
+
+Возможности приложения:
+1. Каталог проверенных мастеров по городам России с прямыми контактами без посредников и комиссий.
+2. Составление официального договора подряда между мастером и заказчиком с актом приёмки работ и гарантией.
+3. Онлайн-калькулятор материалов для точного расчёта труб, фитингов и радиаторов отопления.
+4. Быстрое составление профессиональных электронных смет на сантехнические работы.
+5. Интерактивная диагностика неисправностей и устранение протечек.
+6. Более 100 иллюстрированных пошаговых инструкций и видеоуроков по монтажу водоснабжения, канализации и отопления.
+7. Удобный личный кабинет мастера с портфолио выполненных работ и рейтингом.</textarea>
+      <div class="hint">Вставьте в поле «Основное описание»</div>
+    </div>
+
+    <!-- Email -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">3. E-mail для связи</span>
+        <button class="copy-btn" onclick="copyText('emailText', this)">📋 Скопировать</button>
+      </div>
+      <textarea id="emailText" rows="1" readonly>santehpro.info@yandex.ru</textarea>
+      <div class="hint">Вставьте в поле «E-mail»</div>
+    </div>
+
+    <!-- Сайт -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">4. Адрес сайта</span>
+        <button class="copy-btn" onclick="copyText('siteText', this)">📋 Скопировать</button>
+      </div>
+      <textarea id="siteText" rows="1" readonly>https://santehpro.ru</textarea>
+      <div class="hint">Вставьте в поле «Адрес сайта»</div>
+    </div>
+  </div>
+
+  <script>
+    function copyText(id, btn) {
+      const textarea = document.getElementById(id);
+      textarea.select();
+      textarea.setSelectionRange(0, 99999);
+      navigator.clipboard.writeText(textarea.value).then(() => {
+        const origText = btn.innerHTML;
+        btn.innerHTML = '✅ Скопировано!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.innerHTML = origText;
+          btn.classList.remove('copied');
+        }, 2500);
+      }).catch(err => {
+        alert('Выделите текст в поле и скопируйте его вручную.');
+      });
+    }
+  </script>
+</body>
+</html>

@@ -611,8 +611,13 @@ export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
                 </label>
                 <input
                   type="number"
-                  value={studentsCount}
-                  onChange={(e) => setStudentsCount(Number(e.target.value))}
+                  min="0"
+                  placeholder="0"
+                  value={studentsCount === 0 ? '' : studentsCount}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setStudentsCount(v === '' ? 0 : parseInt(v, 10) || 0);
+                  }}
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white"
                 />
               </div>
@@ -624,8 +629,13 @@ export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
                 </label>
                 <input
                   type="number"
-                  value={viewsCount}
-                  onChange={(e) => setViewsCount(Number(e.target.value))}
+                  min="0"
+                  placeholder="0"
+                  value={viewsCount === 0 ? '' : viewsCount}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setViewsCount(v === '' ? 0 : parseInt(v, 10) || 0);
+                  }}
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white"
                 />
               </div>
@@ -637,8 +647,13 @@ export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
                 </label>
                 <input
                   type="number"
-                  value={likesCount}
-                  onChange={(e) => setLikesCount(Number(e.target.value))}
+                  min="0"
+                  placeholder="0"
+                  value={likesCount === 0 ? '' : likesCount}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setLikesCount(v === '' ? 0 : parseInt(v, 10) || 0);
+                  }}
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white"
                 />
               </div>

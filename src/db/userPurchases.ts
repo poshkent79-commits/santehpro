@@ -1,4 +1,4 @@
-import { db, withDbRetry } from './index.ts';
+import { db, withDbRetry, isSqlConfigured } from './index.ts';
 import { userPurchases } from './schema.ts';
 import { eq, desc, and } from 'drizzle-orm';
 import { UserPurchase } from '../types.ts';
@@ -32,6 +32,10 @@ function saveCachedPurchases(purchases: UserPurchase[]) {
 }
 
 export async function getUserPurchasesByUid(userUid: string): Promise<UserPurchase[]> {
+  if (!isSqlConfigured()) {
+    return getCachedPurchases().filter((p) => p.userUid === userUid);
+  }
+
   try {
     const list = await withDbRetry(async () => {
       const rows = await db
@@ -62,13 +66,16 @@ export async function getUserPurchasesByUid(userUid: string): Promise<UserPurcha
     }
 
     return list;
-  } catch (error) {
-    console.warn('Database note in getUserPurchasesByUid, serving local cache:', (error as any)?.message || error);
+  } catch (_error) {
     return getCachedPurchases().filter((p) => p.userUid === userUid);
   }
 }
 
 export async function checkUserCourseAccess(userUid: string, courseId: string): Promise<boolean> {
+  if (!isSqlConfigured()) {
+    return getCachedPurchases().some((p) => p.userUid === userUid && p.courseId === courseId);
+  }
+
   try {
     return await withDbRetry(async () => {
       const rows = await db
@@ -78,8 +85,7 @@ export async function checkUserCourseAccess(userUid: string, courseId: string): 
 
       return rows.length > 0;
     });
-  } catch (error) {
-    console.warn('Database note in checkUserCourseAccess, checking local cache:', (error as any)?.message || error);
+  } catch (_error) {
     return getCachedPurchases().some((p) => p.userUid === userUid && p.courseId === courseId);
   }
 }
@@ -113,22 +119,24 @@ export async function createDbPurchase(data: {
     // ignore
   }
 
-  try {
-    await withDbRetry(async () => {
-      await db.insert(userPurchases).values({
-        id: newRecord.id,
-        userUid: newRecord.userUid,
-        userEmail: newRecord.userEmail,
-        courseId: newRecord.courseId,
-        courseTitle: newRecord.courseTitle,
-        price: newRecord.price,
-        paymentMethod: newRecord.paymentMethod,
-        purchasedAt: new Date(newRecord.purchasedAt),
-        status: newRecord.status,
+  if (isSqlConfigured()) {
+    try {
+      await withDbRetry(async () => {
+        await db.insert(userPurchases).values({
+          id: newRecord.id,
+          userUid: newRecord.userUid,
+          userEmail: newRecord.userEmail,
+          courseId: newRecord.courseId,
+          courseTitle: newRecord.courseTitle,
+          price: newRecord.price,
+          paymentMethod: newRecord.paymentMethod,
+          purchasedAt: new Date(newRecord.purchasedAt),
+          status: newRecord.status,
+        });
       });
-    });
-  } catch (error) {
-    console.warn('Could not persist purchase to Cloud SQL immediately, saved to cache:', (error as any)?.message || error);
+    } catch (_error) {
+      // Gracefully saved in local cache
+    }
   }
 
   return newRecord;

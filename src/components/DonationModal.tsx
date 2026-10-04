@@ -50,6 +50,7 @@ export const DonationModal: React.FC<DonationModalProps> = ({
   const [isProcessingPayment, setIsProcessingPayment] = useState<boolean>(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'ALL' | 'SBP' | 'BankCard' | 'SberPay' | 'TinkoffPay'>('ALL');
+  const [clientEmail, setClientEmail] = useState<string>('');
   const [isSupportModalOpen, setIsSupportModalOpen] = useState<boolean>(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -57,6 +58,9 @@ export const DonationModal: React.FC<DonationModalProps> = ({
     if (isOpen) {
       setIsThankYouOpen(false);
       setIsScrolled(false);
+      if (currentUser?.email) {
+        setClientEmail(currentUser.email);
+      }
       if (scrollContainerRef.current) {
         scrollContainerRef.current.scrollTop = 0;
       }
@@ -65,7 +69,7 @@ export const DonationModal: React.FC<DonationModalProps> = ({
         setIsCustom(false);
       }
     }
-  }, [isOpen, initialAmount]);
+  }, [isOpen, initialAmount, currentUser]);
 
   if (!isOpen) return null;
 
@@ -104,7 +108,7 @@ export const DonationModal: React.FC<DonationModalProps> = ({
           type: 'donation',
           userUid: currentUser?.uid,
           userName: currentUser?.name,
-          email: currentUser?.email,
+          email: clientEmail.trim() || currentUser?.email || undefined,
           phone: currentUser?.phone,
           incCurrLabel: paymentMethod === 'ALL' ? undefined : paymentMethod,
         }),
@@ -201,17 +205,35 @@ export const DonationModal: React.FC<DonationModalProps> = ({
           onScroll={handleBodyScroll}
           className="p-4 sm:p-5 overflow-y-auto space-y-4 text-slate-100"
         >
+          {/* Engineering Mosaic Grid inspired by Sajda design */}
+          <div className="flex items-center justify-center gap-1.5 sm:gap-2 py-1">
+            {[
+              { icon: '🔧', bg: 'bg-emerald-500/15 border-emerald-500/30' },
+              { icon: '🎛️', bg: 'bg-cyan-500/15 border-cyan-500/30' },
+              { icon: '♨️', bg: 'bg-amber-500/15 border-amber-500/30' },
+              { icon: '🛡️', bg: 'bg-blue-500/15 border-blue-500/30' },
+              { icon: '💧', bg: 'bg-sky-500/15 border-sky-500/30' },
+              { icon: '🏠', bg: 'bg-teal-500/15 border-teal-500/30' },
+              { icon: '⚡', bg: 'bg-yellow-500/15 border-yellow-500/30' },
+              { icon: '⭐', bg: 'bg-rose-500/15 border-rose-500/30' },
+            ].map((it, idx) => (
+              <div
+                key={idx}
+                className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center text-base sm:text-lg border shadow-sm transition transform hover:scale-110 ${it.bg}`}
+              >
+                <span>{it.icon}</span>
+              </div>
+            ))}
+          </div>
+
           {/* Manifesto Box */}
           <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2.5 text-xs sm:text-sm">
             <div className="flex items-center space-x-2 text-amber-400 font-bold">
               <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
-              <span>Проект открыт для всех без скрытых платных подписок</span>
+              <span>Польза для клиентов, заказы и расчёты для мастеров</span>
             </div>
             <p className="text-slate-300 leading-relaxed text-[12px] sm:text-[13px]">
-              Все пошаговые инструкции, видеоуроки, интерактивный калькулятор закупки труб и каталог проверенных мастеров остаются в свободном доступе.
-            </p>
-            <p className="text-slate-300 leading-relaxed text-[12px] sm:text-[13px]">
-              Если справочник сэкономил вам деньги на ремонте, уберёг от протечки или научил тонкостям пайки и монтажа — вы можете поддержать развитие любой добровольной суммой на оплату серверов, хостинга и съёмку новых практических материалов.
+              Мы помогаем пользователям разбираться в сантехнике, а профи — находить клиентов и быстро считать сметы. Мы развиваем проект на добровольные донаты: поддержите СантехПро любой суммой, чтобы сервис оставался бесплатным!
             </p>
           </div>
 
@@ -291,7 +313,10 @@ export const DonationModal: React.FC<DonationModalProps> = ({
                     min="50"
                     step="50"
                     value={customAmount}
-                    onChange={(e) => setCustomAmount(e.target.value)}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setCustomAmount(v === '' ? '' : v.replace(/^0+([1-9])/, '$1'));
+                    }}
                     placeholder="Введите сумму (например, 700)"
                     autoFocus
                     className="w-full bg-slate-900 border border-rose-500/80 rounded-xl px-3.5 py-2.5 text-white font-bold text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 pr-10"
@@ -337,6 +362,27 @@ export const DonationModal: React.FC<DonationModalProps> = ({
                   Любые карты
                 </span>
               </div>
+            </div>
+
+            {/* Optional Email Input for Receipt */}
+            <div className="space-y-1.5 p-3 rounded-2xl bg-slate-950/70 border border-slate-800/80">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>E-mail для получения чека</span>
+                </label>
+                <span className="text-[10px] text-slate-400 font-semibold">(необязательно)</span>
+              </div>
+              <input
+                type="email"
+                value={clientEmail}
+                onChange={(e) => setClientEmail(e.target.value)}
+                placeholder="name@example.ru (необязательно)"
+                className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700/80 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition"
+              />
+              <p className="text-[10px] text-slate-400">
+                Чек по 54-ФЗ формируется автоматически. Если не указывать e-mail, его можно ввести на странице кассы или пропустить.
+              </p>
             </div>
 
             {/* ВЫБЕРИТЕ УДОБНЫЙ СПОСОБ ОПЛАТЫ */}

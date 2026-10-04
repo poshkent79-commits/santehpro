@@ -31,6 +31,7 @@ import { ClientEstimateModal } from './components/ClientEstimateModal';
 import { ClientContractModal } from './components/ClientContractModal';
 import { MasterPlumbingEstimate, PlumbingContract } from './types';
 import { DonationModal } from './components/DonationModal';
+import { ProSubscriptionModal } from './components/ProSubscriptionModal';
 import { triggerNativeShare } from './utils/shareApp';
 import { playIncomingRequestSound, sendBrowserNotification } from './utils/notificationSound';
 
@@ -122,6 +123,7 @@ function AppContent() {
   const [isFooterLegalModalOpen, setIsFooterLegalModalOpen] = useState<boolean>(false);
   const [footerLegalDoc, setFooterLegalDoc] = useState<'privacy' | 'terms' | 'offer'>('privacy');
   const [isDonationModalOpen, setIsDonationModalOpen] = useState<boolean>(false);
+  const [isProModalOpen, setIsProModalOpen] = useState<boolean>(false);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState<boolean>(false);
 
   const handleOpenLegalModal = (doc: 'privacy' | 'terms' | 'offer') => {
@@ -675,7 +677,7 @@ function AppContent() {
         `/api/specialists?admin=true&_t=${Date.now()}`,
         { cache: 'no-store' }
       );
-      if (Array.isArray(data) && data.length > 0) {
+      if (Array.isArray(data)) {
         setSpecialists(data);
         try {
           localStorage.setItem('santehpro_cached_specialists', JSON.stringify(data));
@@ -972,6 +974,7 @@ function AppContent() {
         onOpenAdminLogin={() => setIsLoginModalOpen(true)}
         onOpenDonation={() => setIsDonationModalOpen(true)}
         onOpenSupport={() => setIsSupportModalOpen(true)}
+        onOpenProSubscription={() => setIsProModalOpen(true)}
       />
 
       {/* Main App Container */}
@@ -1454,6 +1457,12 @@ function AppContent() {
         onClose={() => setIsDonationModalOpen(false)}
         onOpenOffer={() => handleOpenLegalModal('offer')}
         onOpenPrivacy={() => handleOpenLegalModal('privacy')}
+      />
+
+      {/* PRO+ Subscription / New Features Modal (inspired by Sajda+) */}
+      <ProSubscriptionModal
+        isOpen={isProModalOpen}
+        onClose={() => setIsProModalOpen(false)}
       />
 
       {/* User Support & Feedback Modal (santehpro.info@yandex.ru with up to 10 MB attachments) */}

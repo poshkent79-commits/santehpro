@@ -569,10 +569,14 @@ export const ApplySpecialistModal: React.FC<ApplySpecialistModalProps> = ({
                   <label className="block text-xs font-medium text-slate-300 mb-1">Стаж работы (лет)</label>
                   <input
                     type="number"
-                    min="1"
+                    min="0"
                     max="50"
-                    value={formData.experienceYears}
-                    onChange={(e) => setFormData({ ...formData, experienceYears: Number(e.target.value) })}
+                    placeholder="0"
+                    value={formData.experienceYears === 0 ? '' : formData.experienceYears}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setFormData({ ...formData, experienceYears: v === '' ? 0 : parseInt(v, 10) || 0 });
+                    }}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:border-cyan-500 focus:outline-none"
                   />
                 </div>
@@ -581,9 +585,14 @@ export const ApplySpecialistModal: React.FC<ApplySpecialistModalProps> = ({
                   <label className="block text-xs font-medium text-slate-300 mb-1">Минимальная цена вызова (руб)</label>
                   <input
                     type="number"
+                    min="0"
                     step="100"
-                    value={formData.minPrice}
-                    onChange={(e) => setFormData({ ...formData, minPrice: Number(e.target.value) })}
+                    placeholder="0"
+                    value={formData.minPrice === 0 ? '' : formData.minPrice}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setFormData({ ...formData, minPrice: v === '' ? 0 : parseInt(v, 10) || 0 });
+                    }}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:border-cyan-500 focus:outline-none"
                   />
                 </div>

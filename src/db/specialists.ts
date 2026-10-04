@@ -17,7 +17,7 @@ export function getCachedSpecialists(): PlumbingSpecialist[] {
     if (fs.existsSync(SPECIALISTS_STORE_FILE)) {
       const data = fs.readFileSync(SPECIALISTS_STORE_FILE, 'utf-8');
       const parsed = JSON.parse(data);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         return parsed;
       }
     }
@@ -50,7 +50,7 @@ export function getCachedSpecialists(): PlumbingSpecialist[] {
   return INITIAL_SPECIALISTS;
 }
 
-export function saveCachedSpecialists(list: PlumbingSpecialist[]): void {
+export function saveCachedSpecialists(list: PlumbingSpecialist[], allowWipe = false): void {
   try {
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -59,8 +59,8 @@ export function saveCachedSpecialists(list: PlumbingSpecialist[]): void {
       fs.mkdirSync(BACKUPS_DIR, { recursive: true });
     }
 
-    // Safety guard: NEVER overwrite non-empty store with empty array!
-    if (!list || list.length === 0) {
+    // Safety guard: NEVER overwrite non-empty store with empty array unless explicitly requested!
+    if (!allowWipe && (!list || list.length === 0)) {
       const existing = getCachedSpecialists();
       if (existing.length > 0) {
         console.warn(`[Safety Guard] Prevented wiping ${existing.length} specialists with empty array!`);
@@ -74,27 +74,27 @@ export function saveCachedSpecialists(list: PlumbingSpecialist[]): void {
     fs.writeFileSync(SPECIALISTS_STORE_FILE, jsonStr, 'utf-8');
 
     // Save safety mirror backup
-    if (list.length > 0) {
-      fs.writeFileSync(SPECIALISTS_BACKUP_FILE, jsonStr, 'utf-8');
-
-      // Save timestamped rotating backup (keep last 30)
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const backupPath = path.join(BACKUPS_DIR, `specialists_${timestamp}.json`);
-      fs.writeFileSync(backupPath, jsonStr, 'utf-8');
-
-      // Prune old backups if more than 30
-      try {
-        const allBackups = fs.readdirSync(BACKUPS_DIR).filter(f => f.startsWith('specialists_')).sort();
-        if (allBackups.length > 30) {
-          const toRemove = allBackups.slice(0, allBackups.length - 30);
-          for (const rmFile of toRemove) {
-            fs.unlinkSync(path.join(BACKUPS_DIR, rmFile));
-          }
-        }
-      } catch {}
-    }
+    fs.writeFileSync(SPECIALISTS_BACKUP_FILE, jsonStr, 'utf-8');
   } catch (err) {
     console.error('Failed to save cached specialists to disk:', err);
+  }
+}
+
+export async function clearAllDbSpecialists(): Promise<void> {
+  inMemorySpecialists = [];
+  try {
+    if (fs.existsSync(DATA_DIR)) {
+      fs.writeFileSync(SPECIALISTS_STORE_FILE, '[]', 'utf-8');
+      fs.writeFileSync(SPECIALISTS_BACKUP_FILE, '[]', 'utf-8');
+    }
+    if (fs.existsSync(BACKUPS_DIR)) {
+      const files = fs.readdirSync(BACKUPS_DIR).filter(f => f.startsWith('specialists_'));
+      for (const f of files) {
+        try { fs.unlinkSync(path.join(BACKUPS_DIR, f)); } catch {}
+      }
+    }
+  } catch (err) {
+    console.error('Failed to clear specialists store:', err);
   }
 }
 
