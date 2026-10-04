@@ -61,8 +61,12 @@ export const ShareAppModal: React.FC<ShareAppModalProps> = ({
           <X className="w-4 h-4" />
         </button>
 
-        <div className="w-14 h-14 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 flex items-center justify-center mx-auto shadow-inner">
-          <Share2 className="w-7 h-7" />
+        <div className="rounded-2xl overflow-hidden border border-slate-800 shadow-md bg-slate-950">
+          <img
+            src="/santehpro-exchange-banner.jpg"
+            alt="СантехПро"
+            className="w-full h-28 object-cover object-center"
+          />
         </div>
 
         <div className="space-y-1">

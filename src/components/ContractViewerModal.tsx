@@ -586,6 +586,15 @@ ${contract.worksList}
             id="printable-contract-sheet"
             className={`w-full max-w-4xl bg-white text-slate-900 p-4 sm:p-10 lg:p-12 shadow-sm rounded-xl sm:rounded-2xl border border-slate-200 space-y-6 ${fontBodyClass} font-sans`}
           >
+            {/* Official SantehPro Data Exchange Banner (1790635194201.jpg) */}
+            <div className="mb-4 rounded-2xl overflow-hidden shadow-sm border border-slate-200 bg-slate-950">
+              <img
+                src="/santehpro-exchange-banner.jpg"
+                alt="СантехПро — Электронный обмен договорами"
+                className="w-full h-24 sm:h-32 object-cover object-center"
+              />
+            </div>
+
             {/* Printable Official Header */}
             <div className="border-b-2 border-slate-900 pb-4 flex items-start justify-between gap-4">
               <div className="space-y-1">

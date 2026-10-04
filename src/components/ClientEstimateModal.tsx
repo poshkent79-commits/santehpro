@@ -326,6 +326,15 @@ export const ClientEstimateModal: React.FC<ClientEstimateModalProps> = ({
 
         {/* Main Printable Estimate Sheet */}
         <div className="p-5 sm:p-8 space-y-6 max-h-[75vh] overflow-y-auto print:max-h-none print:overflow-visible print:p-0 bg-slate-900 print:bg-white print:text-black">
+          {/* Official SantehPro Data Exchange Banner (1790635194201.jpg) */}
+          <div className="rounded-2xl overflow-hidden shadow-sm border border-slate-800 print:border-gray-300 bg-slate-950">
+            <img
+              src="/santehpro-exchange-banner.jpg"
+              alt="СантехПро — Электронный обмен сметами"
+              className="w-full h-24 sm:h-32 object-cover object-center"
+            />
+          </div>
+
           {/* Header of the Proposal / Invoice */}
           <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-6 border-b border-slate-800 print:border-gray-300">
             <div>

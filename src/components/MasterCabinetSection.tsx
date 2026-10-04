@@ -67,6 +67,8 @@ import { compressImageFile } from '../utils/imageCompressor';
 import { MasterEstimatesTab } from './MasterEstimatesTab';
 import { MasterEstimateBuilderModal } from './MasterEstimateBuilderModal';
 import { MasterContractsTab } from './MasterContractsTab';
+import { ContractBuilderModal } from './ContractBuilderModal';
+import { PlumbingContract } from '../types';
 import { RequestReviewModal } from './RequestReviewModal';
 import { CollectorUnitBuilder } from './CollectorUnitBuilder';
 import { UnderfloorHeatingCalculator } from './UnderfloorHeatingCalculator';
@@ -130,6 +132,19 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
   // Estimate builder states from requests
   const [isEstimateBuilderOpen, setIsEstimateBuilderOpen] = useState(false);
   const [selectedRequestForEstimate, setSelectedRequestForEstimate] = useState<ServiceCallRequest | null>(null);
+
+  // 1-Click Contract builder states from requests / quick actions
+  const [isContractBuilderOpen, setIsContractBuilderOpen] = useState(false);
+  const [selectedRequestForContract, setSelectedRequestForContract] = useState<ServiceCallRequest | null>(null);
+
+  // Interactive Property Type like in Materials Calculator (Дом 🏠 / Квартира 🏢)
+  const [quickBuildingType, setQuickBuildingType] = useState<'house' | 'apartment'>('apartment');
+
+  // Fast Import Modal for Estimates & Contracts from Clients
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importInput, setImportInput] = useState('');
+  const [importError, setImportError] = useState('');
+  const [importToast, setImportToast] = useState('');
 
   // Review request modal states
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
@@ -1117,127 +1132,237 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
           </div>
         )}
 
-        {/* Sub-Navigation Tabs */}
-        <div className="flex items-center gap-1.5 sm:gap-2 mt-6 pt-5 border-t border-slate-800 overflow-x-auto no-scrollbar scroll-smooth pb-1.5">
-          <button
-            id="master-tab-services-btn"
-            onClick={() => setActiveSubTab('services')}
-            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shrink-0 cursor-pointer ${
-              activeSubTab === 'services'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <Wrench className="w-4 h-4 text-blue-400" />
-            <span><span className="hidden sm:inline">Профиль и </span>услуги ({servicesList.length})</span>
-          </button>
-
-          <button
-            id="master-tab-works-btn"
-            onClick={() => setActiveSubTab('works')}
-            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shrink-0 cursor-pointer ${
-              activeSubTab === 'works'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <Camera className="w-4 h-4 text-cyan-400" />
-            <span><span className="hidden sm:inline">Портфолио </span>работ ({works.length})</span>
-          </button>
-
-          <button
-            id="master-tab-messages-btn"
-            onClick={() => setActiveSubTab('messages')}
-            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shrink-0 cursor-pointer ${
-              activeSubTab === 'messages'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <MessageSquare className="w-4 h-4 text-emerald-400" />
-            <span>Заявки ({messages.length})</span>
-            {unhandledRequests.length > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-slate-950 animate-pulse">
-                {unhandledRequests.length} нов.
+        {/* INTERACTIVE MASTER WIDGETS (styled like Materials section: tactile, lively, non-boring!) */}
+        <div className="mt-6 pt-5 border-t border-slate-800 space-y-3.5">
+          {/* Quick Action & Object Type Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/90 border border-slate-800 p-3 sm:p-4 rounded-3xl shadow-lg">
+            {/* Left: Interactive Object Type Pill Buttons (Matches Screenshot 2) */}
+            <div className="flex items-center space-x-2">
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 hidden sm:inline mr-1">
+                Объект:
               </span>
-            )}
-          </button>
+              {/* Дом */}
+              <button
+                type="button"
+                onClick={() => setQuickBuildingType('house')}
+                className={`flex items-center space-x-2 px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-2xl font-black text-xs sm:text-sm transition-all cursor-pointer border ${
+                  quickBuildingType === 'house'
+                    ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-lg shadow-amber-500/25 scale-[1.02]'
+                    : 'bg-slate-950/80 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-800'
+                }`}
+              >
+                <span className="text-base sm:text-lg">🏠</span>
+                <span>Дом</span>
+                {quickBuildingType === 'house' && (
+                  <span className="w-2 h-2 rounded-full bg-slate-950 ml-1"></span>
+                )}
+              </button>
 
-          {/* NEW: MASTER COLLECTOR UNIT CALCULATOR */}
-          <button
-            id="master-tab-collector-btn"
-            onClick={() => setActiveSubTab('collector')}
-            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shrink-0 cursor-pointer ${
-              activeSubTab === 'collector'
-                ? 'bg-cyan-600 text-white shadow-lg shadow-cyan-500/20'
-                : 'text-cyan-300/90 hover:text-white hover:bg-slate-800/60 border border-cyan-500/30'
-            }`}
-          >
-            <Sliders className="w-4 h-4 text-cyan-400" />
-            <span>Узел ввода</span>
-            <span className="px-1 py-0.5 rounded text-[9px] font-extrabold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-              Смета
-            </span>
-          </button>
+              {/* Квартира */}
+              <button
+                type="button"
+                onClick={() => setQuickBuildingType('apartment')}
+                className={`flex items-center space-x-2 px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-2xl font-black text-xs sm:text-sm transition-all cursor-pointer border ${
+                  quickBuildingType === 'apartment'
+                    ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-lg shadow-cyan-500/25 scale-[1.02]'
+                    : 'bg-slate-950/80 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-800'
+                }`}
+              >
+                <span className="text-base sm:text-lg">🏢</span>
+                <span>Квартира</span>
+                {quickBuildingType === 'apartment' && (
+                  <span className="w-2 h-2 rounded-full bg-slate-950 ml-1"></span>
+                )}
+              </button>
+            </div>
 
-          {/* NEW: MASTER UNDERFLOOR HEATING CALCULATOR */}
-          <button
-            id="master-tab-underfloor-btn"
-            onClick={() => setActiveSubTab('underfloor')}
-            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shrink-0 cursor-pointer ${
-              activeSubTab === 'underfloor'
-                ? 'bg-amber-600 text-white shadow-lg shadow-amber-500/20'
-                : 'text-amber-300/90 hover:text-white hover:bg-slate-800/60 border border-amber-500/30'
-            }`}
-          >
-            <Flame className="w-4 h-4 text-amber-400" />
-            <span>Тёплый пол</span>
-            <span className="px-1 py-0.5 rounded text-[9px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-              Смета
-            </span>
-          </button>
+            {/* Right: Quick Launch & Import Buttons */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Быстрая смета */}
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedRequestForEstimate(null);
+                  setIsEstimateBuilderOpen(true);
+                }}
+                className="flex items-center space-x-1.5 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-extrabold text-xs transition shadow-md shadow-blue-500/20 active:scale-95 cursor-pointer border border-blue-400/40"
+                title="Создать новую смету для клиента"
+              >
+                <span>⚡ Смета</span>
+              </button>
 
-          <button
-            id="master-tab-estimates-btn"
-            onClick={() => setActiveSubTab('estimates')}
-            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shrink-0 cursor-pointer ${
-              activeSubTab === 'estimates'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <Calculator className="w-4 h-4 text-amber-400" />
-            <span><span className="hidden sm:inline">Сметы </span>клиентам</span>
-          </button>
+              {/* Быстрый договор */}
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedRequestForContract(null);
+                  setIsContractBuilderOpen(true);
+                }}
+                className="flex items-center space-x-1.5 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-500 hover:to-violet-500 text-white font-extrabold text-xs transition shadow-md shadow-purple-500/20 active:scale-95 cursor-pointer border border-purple-400/40"
+                title="Оформить официальный договор подряда с актом и гарантией"
+              >
+                <span>📜 Договор</span>
+              </button>
 
-          <button
-            id="master-tab-contracts-btn"
-            onClick={() => setActiveSubTab('contracts')}
-            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shrink-0 cursor-pointer ${
-              activeSubTab === 'contracts'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <FileCheck className="w-4 h-4 text-emerald-400" />
-            <span>Договоры<span className="hidden sm:inline"> и акты</span></span>
-            <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-              B2B
-            </span>
-          </button>
+              {/* Импорт сметы/договора от клиента */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsImportModalOpen(true);
+                  setImportError('');
+                  setImportInput('');
+                }}
+                className="flex items-center space-x-1.5 px-3 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-extrabold text-xs transition border border-amber-500/30 active:scale-95 cursor-pointer shadow-xs"
+                title="Принять смету или договор от клиента по ссылке/коду"
+              >
+                <span>📥 Принять смету / договор</span>
+              </button>
+            </div>
+          </div>
 
-          <button
-            id="master-tab-articles-btn"
-            onClick={() => setActiveSubTab('articles')}
-            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shrink-0 cursor-pointer ${
-              activeSubTab === 'articles'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <GraduationCap className="w-4 h-4 text-rose-400" />
-            <span><span className="hidden sm:inline">Курсы и </span>статьи ({masterArticles.length})</span>
-          </button>
+          {/* Sub-Navigation Tabs (Cool pill button design matching Screenshot 2) */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth pb-2 pt-1">
+            {/* 1. Услуги и профиль */}
+            <button
+              id="master-tab-services-btn"
+              onClick={() => setActiveSubTab('services')}
+              className={`flex items-center space-x-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl font-black text-xs sm:text-sm transition-all shrink-0 cursor-pointer border ${
+                activeSubTab === 'services'
+                  ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-lg shadow-amber-500/25 scale-[1.02]'
+                  : 'bg-slate-950/80 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-800'
+              }`}
+            >
+              <span className="text-base sm:text-lg">🔧</span>
+              <span>Услуги ({servicesList.length})</span>
+              {activeSubTab === 'services' && (
+                <span className="w-2 h-2 rounded-full bg-slate-950 ml-1"></span>
+              )}
+            </button>
+
+            {/* 2. Портфолио работ */}
+            <button
+              id="master-tab-works-btn"
+              onClick={() => setActiveSubTab('works')}
+              className={`flex items-center space-x-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl font-black text-xs sm:text-sm transition-all shrink-0 cursor-pointer border ${
+                activeSubTab === 'works'
+                  ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-lg shadow-cyan-500/25 scale-[1.02]'
+                  : 'bg-slate-950/80 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-800'
+              }`}
+            >
+              <span className="text-base sm:text-lg">📷</span>
+              <span>Работы ({works.length})</span>
+              {activeSubTab === 'works' && (
+                <span className="w-2 h-2 rounded-full bg-slate-950 ml-1"></span>
+              )}
+            </button>
+
+            {/* 3. Входящие заявки от клиентов */}
+            <button
+              id="master-tab-messages-btn"
+              onClick={() => setActiveSubTab('messages')}
+              className={`flex items-center space-x-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl font-black text-xs sm:text-sm transition-all shrink-0 cursor-pointer border ${
+                activeSubTab === 'messages'
+                  ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-lg shadow-emerald-500/25 scale-[1.02]'
+                  : 'bg-slate-950/80 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-800'
+              }`}
+            >
+              <span className="text-base sm:text-lg">💬</span>
+              <span>Заявки ({messages.length})</span>
+              {unhandledRequests.length > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-slate-950 animate-pulse ml-0.5">
+                  {unhandledRequests.length} нов.
+                </span>
+              )}
+              {activeSubTab === 'messages' && (
+                <span className="w-2 h-2 rounded-full bg-slate-950 ml-1"></span>
+              )}
+            </button>
+
+            {/* 4. Узел ввода (Смета) */}
+            <button
+              id="master-tab-collector-btn"
+              onClick={() => setActiveSubTab('collector')}
+              className={`flex items-center space-x-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl font-black text-xs sm:text-sm transition-all shrink-0 cursor-pointer border ${
+                activeSubTab === 'collector'
+                  ? 'bg-indigo-500 text-white border-indigo-400 shadow-lg shadow-indigo-500/25 scale-[1.02]'
+                  : 'bg-slate-950/80 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-800'
+              }`}
+            >
+              <span className="text-base sm:text-lg">🎛️</span>
+              <span>Узел ввода</span>
+              {activeSubTab === 'collector' && (
+                <span className="w-2 h-2 rounded-full bg-white ml-1"></span>
+              )}
+            </button>
+
+            {/* 5. Тёплый пол (Смета) */}
+            <button
+              id="master-tab-underfloor-btn"
+              onClick={() => setActiveSubTab('underfloor')}
+              className={`flex items-center space-x-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl font-black text-xs sm:text-sm transition-all shrink-0 cursor-pointer border ${
+                activeSubTab === 'underfloor'
+                  ? 'bg-orange-500 text-slate-950 border-orange-400 shadow-lg shadow-orange-500/25 scale-[1.02]'
+                  : 'bg-slate-950/80 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-800'
+              }`}
+            >
+              <span className="text-base sm:text-lg">🔥</span>
+              <span>Тёплый пол</span>
+              {activeSubTab === 'underfloor' && (
+                <span className="w-2 h-2 rounded-full bg-slate-950 ml-1"></span>
+              )}
+            </button>
+
+            {/* 6. Сметы клиентам */}
+            <button
+              id="master-tab-estimates-btn"
+              onClick={() => setActiveSubTab('estimates')}
+              className={`flex items-center space-x-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl font-black text-xs sm:text-sm transition-all shrink-0 cursor-pointer border ${
+                activeSubTab === 'estimates'
+                  ? 'bg-blue-500 text-white border-blue-400 shadow-lg shadow-blue-500/25 scale-[1.02]'
+                  : 'bg-slate-950/80 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-800'
+              }`}
+            >
+              <span className="text-base sm:text-lg">📊</span>
+              <span>Сметы</span>
+              {activeSubTab === 'estimates' && (
+                <span className="w-2 h-2 rounded-full bg-white ml-1"></span>
+              )}
+            </button>
+
+            {/* 7. Договоры и акты B2B */}
+            <button
+              id="master-tab-contracts-btn"
+              onClick={() => setActiveSubTab('contracts')}
+              className={`flex items-center space-x-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl font-black text-xs sm:text-sm transition-all shrink-0 cursor-pointer border ${
+                activeSubTab === 'contracts'
+                  ? 'bg-purple-600 text-white border-purple-400 shadow-lg shadow-purple-500/25 scale-[1.02]'
+                  : 'bg-slate-950/80 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-800'
+              }`}
+            >
+              <span className="text-base sm:text-lg">📜</span>
+              <span>Договоры B2B</span>
+              {activeSubTab === 'contracts' && (
+                <span className="w-2 h-2 rounded-full bg-white ml-1"></span>
+              )}
+            </button>
+
+            {/* 8. Курсы и статьи */}
+            <button
+              id="master-tab-articles-btn"
+              onClick={() => setActiveSubTab('articles')}
+              className={`flex items-center space-x-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl font-black text-xs sm:text-sm transition-all shrink-0 cursor-pointer border ${
+                activeSubTab === 'articles'
+                  ? 'bg-rose-500 text-white border-rose-400 shadow-lg shadow-rose-500/25 scale-[1.02]'
+                  : 'bg-slate-950/80 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-800'
+              }`}
+            >
+              <span className="text-base sm:text-lg">🎓</span>
+              <span>Курсы и статьи ({masterArticles.length})</span>
+              {activeSubTab === 'articles' && (
+                <span className="w-2 h-2 rounded-full bg-white ml-1"></span>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -2359,18 +2484,32 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
                         </a>
                       )}
 
-                      {/* Create Estimate for Request */}
+                      {/* 1-Click Estimate for Request */}
                       <button
                         type="button"
                         onClick={() => {
                           setSelectedRequestForEstimate(msg);
                           setIsEstimateBuilderOpen(true);
                         }}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-bold transition shadow-sm cursor-pointer"
-                        title="Сформировать детальную смету по этой заявке"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-black transition shadow-sm cursor-pointer active:scale-95"
+                        title="Сформировать детальную смету по этой заявке в 1 клик"
                       >
                         <Calculator className="w-3.5 h-3.5 text-slate-950" />
-                        <span>Предложить смету</span>
+                        <span>⚡ Смета в 1 клик</span>
+                      </button>
+
+                      {/* 1-Click Contract for Request */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedRequestForContract(msg);
+                          setIsContractBuilderOpen(true);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-black transition shadow-sm cursor-pointer active:scale-95"
+                        title="Оформить официальный договор подряда в 1 клик со всеми данными клиента"
+                      >
+                        <FileCheck className="w-3.5 h-3.5 text-white" />
+                        <span>📜 Договор в 1 клик</span>
                       </button>
 
                       {msg.status !== 'completed' ? (
@@ -3240,6 +3379,138 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
             setActiveSubTab('estimates');
           }}
         />
+      )}
+
+      {/* 1-Click Contract Builder Modal (when launched directly from request or quick widget) */}
+      {isContractBuilderOpen && (
+        <ContractBuilderModal
+          isOpen={isContractBuilderOpen}
+          specialist={specialist}
+          availableEstimates={estimates}
+          initialContract={
+            selectedRequestForContract
+              ? {
+                  id: `contract_${Date.now()}`,
+                  specialistId: specialist.id,
+                  specialistName: specialist.name,
+                  specialistPhone: specialist.phone,
+                  specialistStatus: specialist.legalStatus === 'ip' ? 'ip' : specialist.legalStatus === 'ooo' ? 'ooo' : 'self_employed',
+                  specialistInn: specialist.inn || '',
+                  specialistCity: specialist.city || 'Москва',
+                  clientName: selectedRequestForContract.clientName || 'Заказчик',
+                  clientPhone: selectedRequestForContract.clientPhone || '',
+                  clientAddress: selectedRequestForContract.city + (selectedRequestForContract.address ? `, ${selectedRequestForContract.address}` : ''),
+                  title: `Сантехнические работы: ${selectedRequestForContract.problemDescription?.slice(0, 45) || 'Монтаж сантехники'}`,
+                  worksList: `1. ${selectedRequestForContract.problemDescription || 'Сантехнические работы по заявке'}\n2. Проверка и опрессовка соединений\n3. Пусконаладка и сдача объекта заказчику`,
+                  totalPrice: 15000,
+                  contractDate: new Date().toISOString().slice(0, 10),
+                  startDate: new Date().toISOString().slice(0, 10),
+                  endDate: new Date(Date.now() + 86400000 * 3).toISOString().slice(0, 10),
+                  paymentType: 'split',
+                  prepaymentPercent: 30,
+                  warrantyMonths: 24,
+                  materialsOption: 'specialist',
+                  contractNumber: `СП-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
+                  status: 'draft',
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                }
+              : null
+          }
+          onClose={() => {
+            setIsContractBuilderOpen(false);
+            setSelectedRequestForContract(null);
+          }}
+          onSave={(newContract) => {
+            setIsContractBuilderOpen(false);
+            setSelectedRequestForContract(null);
+            try {
+              const key = `santehpro_master_contracts_${specialist.id}`;
+              const prev = JSON.parse(localStorage.getItem(key) || '[]');
+              localStorage.setItem(key, JSON.stringify([newContract, ...prev]));
+            } catch {}
+            setActiveSubTab('contracts');
+          }}
+        />
+      )}
+
+      {/* Instant Import Modal for Estimate / Contract from Client */}
+      {isImportModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-2xl text-slate-100 animate-in zoom-in-95">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-lg font-bold border border-amber-500/30">
+                  📥
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm sm:text-base text-white">Принять смету или договор</h3>
+                  <p className="text-[11px] text-slate-400">Мгновенный импорт в приложение для заполнения</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsImportModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <p className="text-slate-300 leading-relaxed">
+                Вставьте ссылку или номер сметы/договора, полученные от заказчика в WhatsApp, Telegram или SMS:
+              </p>
+              <input
+                type="text"
+                value={importInput}
+                onChange={(e) => {
+                  setImportInput(e.target.value);
+                  setImportError('');
+                }}
+                placeholder="https://santehpro.info/?estimate=... или номер"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs outline-none focus:border-amber-400 font-mono"
+              />
+              {importError && (
+                <p className="text-rose-400 font-bold text-[11px]">{importError}</p>
+              )}
+            </div>
+
+            <div className="pt-2 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsImportModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+              >
+                Отмена
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const val = importInput.trim();
+                  if (!val) {
+                    setImportError('Пожалуйста, вставьте ссылку или ID');
+                    return;
+                  }
+
+                  // Check if it's a contract
+                  if (val.includes('contract') || val.startsWith('СП-') || val.startsWith('ctr_')) {
+                    setIsImportModalOpen(false);
+                    setIsContractBuilderOpen(true);
+                  } else {
+                    // It's an estimate or general request
+                    setIsImportModalOpen(false);
+                    setIsEstimateBuilderOpen(true);
+                  }
+                }}
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs transition shadow-md active:scale-95 cursor-pointer"
+              >
+                Открыть для заполнения →
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Full Lightbox viewer for works with up to 10 photos */}

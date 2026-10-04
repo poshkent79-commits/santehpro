@@ -281,6 +281,32 @@ export const ContractBuilderModal: React.FC<ContractBuilderModalProps> = ({
     };
   }, []);
 
+  // Synchronize state when modal opens with new initialContract (e.g. from an incoming client request or estimate)
+  useEffect(() => {
+    if (isOpen && initialContract) {
+      setContractNumber(initialContract.contractNumber || generateContractNumber());
+      setContractDate(initialContract.contractDate || todayStr);
+      setStartDate(initialContract.startDate || todayStr);
+      setEndDate(initialContract.endDate || nextMonthStr);
+      setSpecialistName(initialContract.specialistName || specialist.name || '');
+      setSpecialistPhone(initialContract.specialistPhone || specialist.phone || '');
+      setSpecialistStatus(initialContract.specialistStatus || (specialist.legalStatus === 'ip' ? 'ip' : specialist.legalStatus === 'ooo' ? 'ooo' : 'self_employed'));
+      setSpecialistInn(initialContract.specialistInn || specialist.inn || '');
+      setSpecialistCity(initialContract.specialistCity || specialist.city || 'Москва');
+      setClientName(initialContract.clientName || '');
+      setClientPhone(initialContract.clientPhone || '');
+      setClientPassport(initialContract.clientPassport || '');
+      setClientAddress(initialContract.clientAddress || '');
+      setTitle(initialContract.title || 'Монтаж системы водоснабжения и сантехприборов');
+      setWorksList(initialContract.worksList || '');
+      setTotalPrice(initialContract.totalPrice || 25000);
+      setAdvancePayment(initialContract.advancePayment || 0);
+      setWarrantyMonths(initialContract.warrantyMonths || 24);
+      setMaterialsResponsibility(initialContract.materialsResponsibility || 'mixed');
+      setLinkedEstimateId(initialContract.estimateId || '');
+    }
+  }, [isOpen, initialContract]);
+
   // Helper to add a work item to worksList with proper numbering
   const handleAddWorkItem = (itemText: string) => {
     const trimmed = itemText.trim();

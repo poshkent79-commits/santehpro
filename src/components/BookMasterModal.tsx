@@ -90,10 +90,19 @@ export const BookMasterModal: React.FC<BookMasterModalProps> = ({
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition"
+          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition z-10"
         >
           <X className="w-5 h-5" />
         </button>
+
+        {/* Official SantehPro Data Exchange Graphic Element (1790635194201.jpg) */}
+        <div className="rounded-2xl overflow-hidden border border-slate-800 shadow-md bg-slate-950">
+          <img
+            src="/santehpro-exchange-banner.jpg"
+            alt="СантехПро — Обмен заявками между клиентом и мастером"
+            className="w-full h-24 sm:h-28 object-cover object-center"
+          />
+        </div>
 
         {submitted ? (
           <div className="text-center py-6 sm:py-8 space-y-4">

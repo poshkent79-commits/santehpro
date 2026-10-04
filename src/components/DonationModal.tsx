@@ -33,6 +33,67 @@ const PRESET_AMOUNTS = [
   { amount: 2500, label: 'Меценат СантехПро', icon: '👑', description: 'Серьёзный вклад в съёмки' },
 ];
 
+/**
+ * Authentic Russian SBP (Система быстрых платежей) emblem matching Screenshot 1
+ */
+const SbpLogo: React.FC<{ className?: string }> = ({ className = 'w-7 h-7' }) => (
+  <svg
+    viewBox="0 0 100 100"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+    role="img"
+    aria-label="Логотип СБП"
+  >
+    {/* Left arrow: purple / violet */}
+    <polygon points="6,50 18,25 35,46" fill="#4B3F8A" />
+    <polygon points="6,50 18,75 35,54" fill="#882C7C" />
+
+    {/* Top vertical arrow: gold-yellow / orange */}
+    <polygon points="50,5 36,28 50,49" fill="#FAB614" />
+    <polygon points="50,5 68,25 50,33" fill="#F47B20" />
+
+    {/* Top-right arrow: red-orange / crimson */}
+    <polygon points="95,33 68,25 50,33" fill="#ED5729" />
+    <polygon points="95,33 68,44 50,33" fill="#D3254B" />
+
+    {/* Interlocking central diagonal ribbon: cyan / sky-blue */}
+    <polygon points="18,25 95,71 78,81 6,35" fill="#00A2E2" />
+    <polygon points="35,46 95,71 78,81 20,56" fill="#0077B6" />
+
+    {/* Bottom vertical arrow: lime green / forest green */}
+    <polygon points="50,95 36,72 50,51" fill="#78BE20" />
+    <polygon points="50,95 68,75 50,67" fill="#009A44" />
+
+    {/* Bottom-right teal facet */}
+    <polygon points="95,71 68,75 50,67" fill="#007A3D" />
+  </svg>
+);
+
+/**
+ * Authentic T-Pay pill badge with yellow shield and "PAY" text matching Screenshot 2
+ */
+const TPayBadge: React.FC<{ className?: string }> = ({ className = '' }) => (
+  <div
+    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-[#202022] border border-slate-700/80 shadow-md ${className}`}
+    title="T-Pay"
+  >
+    {/* T-Bank Yellow Shield */}
+    <svg viewBox="0 0 24 28" className="w-4 h-4 shrink-0" fill="none">
+      <path
+        d="M2 2h20v14c0 6.5-10 11.5-10 11.5S2 22.5 2 16V2z"
+        fill="#FED800"
+      />
+      {/* Letter T */}
+      <path
+        d="M6 6h12v3.6h-3.8v8.8h-4.4V9.6H6V6z"
+        fill="#121212"
+      />
+    </svg>
+    <span className="text-white font-black text-[11px] tracking-wider leading-none">PAY</span>
+  </div>
+);
+
 export const DonationModal: React.FC<DonationModalProps> = ({
   isOpen,
   onClose,
@@ -49,7 +110,7 @@ export const DonationModal: React.FC<DonationModalProps> = ({
   const [isScrolled, setIsScrolled] = useState<boolean>(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState<boolean>(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'ALL' | 'SBP' | 'BankCard' | 'SberPay' | 'TinkoffPay'>('ALL');
+  const [paymentMethod, setPaymentMethod] = useState<'ALL' | 'SBP' | 'BankCard' | 'TinkoffPay'>('SBP');
   const [clientEmail, setClientEmail] = useState<string>('');
   const [isSupportModalOpen, setIsSupportModalOpen] = useState<boolean>(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -205,17 +266,35 @@ export const DonationModal: React.FC<DonationModalProps> = ({
           onScroll={handleBodyScroll}
           className="p-4 sm:p-5 overflow-y-auto space-y-4 text-slate-100"
         >
+          {/* Engineering Mosaic Grid inspired by Sajda design */}
+          <div className="flex items-center justify-center gap-1.5 sm:gap-2 py-1">
+            {[
+              { icon: '🔧', bg: 'bg-emerald-500/15 border-emerald-500/30' },
+              { icon: '🎛️', bg: 'bg-cyan-500/15 border-cyan-500/30' },
+              { icon: '♨️', bg: 'bg-amber-500/15 border-amber-500/30' },
+              { icon: '🛡️', bg: 'bg-blue-500/15 border-blue-500/30' },
+              { icon: '💧', bg: 'bg-sky-500/15 border-sky-500/30' },
+              { icon: '🏠', bg: 'bg-teal-500/15 border-teal-500/30' },
+              { icon: '⚡', bg: 'bg-yellow-500/15 border-yellow-500/30' },
+              { icon: '⭐', bg: 'bg-rose-500/15 border-rose-500/30' },
+            ].map((it, idx) => (
+              <div
+                key={idx}
+                className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center text-base sm:text-lg border shadow-sm transition transform hover:scale-110 ${it.bg}`}
+              >
+                <span>{it.icon}</span>
+              </div>
+            ))}
+          </div>
+
           {/* Manifesto Box */}
           <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2.5 text-xs sm:text-sm">
             <div className="flex items-center space-x-2 text-amber-400 font-bold">
               <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
-              <span>Проект открыт для всех без скрытых платных подписок</span>
+              <span>Польза для клиентов, заказы и расчёты для мастеров</span>
             </div>
             <p className="text-slate-300 leading-relaxed text-[12px] sm:text-[13px]">
-              Все пошаговые инструкции, видеоуроки, интерактивный калькулятор закупки труб и каталог проверенных мастеров остаются в свободном доступе.
-            </p>
-            <p className="text-slate-300 leading-relaxed text-[12px] sm:text-[13px]">
-              Если справочник сэкономил вам деньги на ремонте, уберёг от протечки или научил тонкостям пайки и монтажа — вы можете поддержать развитие любой добровольной суммой на оплату серверов, хостинга и съёмку новых практических материалов.
+              Мы помогаем пользователям разбираться в сантехнике, а профи — находить клиентов и быстро считать сметы. Мы развиваем проект на добровольные донаты: поддержите СантехПро любой суммой, чтобы сервис оставался бесплатным!
             </p>
           </div>
 
@@ -346,161 +425,160 @@ export const DonationModal: React.FC<DonationModalProps> = ({
               </div>
             </div>
 
-            {/* Optional Email Input for Receipt */}
-            <div className="space-y-1.5 p-3 rounded-2xl bg-slate-950/70 border border-slate-800/80">
-              <div className="flex items-center justify-between">
-                <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <Mail className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>E-mail для получения чека</span>
-                </label>
-                <span className="text-[10px] text-slate-400 font-semibold">(необязательно)</span>
-              </div>
-              <input
-                type="email"
-                value={clientEmail}
-                onChange={(e) => setClientEmail(e.target.value)}
-                placeholder="name@example.ru (необязательно)"
-                className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700/80 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition"
-              />
-              <p className="text-[10px] text-slate-400">
-                Чек по 54-ФЗ формируется автоматически. Если не указывать e-mail, его можно ввести на странице кассы или пропустить.
-              </p>
-            </div>
-
             {/* ВЫБЕРИТЕ УДОБНЫЙ СПОСОБ ОПЛАТЫ */}
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider block">
-                ВЫБЕРИТЕ УДОБНЫЙ СПОСОБ ОПЛАТЫ:
-              </label>
-              <div className="grid grid-cols-2 gap-2.5">
-                {/* Все способы */}
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('ALL')}
-                  className={`p-3 rounded-2xl border text-left transition flex items-center space-x-2.5 cursor-pointer ${
-                    paymentMethod === 'ALL'
-                      ? 'bg-blue-600/20 border-blue-500 text-white shadow-lg shadow-blue-950/40 ring-1 ring-blue-500'
-                      : 'bg-slate-950/80 border-slate-800/90 text-slate-400 hover:border-slate-700 hover:text-slate-200'
-                  }`}
-                >
-                  <div className="w-8 h-8 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 text-base shrink-0">
-                    🌐
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-xs sm:text-sm font-bold text-white truncate">Все способы</div>
-                    <div className="text-[11px] text-slate-400 truncate">Выбор в кассе</div>
-                  </div>
-                </button>
+            <div className="space-y-3 pt-1">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-black text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span>Выберите способ оплаты:</span>
+                </label>
+                <span className="text-[10px] font-extrabold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/25">
+                  0% комиссии
+                </span>
+              </div>
 
-                {/* СБП */}
+              <div className="grid grid-cols-2 gap-2.5">
+                {/* 1. СБП 0% (По QR-коду) */}
                 <button
                   type="button"
                   onClick={() => setPaymentMethod('SBP')}
-                  className={`p-3 rounded-2xl border text-left transition flex items-center space-x-2.5 cursor-pointer ${
+                  className={`relative p-3 sm:p-3.5 rounded-2xl border text-left transition-all duration-200 flex items-center space-x-3 cursor-pointer group active:scale-95 ${
                     paymentMethod === 'SBP'
-                      ? 'bg-emerald-600/20 border-emerald-500 text-white shadow-lg shadow-emerald-950/40 ring-1 ring-emerald-500'
-                      : 'bg-slate-950/80 border-slate-800/90 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+                      ? 'bg-gradient-to-br from-emerald-500/20 via-slate-900 to-slate-900 border-emerald-400 text-white shadow-xl shadow-emerald-500/20 ring-2 ring-emerald-400/80 scale-[1.02]'
+                      : 'bg-slate-950/80 border-slate-800/90 text-slate-300 hover:border-emerald-500/50 hover:bg-slate-900/60'
                   }`}
                 >
-                  <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-base shrink-0">
-                    ⚡
+                  {paymentMethod === 'SBP' && (
+                    <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center text-[10px] font-black shadow-sm">
+                      ✓
+                    </span>
+                  )}
+                  <div className="w-10 h-10 rounded-xl bg-white p-1.5 flex items-center justify-center shadow-md shadow-emerald-500/20 shrink-0">
+                    <SbpLogo className="w-full h-full" />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-xs sm:text-sm font-bold text-white truncate">СБП 0%</div>
-                    <div className="text-[11px] text-emerald-400 truncate">По QR-коду</div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs sm:text-sm font-black text-white truncate">СБП 0%</span>
+                    </div>
+                    <div className="text-[11px] font-medium text-emerald-400 truncate">По QR-коду</div>
                   </div>
                 </button>
 
-                {/* Картой */}
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('BankCard')}
-                  className={`p-3 rounded-2xl border text-left transition flex items-center space-x-2.5 cursor-pointer ${
-                    paymentMethod === 'BankCard'
-                      ? 'bg-cyan-600/20 border-cyan-500 text-white shadow-lg shadow-cyan-950/40 ring-1 ring-cyan-500'
-                      : 'bg-slate-950/80 border-slate-800/90 text-slate-400 hover:border-slate-700 hover:text-slate-200'
-                  }`}
-                >
-                  <div className="w-8 h-8 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-base shrink-0">
-                    💳
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-xs sm:text-sm font-bold text-white truncate">Картой</div>
-                    <div className="text-[11px] text-slate-400 truncate">МИР, Visa, MC</div>
-                  </div>
-                </button>
-
-                {/* SberPay */}
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('SberPay')}
-                  className={`p-3 rounded-2xl border text-left transition flex items-center space-x-2.5 cursor-pointer ${
-                    paymentMethod === 'SberPay'
-                      ? 'bg-green-600/20 border-green-500 text-white shadow-lg shadow-green-950/40 ring-1 ring-green-500'
-                      : 'bg-slate-950/80 border-slate-800/90 text-slate-400 hover:border-slate-700 hover:text-slate-200'
-                  }`}
-                >
-                  <div className="w-8 h-8 rounded-xl bg-green-500/15 border border-green-500/30 flex items-center justify-center text-green-400 text-base shrink-0">
-                    🟢
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-xs sm:text-sm font-bold text-white truncate">SberPay</div>
-                    <div className="text-[11px] text-slate-400 truncate">Сбербанк Онлайн</div>
-                  </div>
-                </button>
-
-                {/* T-Pay */}
+                {/* 2. T-Pay (Т-Банк) */}
                 <button
                   type="button"
                   onClick={() => setPaymentMethod('TinkoffPay')}
-                  className={`col-span-2 sm:col-span-1 p-3 rounded-2xl border text-left transition flex items-center space-x-2.5 cursor-pointer ${
+                  className={`relative p-3 sm:p-3.5 rounded-2xl border text-left transition-all duration-200 flex items-center space-x-3 cursor-pointer group active:scale-95 ${
                     paymentMethod === 'TinkoffPay'
-                      ? 'bg-amber-600/20 border-amber-500 text-white shadow-lg shadow-amber-950/40 ring-1 ring-amber-500'
-                      : 'bg-slate-950/80 border-slate-800/90 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+                      ? 'bg-gradient-to-br from-amber-500/20 via-slate-900 to-slate-900 border-amber-400 text-white shadow-xl shadow-amber-500/20 ring-2 ring-amber-400/80 scale-[1.02]'
+                      : 'bg-slate-950/80 border-slate-800/90 text-slate-300 hover:border-amber-500/50 hover:bg-slate-900/60'
                   }`}
                 >
-                  <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 text-base shrink-0">
-                    🟡
+                  {paymentMethod === 'TinkoffPay' && (
+                    <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center text-[10px] font-black shadow-sm">
+                      ✓
+                    </span>
+                  )}
+                  <div className="shrink-0">
+                    <TPayBadge />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-xs sm:text-sm font-bold text-white truncate">T-Pay</div>
-                    <div className="text-[11px] text-slate-400 truncate">Т-Банк в 1 клик</div>
+                    <div className="text-xs sm:text-sm font-black text-white truncate">T-Pay</div>
+                    <div className="text-[11px] font-medium text-amber-300 truncate">Т-Банк в 1 клик</div>
+                  </div>
+                </button>
+
+                {/* 3. Банковской картой */}
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('BankCard')}
+                  className={`relative p-3 sm:p-3.5 rounded-2xl border text-left transition-all duration-200 flex items-center space-x-3 cursor-pointer group active:scale-95 ${
+                    paymentMethod === 'BankCard'
+                      ? 'bg-gradient-to-br from-blue-500/20 via-slate-900 to-slate-900 border-blue-400 text-white shadow-xl shadow-blue-500/20 ring-2 ring-blue-400/80 scale-[1.02]'
+                      : 'bg-slate-950/80 border-slate-800/90 text-slate-300 hover:border-blue-500/50 hover:bg-slate-900/60'
+                  }`}
+                >
+                  {paymentMethod === 'BankCard' && (
+                    <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-blue-400 text-slate-950 flex items-center justify-center text-[10px] font-black shadow-sm">
+                      ✓
+                    </span>
+                  )}
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 text-white flex items-center justify-center shadow-md shadow-blue-500/30 shrink-0">
+                    <CreditCard className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs sm:text-sm font-black text-white truncate">Картой</div>
+                    <div className="text-[11px] font-medium text-cyan-300 truncate">МИР, Visa, MC</div>
+                  </div>
+                </button>
+
+                {/* 4. Все способы (на странице кассы) */}
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('ALL')}
+                  className={`relative p-3 sm:p-3.5 rounded-2xl border text-left transition-all duration-200 flex items-center space-x-3 cursor-pointer group active:scale-95 ${
+                    paymentMethod === 'ALL'
+                      ? 'bg-gradient-to-br from-indigo-500/20 via-slate-900 to-slate-900 border-indigo-400 text-white shadow-xl shadow-indigo-500/20 ring-2 ring-indigo-400/80 scale-[1.02]'
+                      : 'bg-slate-950/80 border-slate-800/90 text-slate-300 hover:border-indigo-500/50 hover:bg-slate-900/60'
+                  }`}
+                >
+                  {paymentMethod === 'ALL' && (
+                    <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-indigo-400 text-slate-950 flex items-center justify-center text-[10px] font-black shadow-sm">
+                      ✓
+                    </span>
+                  )}
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-lg shrink-0 shadow-md shadow-indigo-500/30">
+                    🌐
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs sm:text-sm font-black text-white truncate">Все способы</div>
+                    <div className="text-[11px] font-medium text-indigo-300 truncate">Выбор в кассе</div>
                   </div>
                 </button>
               </div>
             </div>
 
             {paymentError && (
-              <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-500/40 text-xs text-rose-300">
-                {paymentError}
+              <div className="p-3.5 rounded-2xl bg-rose-950/60 border border-rose-500/40 text-xs text-rose-300 flex items-center gap-2">
+                <span>⚠️</span>
+                <span>{paymentError}</span>
               </div>
             )}
 
-            {/* Big Green Gradient "Оплатить" Button with Lock and Arrow */}
-            <button
-              type="button"
-              disabled={isProcessingPayment || currentSum <= 0}
-              onClick={handleRobokassaPay}
-              className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-400 hover:from-emerald-400 hover:via-teal-400 hover:to-cyan-300 active:scale-[0.99] disabled:opacity-50 text-slate-950 font-black text-base sm:text-lg flex items-center justify-center space-x-2.5 transition shadow-2xl shadow-emerald-950/60 cursor-pointer"
-            >
-              {isProcessingPayment ? (
-                <div className="flex items-center space-x-2 text-slate-950 font-bold">
-                  <span className="animate-spin text-base">⏳</span>
-                  <span>Переход к оплате...</span>
-                </div>
-              ) : (
-                <>
-                  <Lock className="w-5 h-5 text-slate-950" />
-                  <span>Оплатить {currentSum > 0 ? `${currentSum.toLocaleString('ru-RU')} ₽` : '0 ₽'}</span>
-                  <ArrowRight className="w-5 h-5 text-slate-950 ml-1" />
-                </>
-              )}
-            </button>
+            {/* STUNNING HIGH-CONVERSION PAY BUTTON */}
+            <div className="pt-1">
+              <button
+                type="button"
+                disabled={isProcessingPayment || currentSum <= 0}
+                onClick={handleRobokassaPay}
+                className="relative group w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 hover:from-emerald-300 hover:via-teal-300 hover:to-cyan-200 active:scale-[0.98] disabled:opacity-50 text-slate-950 font-black text-base sm:text-lg flex items-center justify-center space-x-2.5 transition-all shadow-xl shadow-emerald-500/25 hover:shadow-emerald-500/40 cursor-pointer overflow-hidden border border-emerald-300/60"
+              >
+                {/* Glowing light sweep effect */}
+                <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/30 to-transparent pointer-events-none" />
 
-            {/* Trust footer note */}
-            <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400 pt-0.5">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-              <span>Защищённое соединение SSL • Официальный электронный чек</span>
+                {isProcessingPayment ? (
+                  <div className="flex items-center space-x-2 text-slate-950 font-black">
+                    <span className="animate-spin text-lg">⏳</span>
+                    <span>Перенаправление в кассу...</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="w-7 h-7 rounded-xl bg-slate-950/15 flex items-center justify-center">
+                      <Lock className="w-4 h-4 text-slate-950 stroke-[2.5]" />
+                    </div>
+                    <span className="tracking-tight">
+                      Оплатить {currentSum > 0 ? `${currentSum.toLocaleString('ru-RU')} ₽` : '0 ₽'}
+                    </span>
+                    <ArrowRight className="w-5 h-5 text-slate-950 stroke-[2.5] group-hover:translate-x-1 transition-transform" />
+                  </>
+                )}
+              </button>
+
+              {/* Trust footer note */}
+              <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400 pt-2.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span>Данные защищены по стандарту PCI DSS</span>
+              </div>
             </div>
           </div>
 

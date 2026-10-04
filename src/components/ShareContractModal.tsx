@@ -170,6 +170,21 @@ export const ShareContractModal: React.FC<ShareContractModalProps> = ({
           </button>
         </div>
 
+        {/* Official Exchange Banner (1790635194201.jpg) */}
+        <div className="relative overflow-hidden bg-slate-950 border-b border-slate-800 shrink-0">
+          <img
+            src="/santehpro-exchange-banner.jpg"
+            alt="СантехПро — Обмен данными между клиентом и специалистом"
+            className="w-full h-24 sm:h-28 object-cover object-center opacity-95"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-transparent to-transparent flex items-end p-2 sm:p-2.5">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-200 bg-slate-900/85 backdrop-blur-xs px-2 py-0.5 rounded-full border border-white/10 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              Защищённый обмен: Клиент ⇄ Специалист
+            </span>
+          </div>
+        </div>
+
         {/* Client preview info card */}
         <div className="px-4 py-2.5 bg-blue-50/70 border-b border-blue-100 flex items-center justify-between text-xs shrink-0">
           <div className="min-w-0 pr-2">

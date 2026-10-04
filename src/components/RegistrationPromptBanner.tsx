@@ -42,22 +42,36 @@ export const RegistrationPromptBanner: React.FC<RegistrationPromptBannerProps> =
           </div>
         </div>
 
-        {/* Right: Actions */}
-        <div className="flex items-center space-x-2 shrink-0 self-end sm:self-auto">
+        {/* Right: Actions (Яндекс ID + VK ID + Close) */}
+        <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0 self-end sm:self-auto flex-wrap gap-y-1.5">
+          {/* Яндекс ID */}
           <button
             type="button"
-            onClick={() => openAuthModal('login', 'Вход в аккаунт через Яндекс ID для доступа ко всем материалам', () => onNavigateCabinet ? onNavigateCabinet() : undefined)}
-            className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-extrabold text-xs transition shadow-sm flex items-center space-x-1.5"
+            onClick={() => openAuthModal('login', 'Вход в аккаунт через Яндекс ID', () => onNavigateCabinet ? onNavigateCabinet() : undefined)}
+            className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-extrabold text-[11px] sm:text-xs transition shadow-xs flex items-center space-x-1.5 cursor-pointer active:scale-95 shrink-0"
+            title="Войти с Яндекс ID"
           >
-            <span className="w-4 h-4 rounded-full bg-white text-red-600 text-[10px] font-black flex items-center justify-center">Я</span>
-            <span>Войти с Яндекс ID</span>
+            <span className="w-4 h-4 rounded-full bg-white text-red-600 text-[10px] font-black flex items-center justify-center shrink-0">Я</span>
+            <span>Яндекс ID</span>
           </button>
 
+          {/* VK ID */}
+          <button
+            type="button"
+            onClick={() => openAuthModal('login', 'Вход в аккаунт через VK ID', () => onNavigateCabinet ? onNavigateCabinet() : undefined)}
+            className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#0077ff] hover:bg-[#0066ee] text-white font-extrabold text-[11px] sm:text-xs transition shadow-xs flex items-center space-x-1.5 cursor-pointer active:scale-95 shrink-0"
+            title="Войти через VK ID"
+          >
+            <span className="w-4 h-4 rounded-md bg-white/20 text-white text-[9px] font-black flex items-center justify-center shrink-0">VK</span>
+            <span>VK ID</span>
+          </button>
+
+          {/* Close button */}
           <button
             type="button"
             onClick={handleDismiss}
             title="Закрыть уведомление"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition cursor-pointer active:scale-95 shrink-0 ml-1"
           >
             <X className="w-4 h-4" />
           </button>

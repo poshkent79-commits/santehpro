@@ -47,11 +47,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           onClick={() => setActiveTab('handbook')}
           className="flex items-center space-x-3 cursor-pointer group"
         >
-          <img
-            src="/icon.svg"
-            alt="СантехПро"
-            className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl shadow-md shadow-red-500/20 group-hover:scale-105 transition transform shrink-0 border border-white/10 object-contain bg-slate-950"
-          />
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-rose-500 via-red-500 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-rose-500/35 group-hover:scale-105 transition transform shrink-0 border border-white/20">
+            <Wrench className="w-5 h-5 text-white stroke-[2.2]" />
+          </div>
           <div>
             <div className="flex items-center">
               <span className="text-xl sm:text-2xl font-black tracking-tight leading-none">
@@ -67,17 +65,17 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Upper Right: PRO+ Button (like S+ in Sajda) + City + Admin badge */}
         <div className="flex items-center space-x-2 sm:space-x-3">
-          {/* Voluntary Support / Club Pill Button (inspired by Sajda layout, compliant with Robokassa donation offer) */}
+          {/* Voluntary Support / Club Pill Button */}
           {onOpenDonation && (
             <button
               type="button"
               onClick={onOpenDonation}
-              className="relative group flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-gradient-to-r from-rose-500 via-pink-500 to-amber-500 text-white font-extrabold text-xs shadow-md shadow-rose-500/25 hover:shadow-rose-500/40 border border-rose-400/40 hover:scale-105 active:scale-95 transition cursor-pointer shrink-0"
+              className="relative group flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-gradient-to-r from-rose-500 via-pink-500 to-amber-500 text-white font-extrabold text-[11px] sm:text-xs shadow-sm shadow-rose-500/25 hover:shadow-rose-500/40 border border-rose-400/40 hover:scale-105 active:scale-95 transition cursor-pointer shrink-0"
               title="Поддержать проект СантехПро (добровольный взнос через Робокассу)"
             >
-              <Heart className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-white text-white shrink-0" />
-              <span className="text-white text-xs font-black">Поддержать</span>
-              <span className="hidden sm:inline text-rose-100 text-[10px] font-medium">• Клуб</span>
+              <Heart className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-white text-white shrink-0" />
+              <span className="text-white text-[11px] sm:text-xs font-bold">Поддержать</span>
+              <span className="hidden sm:inline text-rose-100 text-[9px] font-medium">• Клуб</span>
             </button>
           )}
 
