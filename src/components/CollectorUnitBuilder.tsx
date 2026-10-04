@@ -31,10 +31,7 @@ import {
   HelpCircle,
   RotateCcw,
   FileDown,
-  Loader2,
-  Share2,
-  Send,
-  Info
+  Loader2
 } from 'lucide-react';
 import { SavedEstimate } from '../types';
 import { downloadCollectorBoardPdf } from '../utils/pdfGenerator';
@@ -799,9 +796,9 @@ export const CollectorUnitBuilder: React.FC<CollectorUnitBuilderProps> = ({
   const [viewMode, setViewMode] = useState<'board' | 'spec'>('board');
 
   // Labor options
-  const [includeLabor, setIncludeLabor] = useState<boolean>(false); // По умолчанию выключено (только чистые материалы)
-  const [laborLevel, setLaborLevel] = useState<'custom' | 'premium' | 'standard'>('custom');
-  const [customLaborCost, setCustomLaborCost] = useState<number>(130000); // Актуальная рыночная цена исполнителя (130 000 ₽)
+  const [includeLabor, setIncludeLabor] = useState<boolean>(true);
+  const [laborLevel, setLaborLevel] = useState<'standard' | 'premium' | 'custom'>('premium');
+  const [customLaborCost, setCustomLaborCost] = useState<number>(45000);
 
   // Custom Item Modal
   const [isAddCustomModalOpen, setIsAddCustomModalOpen] = useState<boolean>(false);
@@ -825,6 +822,11 @@ export const CollectorUnitBuilder: React.FC<CollectorUnitBuilderProps> = ({
   const handleApplyPreset = (p: 'foriver_premium' | 'comfort' | 'optimum') => {
     setActivePreset(p);
     setBoardItems(createDefaultPreset(p));
+    if (p === 'foriver_premium') {
+      setLaborLevel('premium');
+    } else {
+      setLaborLevel('standard');
+    }
     showToast(`Загружен шаблон узла: ${p === 'foriver_premium' ? 'Премиум Foriver' : p === 'comfort' ? 'Комфорт' : 'Базовый'}`);
   };
 
@@ -847,11 +849,11 @@ export const CollectorUnitBuilder: React.FC<CollectorUnitBuilderProps> = ({
     if (!includeLabor) return 0;
     if (laborLevel === 'custom') return customLaborCost;
     if (laborLevel === 'premium') {
-      // Премиум монтаж на монтажной раме Walraven/Mupro с пресс-нержавейкой и автоматикой
-      return 135000;
+      // Премиум монтаж на раме Walraven с пресс-нержавейкой
+      return 65000;
     }
-    // Стандартный монтаж коллекторного узла ввода под ключ
-    return 85000;
+    // Стандартный монтаж коллекторного узла
+    return 38000;
   }, [includeLabor, laborLevel, customLaborCost]);
 
   const grandTotal = totalMaterialsCost + laborCost;
@@ -1180,29 +1182,6 @@ export const CollectorUnitBuilder: React.FC<CollectorUnitBuilderProps> = ({
     } finally {
       setIsGeneratingPdf(false);
     }
-  };
-
-  const handleShareWhatsApp = () => {
-    let msg = `Здравствуйте! Направляю вам расчёт сметы коллекторного узла ввода:\n`;
-    msg += `• Комплектация: ${activePreset === 'foriver_premium' ? 'Премиум Foriver' : activePreset === 'comfort' ? 'Комфорт' : 'Базовый'}\n`;
-    msg += `• Позиций оборудования: ${boardItems.length} шт\n`;
-    msg += `• Оборудование и материалы: ${totalMaterialsCost.toLocaleString('ru-RU')} ₽\n`;
-    if (includeLabor) {
-      msg += `• Сборка и монтаж узла: ${laborCost.toLocaleString('ru-RU')} ₽\n`;
-    }
-    msg += `• ИТОГО ПО СМЕТЕ: ${grandTotal.toLocaleString('ru-RU')} ₽\n\n`;
-    msg += `Сформировано сервисом «СантехПро».`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
-  };
-
-  const handleShareTelegram = () => {
-    let msg = `Смета узла ввода (${boardItems.length} поз.):\n`;
-    msg += `Материалы: ${totalMaterialsCost.toLocaleString('ru-RU')} ₽\n`;
-    if (includeLabor) {
-      msg += `Монтаж: ${laborCost.toLocaleString('ru-RU')} ₽\n`;
-    }
-    msg += `ИТОГО: ${grandTotal.toLocaleString('ru-RU')} ₽`;
-    window.open(`https://t.me/share/url?url=${encodeURIComponent(window.location.origin)}&text=${encodeURIComponent(msg)}`, '_blank');
   };
 
   return (
@@ -1646,114 +1625,63 @@ export const CollectorUnitBuilder: React.FC<CollectorUnitBuilderProps> = ({
             </div>
 
             {includeLabor && (
-              <div className="space-y-3 pt-3 border-t border-slate-800 animate-in fade-in duration-200">
-                <div className="text-xs font-bold text-slate-300 flex items-center justify-between">
-                  <span>Расценка исполнителя за сборку узла:</span>
-                  <span className="text-cyan-400 font-extrabold">{laborCost.toLocaleString('ru-RU')} ₽</span>
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setLaborLevel('standard')}
+                  className={`p-3 rounded-xl border text-left transition cursor-pointer ${
+                    laborLevel === 'standard'
+                      ? 'bg-cyan-950/40 border-cyan-500 text-white shadow-sm'
+                      : 'bg-slate-950 border-slate-800 text-slate-400'
+                  }`}
+                >
+                  <div className="text-xs font-black">Стандартная сборка</div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">38 000 ₽</div>
+                  <p className="text-[10px] text-slate-500 mt-1 leading-tight">
+                    Сборка узла на стене/кронштейнах, подключение к стоякам, опрессовка
+                  </p>
+                </button>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setLaborLevel('custom')}
-                    className={`p-3.5 rounded-2xl border text-left transition cursor-pointer ${
-                      laborLevel === 'custom'
-                        ? 'bg-cyan-950/50 border-cyan-500 text-white shadow-md ring-1 ring-cyan-500'
-                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-cyan-300">✍️ Своя договорная цена</span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-bold">Актуально</span>
-                    </div>
-                    <div className="mt-2">
-                      <div className="flex items-center space-x-1.5 bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 focus-within:border-cyan-400">
-                        <input
-                          type="number"
-                          min="0"
-                          step="1000"
-                          placeholder="130000"
-                          value={customLaborCost === 0 ? '' : customLaborCost}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setLaborLevel('custom');
-                          }}
-                          onChange={(e) => {
-                            setLaborLevel('custom');
-                            const raw = e.target.value;
-                            const num = raw === '' ? 0 : Math.max(0, parseInt(raw, 10) || 0);
-                            setCustomLaborCost(num);
-                          }}
-                          className="w-full bg-transparent text-sm text-white font-extrabold outline-none"
-                        />
-                        <span className="text-xs text-cyan-400 font-bold">₽</span>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {[85000, 110000, 130000, 160000].map((chip) => (
-                        <button
-                          key={chip}
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setLaborLevel('custom');
-                            setCustomLaborCost(chip);
-                          }}
-                          className={`text-[9px] px-1.5 py-0.5 rounded-md font-bold transition cursor-pointer ${
-                            customLaborCost === chip && laborLevel === 'custom'
-                              ? 'bg-cyan-500 text-slate-950 font-black'
-                              : 'bg-slate-900 text-slate-300 hover:bg-slate-800'
-                          }`}
-                        >
-                          {(chip / 1000).toFixed(0)}k ₽
-                        </button>
-                      ))}
-                    </div>
-                  </button>
+                <button
+                  type="button"
+                  onClick={() => setLaborLevel('premium')}
+                  className={`p-3 rounded-xl border text-left transition cursor-pointer ${
+                    laborLevel === 'premium'
+                      ? 'bg-cyan-950/40 border-cyan-500 text-white shadow-sm ring-1 ring-cyan-500'
+                      : 'bg-slate-950 border-slate-800 text-slate-400'
+                  }`}
+                >
+                  <div className="text-xs font-black text-cyan-300">Премиум Foriver</div>
+                  <div className="text-[10px] text-cyan-400 mt-0.5">65 000 ₽</div>
+                  <p className="text-[10px] text-slate-400 mt-1 leading-tight">
+                    Монтаж на раме Walraven, пресс-нержавейка, байпас, настройка Neptun Smart
+                  </p>
+                </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setLaborLevel('premium')}
-                    className={`p-3.5 rounded-2xl border text-left transition cursor-pointer ${
-                      laborLevel === 'premium'
-                        ? 'bg-cyan-950/50 border-cyan-500 text-white shadow-md ring-1 ring-cyan-500'
-                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-white">🏆 Премиум на раме</span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-bold">135 000 ₽</span>
-                    </div>
-                    <p className="text-[10px] text-slate-400 mt-2 leading-relaxed">
-                      Монтаж на консольной раме Walraven / Mupro, нержавеющая пресс-сталь, компенсаторы гидроударов, байпас, настройка Neptun Smart, опрессовка 10 бар
-                    </p>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setLaborLevel('standard')}
-                    className={`p-3.5 rounded-2xl border text-left transition cursor-pointer ${
-                      laborLevel === 'standard'
-                        ? 'bg-cyan-950/50 border-cyan-500 text-white shadow-md ring-1 ring-cyan-500'
-                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-white">⚡ Базовый узел</span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-bold">85 000 ₽</span>
-                    </div>
-                    <p className="text-[10px] text-slate-400 mt-2 leading-relaxed">
-                      Сборка узла на кронштейнах, подключение к вводным стоякам ХВС/ГВС, фильтрация, редукторы и гидравлическая опрессовка
-                    </p>
-                  </button>
-                </div>
-
-                <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80 text-[11px] text-slate-400 leading-snug flex items-center gap-2">
-                  <Info className="w-4 h-4 text-cyan-400 shrink-0" />
-                  <span>
-                    Рыночная цена монтажа современного узла обычно составляет <strong>85 000 — 160 000 ₽</strong>. Введите реальную расценку вашего исполнителя или выключите чекбокс, чтобы считать только чистую закупку материалов.
-                  </span>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setLaborLevel('custom')}
+                  className={`p-3 rounded-xl border text-left transition cursor-pointer ${
+                    laborLevel === 'custom'
+                      ? 'bg-cyan-950/40 border-cyan-500 text-white shadow-sm'
+                      : 'bg-slate-950 border-slate-800 text-slate-400'
+                  }`}
+                >
+                  <div className="text-xs font-black">Своя цена</div>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={customLaborCost === 0 ? '' : customLaborCost}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      const num = raw === '' ? 0 : Math.max(0, parseInt(raw, 10) || 0);
+                      setCustomLaborCost(num);
+                    }}
+                    className="w-full mt-1 px-2 py-1 bg-slate-900 border border-slate-700 rounded text-xs text-white font-bold"
+                  />
+                </button>
               </div>
             )}
           </div>
@@ -2006,29 +1934,7 @@ export const CollectorUnitBuilder: React.FC<CollectorUnitBuilderProps> = ({
               </div>
             </div>
 
-            {/* Share to Messenger Actions */}
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={handleShareWhatsApp}
-                className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center space-x-1.5 transition cursor-pointer shadow-md"
-                title="Отправить смету заказчику в WhatsApp"
-              >
-                <Share2 className="w-4 h-4" />
-                <span>В WhatsApp</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleShareTelegram}
-                className="flex-1 py-2.5 px-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs flex items-center justify-center space-x-1.5 transition cursor-pointer shadow-md"
-                title="Отправить смету заказчику в Telegram"
-              >
-                <Send className="w-4 h-4" />
-                <span>В Telegram</span>
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
               <button
                 type="button"
                 disabled={isGeneratingPdf}
@@ -2061,7 +1967,7 @@ export const CollectorUnitBuilder: React.FC<CollectorUnitBuilderProps> = ({
                 className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center justify-center space-x-1.5 transition border border-slate-700 cursor-pointer"
               >
                 <Printer className="w-4 h-4 text-amber-400" />
-                <span>Печать</span>
+                <span>Печать (A4)</span>
               </button>
               <button
                 type="button"

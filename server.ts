@@ -5100,7 +5100,7 @@ ${publishedArticles
     app.use(express.static(distPath, {
       maxAge: '1h',
       setHeaders: (res, filePath) => {
-        if (filePath.endsWith('.html')) {
+        if (filePath.endsWith('.html') || filePath.endsWith('.json') || filePath.endsWith('.webmanifest') || filePath.endsWith('sw.js')) {
           res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
         }
       }

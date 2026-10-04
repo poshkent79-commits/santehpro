@@ -205,35 +205,17 @@ export const DonationModal: React.FC<DonationModalProps> = ({
           onScroll={handleBodyScroll}
           className="p-4 sm:p-5 overflow-y-auto space-y-4 text-slate-100"
         >
-          {/* Engineering Mosaic Grid inspired by Sajda design */}
-          <div className="flex items-center justify-center gap-1.5 sm:gap-2 py-1">
-            {[
-              { icon: '🔧', bg: 'bg-emerald-500/15 border-emerald-500/30' },
-              { icon: '🎛️', bg: 'bg-cyan-500/15 border-cyan-500/30' },
-              { icon: '♨️', bg: 'bg-amber-500/15 border-amber-500/30' },
-              { icon: '🛡️', bg: 'bg-blue-500/15 border-blue-500/30' },
-              { icon: '💧', bg: 'bg-sky-500/15 border-sky-500/30' },
-              { icon: '🏠', bg: 'bg-teal-500/15 border-teal-500/30' },
-              { icon: '⚡', bg: 'bg-yellow-500/15 border-yellow-500/30' },
-              { icon: '⭐', bg: 'bg-rose-500/15 border-rose-500/30' },
-            ].map((it, idx) => (
-              <div
-                key={idx}
-                className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center text-base sm:text-lg border shadow-sm transition transform hover:scale-110 ${it.bg}`}
-              >
-                <span>{it.icon}</span>
-              </div>
-            ))}
-          </div>
-
           {/* Manifesto Box */}
           <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2.5 text-xs sm:text-sm">
             <div className="flex items-center space-x-2 text-amber-400 font-bold">
               <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
-              <span>Польза для клиентов, заказы и расчёты для мастеров</span>
+              <span>Проект открыт для всех без скрытых платных подписок</span>
             </div>
             <p className="text-slate-300 leading-relaxed text-[12px] sm:text-[13px]">
-              Мы помогаем пользователям разбираться в сантехнике, а профи — находить клиентов и быстро считать сметы. Мы развиваем проект на добровольные донаты: поддержите СантехПро любой суммой, чтобы сервис оставался бесплатным!
+              Все пошаговые инструкции, видеоуроки, интерактивный калькулятор закупки труб и каталог проверенных мастеров остаются в свободном доступе.
+            </p>
+            <p className="text-slate-300 leading-relaxed text-[12px] sm:text-[13px]">
+              Если справочник сэкономил вам деньги на ремонте, уберёг от протечки или научил тонкостям пайки и монтажа — вы можете поддержать развитие любой добровольной суммой на оплату серверов, хостинга и съёмку новых практических материалов.
             </p>
           </div>
 

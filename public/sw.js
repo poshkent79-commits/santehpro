@@ -1,5 +1,5 @@
-// Service Worker for СантехПро PWA (Optimized for resilient loading in RF)
-const CACHE_NAME = 'santehpro-v4';
+// Service Worker for СантехПро PWA (Optimized for resilient loading and immediate update delivery in RF)
+const CACHE_NAME = 'santehpro-v5';
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
@@ -76,33 +76,37 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Navigation requests (HTML page): Cache-first with background revalidation to prevent ERR_TIMED_OUT in RF
+  // Navigation requests (HTML page): Network-first with fast timeout and cache fallback
+  // Ensures user gets fresh updates immediately when online!
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      caches.match('/index.html').then((cachedIndex) => {
-        // Fast fetch with 3.5s timeout race to prevent ERR_TIMED_OUT
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('HTML fetch timeout in RF')), 3500)
-        );
-        const fetchPromise = Promise.race([fetch(event.request), timeoutPromise])
-          .then((networkResponse) => {
-            if (networkResponse && networkResponse.status === 200) {
-              const resClone = networkResponse.clone();
-              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, resClone));
-            }
-            return networkResponse;
-          })
-          .catch(() => cachedIndex || caches.match('/'));
+      (async () => {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 2500);
 
-        // If we have cached index.html, return it instantly!
-        if (cachedIndex) {
-          // Trigger background update
-          fetchPromise.catch(() => {});
-          return cachedIndex;
+          const networkResponse = await fetch(event.request, { signal: controller.signal });
+          clearTimeout(timeoutId);
+
+          if (networkResponse && networkResponse.status === 200) {
+            const resClone = networkResponse.clone();
+            const cache = await caches.open(CACHE_NAME);
+            await cache.put(event.request, resClone);
+            await cache.put('/index.html', networkResponse.clone());
+            return networkResponse;
+          }
+        } catch (_err) {
+          // Fall back to cache on timeout or offline
         }
 
-        return fetchPromise;
-      })
+        const cached = (await caches.match(event.request)) || (await caches.match('/index.html')) || (await caches.match('/'));
+        if (cached) return cached;
+
+        return new Response('Офлайн-режим СантехПро. Проверьте интернет-соединение.', {
+          status: 200,
+          headers: { 'Content-Type': 'text/html; charset=utf-8' },
+        });
+      })()
     );
     return;
   }

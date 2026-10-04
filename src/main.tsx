@@ -7,6 +7,15 @@ import './index.css';
 try {
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && navigator.serviceWorker) {
     if (import.meta.env.PROD) {
+      // Auto-refresh when new service worker takes over so user immediately gets the new version
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+          refreshing = true;
+          window.location.reload();
+        }
+      });
+
       window.addEventListener('load', () => {
         try {
           navigator.serviceWorker
