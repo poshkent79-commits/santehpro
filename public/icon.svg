@@ -1,249 +1,132 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <!-- Background Gradient: Deep Midnight Sapphire to Dark Slate -->
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#0f1b2f" />
-      <stop offset="45%" stop-color="#0b1322" />
-      <stop offset="100%" stop-color="#050912" />
-    </linearGradient>
-
-    <!-- Radial Glow behind the Hero Emblem -->
-    <radialGradient id="centerGlow" cx="50%" cy="42%" r="50%">
-      <stop offset="0%" stop-color="#0284c7" stop-opacity="0.25" />
-      <stop offset="40%" stop-color="#ff4757" stop-opacity="0.10" />
-      <stop offset="80%" stop-color="#000000" stop-opacity="0" />
+    <!-- Background luxury navy gradient -->
+    <radialGradient id="bgGradMask" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#1b2a47" />
+      <stop offset="55%" stop-color="#0e1726" />
+      <stop offset="100%" stop-color="#080d17" />
     </radialGradient>
 
-    <!-- Ruby-Fire 3D Gradient for House & "САНТЕХ" -->
-    <linearGradient id="rubyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#ff6b81" />
-      <stop offset="25%" stop-color="#ff4757" />
-      <stop offset="70%" stop-color="#ee2e3d" />
-      <stop offset="100%" stop-color="#b31217" />
-    </linearGradient>
-
-    <!-- Electric Cyan 3D Gradient for Wrench & "ПРО" -->
-    <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#7dd3fc" />
-      <stop offset="25%" stop-color="#38bdf8" />
-      <stop offset="70%" stop-color="#0284c7" />
-      <stop offset="100%" stop-color="#0369a1" />
-    </linearGradient>
-
-    <!-- Brass / Golden Gradient for Wrench Knurl & Warm Windows -->
-    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#fde047" />
-      <stop offset="50%" stop-color="#f59e0b" />
-      <stop offset="100%" stop-color="#d97706" />
-    </linearGradient>
-
-    <!-- Chrome Specular Sheen -->
-    <linearGradient id="chromeSheen" x1="0%" y1="0%" x2="100%" y2="50%">
-      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.6" />
-      <stop offset="40%" stop-color="#ffffff" stop-opacity="0.1" />
-      <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
-    </linearGradient>
-
-    <!-- Heavy 3D Drop Shadow for Depth -->
-    <filter id="shadow3D" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#000000" flood-opacity="0.75" />
-      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000000" flood-opacity="0.5" />
+    <!-- 3D drop shadow filter for text and emblem -->
+    <filter id="shadow3dMask" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#000000" flood-opacity="0.8" />
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000000" flood-opacity="0.9" />
     </filter>
 
-    <!-- Crisp Text Shadow -->
-    <filter id="textShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.8" />
+    <filter id="subtleShadowMask" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.7" />
     </filter>
+
+    <linearGradient id="red3dMask" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ff6b6b" />
+      <stop offset="25%" stop-color="#ee3838" />
+      <stop offset="70%" stop-color="#cc1f1f" />
+      <stop offset="100%" stop-color="#991212" />
+    </linearGradient>
+
+    <linearGradient id="blue3dMask" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#60a5fa" />
+      <stop offset="25%" stop-color="#3b82f6" />
+      <stop offset="70%" stop-color="#1d4ed8" />
+      <stop offset="100%" stop-color="#172554" />
+    </linearGradient>
+
+    <linearGradient id="wrenchGradMask" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#93c5fd" />
+      <stop offset="100%" stop-color="#60a5fa" />
+    </linearGradient>
+
+    <linearGradient id="houseGradMask" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f87171" />
+      <stop offset="100%" stop-color="#dc2626" />
+    </linearGradient>
   </defs>
 
-  <!-- Edge-to-edge solid background (full-bleed, 512x512) -->
-  <rect width="512" height="512" fill="url(#bgGrad)" />
+  <!-- Full bleed background for Android maskable icon -->
+  <rect width="512" height="512" fill="url(#bgGradMask)" />
+  <rect width="512" height="512" fill="#000" opacity="0.12" />
 
-  <!-- Volumetric ambient backlight -->
-  <rect width="512" height="512" fill="url(#centerGlow)" />
-
-  <!-- Subtle engineering tech circle / compass dial -->
-  <circle cx="256" cy="195" r="160" fill="none" stroke="#38bdf8" stroke-opacity="0.08" stroke-width="1.5" stroke-dasharray="6 8" />
-  <circle cx="256" cy="195" r="185" fill="none" stroke="#ffffff" stroke-opacity="0.04" stroke-width="1" />
-
-  <g transform="translate(256, 256) scale(0.9) translate(-256, -256)">
-
-    <!-- ======================================================== -->
-    <!-- HERO EMBLEM: BOLD 3D PIPE WRENCH + HOUSE + WATER DROPLET -->
-    <!-- ======================================================== -->
-    <g filter="url(#shadow3D)">
+  <!-- Centered inside safe-zone circle (80%) -->
+  <g transform="translate(25, 25) scale(0.9)">
+    <!-- EMBLEM: Stylized Wrench embracing House with 4 Windows -->
+    <g transform="translate(186, 75)" filter="url(#shadow3dMask)">
+      <path d="M 45 10 
+               L 115 72 
+               L 100 85 
+               L 100 135 
+               L 55 135 
+               L 55 120 
+               L 85 120 
+               L 85 80 
+               L 45 44 
+               L 20 67
+               L 5 53 Z" 
+            fill="url(#houseGradMask)" />
       
-      <!-- 1. THE HOUSE SILHOUETTE (Solid 3D Warm Ruby Red) -->
-      <g>
-        <!-- House Body & Roof Peak -->
-        <path
-          d="M 230 92 
-             L 345 195 
-             L 345 285 
-             C 345 292, 339 298, 332 298 
-             L 210 298 
-             C 203 298, 197 292, 197 285 
-             L 197 205 
-             Z"
-          fill="url(#rubyGrad)"
-          stroke="#ff6b81"
-          stroke-width="2"
-          stroke-linejoin="round"
-        />
+      <rect x="80" y="25" width="16" height="32" rx="2" fill="url(#houseGradMask)" />
 
-        <!-- Roof Chimney with subtle 3D bevel -->
-        <path
-          d="M 305 130 
-             L 305 85 
-             C 305 82, 307 80, 310 80 
-             L 330 80 
-             C 333 80, 335 82, 335 85 
-             L 335 156 
-             Z"
-          fill="url(#rubyGrad)"
-          stroke="#ff6b81"
-          stroke-width="2"
-        />
+      <!-- 4 Windows -->
+      <rect x="62" y="72" width="10" height="10" rx="1.5" fill="#fca5a5" />
+      <rect x="76" y="72" width="10" height="10" rx="1.5" fill="#fca5a5" />
+      <rect x="62" y="86" width="10" height="10" rx="1.5" fill="#fca5a5" />
+      <rect x="76" y="86" width="10" height="10" rx="1.5" fill="#fca5a5" />
 
-        <!-- Chimney Cap -->
-        <rect x="301" y="76" width="38" height="7" rx="3.5" fill="#ff7f90" />
-
-        <!-- Glowing Warm Windows (2x2 Grid, symbol of home comfort and heating) -->
-        <g fill="url(#goldGrad)" opacity="0.95" filter="drop-shadow(0 0 6px rgba(251,191,36,0.6))">
-          <rect x="268" y="215" width="24" height="24" rx="4" />
-          <rect x="298" y="215" width="24" height="24" rx="4" />
-          <rect x="268" y="245" width="24" height="24" rx="4" />
-          <rect x="298" y="245" width="24" height="24" rx="4" />
-        </g>
-      </g>
-
-      <!-- 2. THE PIPE WRENCH (Solid 3D Heavy-Duty Cyan-Chrome Tool) -->
-      <!-- Powerful tool gripping the house roof, wrapping around with authority -->
-      <g>
-        <!-- Wrench Top Hook Jaw (wraps over the roof slope) -->
-        <path
-          d="M 175 145 
-             C 160 110, 185 68, 228 65 
-             C 255 63, 275 75, 285 92 
-             C 272 90, 255 88, 240 92 
-             C 205 100, 195 125, 202 152 
-             Z"
-          fill="url(#cyanGrad)"
-          stroke="#7dd3fc"
-          stroke-width="2.5"
-          stroke-linejoin="round"
-        />
-
-        <!-- Precision Gripping Serration Teeth on Jaw Interior -->
-        <path
-          d="M 205 130 L 213 134 M 215 120 L 223 124 M 228 112 L 235 117 M 243 105 L 250 111"
-          stroke="#ffffff"
-          stroke-width="3"
-          stroke-linecap="round"
-          opacity="0.9"
-        />
-
-        <!-- Wrench Lower Jaw & Collar Box -->
-        <path
-          d="M 160 160 
-             L 218 208 
-             L 200 230 
-             L 142 182 
-             Z"
-          fill="url(#cyanGrad)"
-          stroke="#7dd3fc"
-          stroke-width="2"
-        />
-
-        <!-- Knurled Brass Adjustment Nut (Industrial Masterpiece detail) -->
-        <g transform="translate(172, 208) rotate(40)">
-          <rect x="-8" y="-18" width="16" height="36" rx="4" fill="url(#goldGrad)" stroke="#fef08a" stroke-width="1.5" />
-          <line x1="-8" y1="-8" x2="8" y2="-8" stroke="#78350f" stroke-width="1.5" />
-          <line x1="-8" y1="0" x2="8" y2="0" stroke="#78350f" stroke-width="1.5" />
-          <line x1="-8" y1="8" x2="8" y2="8" stroke="#78350f" stroke-width="1.5" />
-        </g>
-
-        <!-- Wrench Long Ergonomic Handle (diagonal down-left) -->
-        <path
-          d="M 165 215 
-             L 108 275 
-             C 98 285, 102 300, 115 304 
-             C 125 307, 136 300, 144 290 
-             L 195 235 
-             Z"
-          fill="url(#cyanGrad)"
-          stroke="#7dd3fc"
-          stroke-width="2.5"
-          stroke-linejoin="round"
-        />
-
-        <!-- Tool Hanger Hole at bottom of handle -->
-        <circle cx="118" cy="292" r="7" fill="#0b1322" stroke="#38bdf8" stroke-width="2" />
-
-        <!-- Chrome Specular Highlight along Handle Spine -->
-        <path
-          d="M 180 225 L 126 280"
-          stroke="url(#chromeSheen)"
-          stroke-width="4"
-          stroke-linecap="round"
-        />
-      </g>
-
-      <!-- 3. CRYSTAL WATER DROP EMBLEM (Nestled at connection) -->
-      <g transform="translate(230, 240)">
-        <path
-          d="M 0 -18 
-             C 8 -8, 14 0, 14 8 
-             C 14 16, 8 22, 0 22 
-             C -8 22, -14 16, -14 8 
-             C -14 0, -8 -8, 0 -18 
-             Z"
-          fill="#38bdf8"
-          filter="drop-shadow(0 0 8px rgba(56,189,248,0.8))"
-        />
-        <!-- Inner Water Droplet Specular Reflection -->
-        <ellipse cx="-4" cy="5" rx="3" ry="5" fill="#ffffff" opacity="0.8" transform="rotate(-20 -4 5)" />
-      </g>
+      <!-- Wrench head and handle in Steel-Cyan -->
+      <path d="M 12 35 
+               C 12 15, 32 0, 52 5 
+               C 42 16, 42 32, 54 40
+               C 40 48, 28 62, 35 78
+               L 52 98
+               C 56 102, 54 110, 48 114
+               L 28 128
+               C 22 132, 14 130, 10 124
+               L -5 104
+               C -9 98, -8 90, -2 84
+               L 8 74
+               C 0 62, 2 48, 12 35 Z" 
+            fill="url(#wrenchGradMask)" />
+      
+      <path d="M 24 22 C 18 30, 20 42, 28 48 C 34 38, 32 26, 24 22 Z" fill="#0d1b2a" />
     </g>
 
-    <!-- ======================================================== -->
-    <!-- BOLD MODERN BRAND TITLE: "САНТЕХ ПРО" (Single clean line) -->
-    <!-- ======================================================== -->
-    <g filter="url(#textShadow)" transform="translate(256, 388)">
-      <!-- 3D Bevel Dark Underlay for Extreme Punch -->
-      <text
-        x="0"
-        y="6"
-        text-anchor="middle"
-        font-family="-apple-system, BlinkMacSystemFont, 'Montserrat', 'Segoe UI', Roboto, 'Arial Black', sans-serif"
-        font-weight="900"
-        font-size="54"
-        letter-spacing="2"
-      >
-        <tspan fill="#4c0508">САНТЕХ </tspan>
-        <tspan fill="#04273e">ПРО</tspan>
-      </text>
-
-      <!-- Front Lustrous Gradient Face -->
-      <text
-        x="0"
-        y="0"
-        text-anchor="middle"
-        font-family="-apple-system, BlinkMacSystemFont, 'Montserrat', 'Segoe UI', Roboto, 'Arial Black', sans-serif"
-        font-weight="900"
-        font-size="54"
-        letter-spacing="2"
-      >
-        <tspan fill="url(#rubyGrad)">САНТЕХ </tspan>
-        <tspan fill="url(#cyanGrad)">ПРО</tspan>
-      </text>
-
-      <!-- Subtle Accent Underline / Horizon Bar -->
-      <g opacity="0.9">
-        <rect x="-195" y="16" width="180" height="4" rx="2" fill="url(#rubyGrad)" />
-        <rect x="15" y="16" width="180" height="4" rx="2" fill="url(#cyanGrad)" />
-      </g>
+    <!-- MAIN TITLE: САНТЕХ -->
+    <g filter="url(#shadow3dMask)">
+      <text x="256" y="280" 
+            text-anchor="middle" 
+            font-family="system-ui, -apple-system, 'SF Pro Display', Roboto, 'Segoe UI', sans-serif" 
+            font-size="82" 
+            font-weight="900" 
+            letter-spacing="3" 
+            fill="url(#red3dMask)">САНТЕХ</text>
     </g>
 
+    <!-- MAIN TITLE: ПРО -->
+    <g filter="url(#shadow3dMask)">
+      <text x="256" y="375" 
+            text-anchor="middle" 
+            font-family="system-ui, -apple-system, 'SF Pro Display', Roboto, 'Segoe UI', sans-serif" 
+            font-size="94" 
+            font-weight="900" 
+            letter-spacing="5" 
+            fill="url(#blue3dMask)">ПРО</text>
+    </g>
+
+    <!-- SUBTITLE: Твой карманный помощник по сантехнике -->
+    <g filter="url(#subtleShadowMask)">
+      <text x="256" y="425" 
+            text-anchor="middle" 
+            font-family="system-ui, -apple-system, 'SF Pro Text', Roboto, 'Segoe UI', sans-serif" 
+            font-size="21" 
+            font-weight="700" 
+            letter-spacing="0.5" 
+            fill="#ffffff">Твой карманный</text>
+      <text x="256" y="455" 
+            text-anchor="middle" 
+            font-family="system-ui, -apple-system, 'SF Pro Text', Roboto, 'Segoe UI', sans-serif" 
+            font-size="21" 
+            font-weight="700" 
+            letter-spacing="0.5" 
+            fill="#ffffff">помощник по сантехнике</text>
+    </g>
   </g>
 </svg>
