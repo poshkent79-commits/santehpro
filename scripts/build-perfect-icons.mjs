@@ -2,14 +2,19 @@ import fs from 'node:fs';
 import path from 'node:path';
 import sharp from 'sharp';
 
+// Precise SVG template replicating the user's updated logo (1790994158260.jpg)
+// Full-bleed deep slate-navy background, high-contrast 3D typography and emblem,
+// strictly square (512x512) with safe margins so Android One UI and RuStore
+// never produce black corner artifacts or clipped text.
+
 function createSvg({ isMaskable = false } = {}) {
-  // Safe zone scaling: Android maskable requires content inside the inner 80% circle
+  // For maskable icon: scale down slightly (scale 0.82) to fit 100% inside Android's 80% safe circle
   const scale = isMaskable ? 0.82 : 0.94;
   const transform = `translate(256, 256) scale(${scale}) translate(-256, -256)`;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <!-- Background Gradient: Deep Slate Navy (#162333 to #0a1018) -->
+    <!-- Background Gradient: Deep Slate Navy (#121d2a to #0c141e) -->
     <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" stop-color="#162333" />
       <stop offset="50%" stop-color="#121d2a" />
@@ -164,7 +169,7 @@ function createSvg({ isMaskable = false } = {}) {
 </svg>`;
 }
 
-export async function generateAllIcons() {
+async function main() {
   const publicDir = path.resolve('public');
   const distDir = path.resolve('dist');
   const rustoreDir = path.join(publicDir, 'rustore');
@@ -175,30 +180,35 @@ export async function generateAllIcons() {
     fs.mkdirSync(distRustoreDir, { recursive: true });
   }
 
+  console.log('Generating crisp adapted icons matching 1790994158260.jpg...');
+
   const standardSvg = createSvg({ isMaskable: false });
   const maskableSvg = createSvg({ isMaskable: true });
 
   fs.writeFileSync(path.join(publicDir, 'icon.svg'), standardSvg);
 
-  // 1. RuStore 512x512 square PNG (strictly square, full bleed background, no rounded corners, no black corner artifacts)
+  // 1. RuStore 512x512 strictly square PNG (full bleed, no rounded corners, no black corner artifacts)
   const rustoreBuf = await sharp(Buffer.from(standardSvg))
     .resize(512, 512)
     .png({ compressionLevel: 9, quality: 100 })
     .toBuffer();
 
   fs.writeFileSync(path.join(rustoreDir, 'icon-512x512.png'), rustoreBuf);
+  console.log('✓ RuStore icon-512x512.png created');
 
   // 2. Standard 512x512 app icon
   fs.writeFileSync(path.join(publicDir, 'icon.png'), rustoreBuf);
   fs.writeFileSync(path.join(publicDir, 'pwa-512x512.png'), rustoreBuf);
+  console.log('✓ Standard pwa-512x512.png created');
 
-  // 3. Android Maskable 512x512 icon (fits 100% inside 80% safe circle)
+  // 3. Android Maskable 512x512 icon (strictly inside safe circle, edge-to-edge solid dark navy)
   const maskableBuf = await sharp(Buffer.from(maskableSvg))
     .resize(512, 512)
     .png({ compressionLevel: 9, quality: 100 })
     .toBuffer();
 
   fs.writeFileSync(path.join(publicDir, 'pwa-maskable-512x512.png'), maskableBuf);
+  console.log('✓ Android Maskable pwa-maskable-512x512.png created');
 
   // 4. 192x192 icon for mobile launchers
   const buf192 = await sharp(Buffer.from(standardSvg))
@@ -206,6 +216,7 @@ export async function generateAllIcons() {
     .png({ compressionLevel: 9, quality: 100 })
     .toBuffer();
   fs.writeFileSync(path.join(publicDir, 'pwa-192x192.png'), buf192);
+  console.log('✓ pwa-192x192.png created');
 
   // 5. Apple Touch Icon (180x180)
   const buf180 = await sharp(Buffer.from(standardSvg))
@@ -213,6 +224,7 @@ export async function generateAllIcons() {
     .png({ compressionLevel: 9, quality: 100 })
     .toBuffer();
   fs.writeFileSync(path.join(publicDir, 'apple-touch-icon.png'), buf180);
+  console.log('✓ apple-touch-icon.png created');
 
   // 6. Favicon (64x64)
   const buf64 = await sharp(Buffer.from(standardSvg))
@@ -220,6 +232,7 @@ export async function generateAllIcons() {
     .png({ compressionLevel: 9, quality: 100 })
     .toBuffer();
   fs.writeFileSync(path.join(publicDir, 'favicon.ico'), buf64);
+  console.log('✓ favicon.ico created');
 
   // 7. Copy to dist/
   if (fs.existsSync(distDir)) {
@@ -231,10 +244,13 @@ export async function generateAllIcons() {
     fs.copyFileSync(path.join(publicDir, 'apple-touch-icon.png'), path.join(distDir, 'apple-touch-icon.png'));
     fs.copyFileSync(path.join(publicDir, 'favicon.ico'), path.join(distDir, 'favicon.ico'));
     fs.copyFileSync(path.join(rustoreDir, 'icon-512x512.png'), path.join(distRustoreDir, 'icon-512x512.png'));
+    console.log('✓ All icons copied to dist/ and dist/rustore/');
   }
+
+  console.log('All icons adapted successfully!');
 }
 
-generateAllIcons().catch(err => {
-  console.error('Error generating icons:', err);
+main().catch(err => {
+  console.error('Error adapting icons:', err);
   process.exit(1);
 });

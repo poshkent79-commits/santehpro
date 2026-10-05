@@ -196,6 +196,7 @@ export function generateRobokassaPaymentUrl(options: CreatePaymentOptions): { pa
     Description: options.description.slice(0, 100),
     Receipt: receiptJson,
     SignatureValue: signature,
+    Culture: 'ru',
   });
 
   if (options.email) {
