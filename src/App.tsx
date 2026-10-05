@@ -653,16 +653,29 @@ function AppContent() {
     return null;
   };
 
-  // Fetch articles from backend API with automatic retry
+  // Fetch articles from backend API with ETag conditional validation (304 Not Modified)
   const fetchArticles = async () => {
     try {
-      const data = await fetchWithRetry<Article[]>('/api/articles');
-      if (Array.isArray(data) && data.length > 0) {
-        setArticles(data);
-        try {
-          localStorage.setItem('santehpro_cached_articles', JSON.stringify(data));
-        } catch (storageErr) {
-          console.warn('Failed to cache articles in localStorage:', storageErr);
+      const etag = localStorage.getItem('santehpro_articles_etag') || '';
+      const headers: Record<string, string> = { Accept: 'application/json' };
+      if (etag) headers['If-None-Match'] = etag;
+
+      const res = await fetch('/api/articles', { headers });
+      if (res.status === 304) {
+        // Data has not changed on server -> 0 bytes transferred, instant!
+        return;
+      }
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setArticles(data);
+          const newEtag = res.headers.get('ETag');
+          if (newEtag) localStorage.setItem('santehpro_articles_etag', newEtag);
+          try {
+            localStorage.setItem('santehpro_cached_articles', JSON.stringify(data));
+          } catch (storageErr) {
+            console.warn('Failed to cache articles in localStorage:', storageErr);
+          }
         }
       }
     } catch (err) {
@@ -670,18 +683,28 @@ function AppContent() {
     }
   };
 
-  // Fetch specialists from backend API with automatic retry
+  // Fetch specialists from backend API with ETag conditional validation (304 Not Modified)
   const fetchSpecialists = async () => {
     try {
-      const data = await fetchWithRetry<PlumbingSpecialist[]>(
-        `/api/specialists?admin=true&_t=${Date.now()}`,
-        { cache: 'no-store' }
-      );
-      if (Array.isArray(data)) {
-        setSpecialists(data);
-        try {
-          localStorage.setItem('santehpro_cached_specialists', JSON.stringify(data));
-        } catch {}
+      const etag = localStorage.getItem('santehpro_specialists_etag') || '';
+      const headers: Record<string, string> = { Accept: 'application/json' };
+      if (etag) headers['If-None-Match'] = etag;
+
+      const res = await fetch('/api/specialists?admin=true', { headers });
+      if (res.status === 304) {
+        // Specialists unchanged on server -> 0 bytes transferred, instant!
+        return;
+      }
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setSpecialists(data);
+          const newEtag = res.headers.get('ETag');
+          if (newEtag) localStorage.setItem('santehpro_specialists_etag', newEtag);
+          try {
+            localStorage.setItem('santehpro_cached_specialists', JSON.stringify(data));
+          } catch {}
+        }
       }
     } catch (err) {
       console.warn('Notice: Using cached specialists while syncing with server:', err);

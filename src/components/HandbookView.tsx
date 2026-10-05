@@ -648,6 +648,8 @@ export const HandbookView: React.FC<HandbookViewProps> = ({
                                     alt={`Шаг ${s.number}`}
                                     title={`Иллюстрация к шагу ${s.number}`}
                                     className="w-8 h-8 object-cover rounded-md border border-slate-800 shrink-0 shadow-sm"
+                                    loading="lazy"
+                                    decoding="async"
                                   />
                                 ))}
                               {art.steps.filter((s) => s.imageUrl).length > 4 && (

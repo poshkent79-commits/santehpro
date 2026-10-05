@@ -1,5 +1,8 @@
-// Service Worker for СантехПро PWA (Optimized for resilient loading and immediate update delivery in RF)
-const CACHE_NAME = 'santehpro-v5';
+// Service Worker for СантехПро PWA (High-performance caching with Stale-While-Revalidate & Image Cache)
+const CACHE_NAME = 'santehpro-v6';
+const API_CACHE_NAME = 'santehpro-api-cache-v2';
+const MEDIA_CACHE_NAME = 'santehpro-media-cache-v1';
+
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
@@ -29,7 +32,8 @@ self.addEventListener('activate', (event) => {
         cacheNames.map((name) => {
           if (
             name !== CACHE_NAME &&
-            name !== 'santehpro-api-cache-v1' &&
+            name !== API_CACHE_NAME &&
+            name !== MEDIA_CACHE_NAME &&
             !name.startsWith('santehpro-offline')
           ) {
             return caches.delete(name);
@@ -43,30 +47,62 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Fast cache for GET /api/articles and GET /api/specialists
-  if (url.origin === self.location.origin && event.request.method === 'GET' && (url.pathname.startsWith('/api/articles') || url.pathname.startsWith('/api/specialists') || url.pathname.startsWith('/api/questions'))) {
+  // 1. Uploaded Media & Images (/uploads/*) -> Cache-First with permanent local storage
+  if (url.origin === self.location.origin && event.request.method === 'GET' && url.pathname.startsWith('/uploads/')) {
     event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (response && response.status === 200) {
-            const resClone = response.clone();
-            caches.open('santehpro-api-cache-v1').then((cache) => cache.put(event.request, resClone));
+      caches.open(MEDIA_CACHE_NAME).then(async (cache) => {
+        const cached = await cache.match(event.request);
+        if (cached) {
+          return cached;
+        }
+        try {
+          const networkResponse = await fetch(event.request);
+          if (networkResponse && networkResponse.status === 200) {
+            cache.put(event.request, networkResponse.clone());
           }
-          return response;
-        })
-        .catch(async () => {
-          const cached = await caches.match(event.request);
-          if (cached) return cached;
-          return new Response(JSON.stringify([]), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' },
-          });
-        })
+          return networkResponse;
+        } catch (err) {
+          return cached || new Response('', { status: 408 });
+        }
+      })
     );
     return;
   }
 
-  // Skip cross-origin requests, non-GET, auth endpoints, and API endpoints
+  // 2. High-volume read APIs (/api/articles, /api/specialists, /api/media-files, /api/questions)
+  // Strategy: Stale-While-Revalidate (Instant 0ms cached response + background revalidation)
+  const isCachableApi =
+    url.origin === self.location.origin &&
+    event.request.method === 'GET' &&
+    (url.pathname.startsWith('/api/articles') ||
+      url.pathname.startsWith('/api/specialists') ||
+      url.pathname.startsWith('/api/media-files') ||
+      url.pathname.startsWith('/api/questions'));
+
+  if (isCachableApi) {
+    event.respondWith(
+      caches.open(API_CACHE_NAME).then(async (cache) => {
+        const cached = await cache.match(event.request);
+
+        const fetchPromise = fetch(event.request)
+          .then((networkResponse) => {
+            if (networkResponse && (networkResponse.status === 200 || networkResponse.status === 304)) {
+              if (networkResponse.status === 200) {
+                cache.put(event.request, networkResponse.clone());
+              }
+            }
+            return networkResponse;
+          })
+          .catch(() => cached);
+
+        // Serve cached content immediately if available; revalidate in background!
+        return cached || fetchPromise;
+      })
+    );
+    return;
+  }
+
+  // Skip other API routes, mutations, and auth endpoints
   if (
     event.request.method !== 'GET' ||
     url.origin !== self.location.origin ||
@@ -76,8 +112,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Navigation requests (HTML page): Network-first with fast timeout and cache fallback
-  // Ensures user gets fresh updates immediately when online!
+  // 3. Navigation requests (HTML page): Network-first with fast timeout and cache fallback
   if (event.request.mode === 'navigate') {
     event.respondWith(
       (async () => {
@@ -111,7 +146,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-First strategy for static assets (JS, CSS, icons, fonts)
+  // 4. Cache-First strategy for static assets (JS, CSS, icons, webp, woff2, svg)
   const isStaticAsset =
     url.pathname.startsWith('/assets/') ||
     url.pathname.endsWith('.js') ||
@@ -125,12 +160,10 @@ self.addEventListener('fetch', (event) => {
   if (isStaticAsset) {
     event.respondWith(
       caches.match(event.request).then((cachedResponse) => {
-        // Instant response from cache if available!
         if (cachedResponse) {
           return cachedResponse;
         }
 
-        // Otherwise fetch from network with timeout protection
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Asset fetch timeout in RF')), 5000)
         );
@@ -152,7 +185,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Default network with cache fallback for other GET requests
+  // Default network with cache fallback
   event.respondWith(
     fetch(event.request)
       .then((response) => {

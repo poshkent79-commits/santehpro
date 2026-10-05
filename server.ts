@@ -187,14 +187,23 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Serve /uploads directly with streaming support (Accept-Ranges) and CDN cache headers
+// Serve /uploads directly with streaming support (Accept-Ranges) and 1-year immutable browser/CDN cache
 app.use('/uploads', express.static(uploadsDir, {
   maxAge: '1y',
+  immutable: true,
+  etag: true,
+  lastModified: true,
   setHeaders: (res) => {
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     res.setHeader('Accept-Ranges', 'bytes');
     res.setHeader('Access-Control-Allow-Origin', '*');
   }
 }));
+
+// Versioning timestamps for HTTP 304 Not Modified cache validation
+let articlesVersion = Date.now();
+let specialistsVersion = Date.now();
+let mediaFilesVersion = Date.now();
 
 // In-memory persistent data store during server runtime (backed by persistent disk & Cloud SQL)
 let articlesStore: Article[] = getCachedArticles();
@@ -276,15 +285,19 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
 });
 
-// GET Articles & Videos (from Cloud SQL with fallback)
+// GET Articles & Videos (High-performance in-memory cache with ETag & 304 Not Modified)
 app.get('/api/articles', async (req, res) => {
   try {
-    const data = await getDbArticles();
-    if (Array.isArray(data) && data.length > 0) {
-      articlesStore = data;
-    }
     const showPending = req.query.admin === 'true' || req.query.includePending === 'true';
     const authorMasterId = req.query.authorMasterId as string | undefined;
+
+    // Refresh from DB only if in-memory store is empty
+    if (!articlesStore || articlesStore.length === 0) {
+      const data = await getDbArticles();
+      if (Array.isArray(data) && data.length > 0) {
+        articlesStore = data;
+      }
+    }
 
     let result = [...articlesStore];
     if (authorMasterId) {
@@ -293,6 +306,15 @@ app.get('/api/articles', async (req, res) => {
       // Public: only show approved and published articles
       result = result.filter(a => a.moderationStatus !== 'pending' && a.moderationStatus !== 'rejected' && a.isPublished !== false);
     }
+
+    // Generate strong ETag based on version and query params
+    const etag = `W/"arts-${articlesVersion}-${result.length}-${showPending ? 'adm' : 'pub'}-${authorMasterId || 'all'}"`;
+    if (req.headers['if-none-match'] === etag) {
+      return res.status(304).end();
+    }
+
+    res.setHeader('ETag', etag);
+    res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=600');
     res.json(result);
   } catch (err) {
     console.error('Failed to get articles from DB:', err);
@@ -456,6 +478,7 @@ app.post('/api/articles', async (req, res) => {
     }
 
     articlesStore.unshift(newArt);
+    articlesVersion = Date.now();
     saveCachedArticles(articlesStore);
 
     // Broadcast real-time event to all connected users
@@ -489,6 +512,7 @@ app.delete('/api/articles/:id', async (req, res) => {
       console.error('Failed to delete article in Cloud SQL:', dbErr);
     }
     articlesStore = articlesStore.filter(a => a.id !== id);
+    articlesVersion = Date.now();
     saveCachedArticles(articlesStore);
 
     // Broadcast real-time deletion
@@ -560,6 +584,7 @@ app.put('/api/articles/:id', async (req, res) => {
     }
 
     articlesStore[index] = updatedArt;
+    articlesVersion = Date.now();
     saveCachedArticles(articlesStore);
 
     broadcastRealtimeEvent({
@@ -602,6 +627,7 @@ app.put('/api/articles/:id/status', async (req, res) => {
     }
 
     articlesStore[index] = updatedArt;
+    articlesVersion = Date.now();
     saveCachedArticles(articlesStore);
 
     broadcastRealtimeEvent({
@@ -624,7 +650,7 @@ app.put('/api/articles/:id/status', async (req, res) => {
 });
 
 // ---------------- MEDIA FILES API (Cloud SQL) ----------------
-// GET Media Files (All or filtered by fileType, category, search)
+// GET Media Files (All or filtered with ETag & 304 caching)
 app.get('/api/media-files', async (req, res) => {
   try {
     const fileType = req.query.fileType as MediaFileType | undefined;
@@ -632,6 +658,14 @@ app.get('/api/media-files', async (req, res) => {
     const search = req.query.search as string | undefined;
 
     const files = await getDbMediaFiles({ fileType, category, search });
+
+    const etag = `W/"media-${mediaFilesVersion}-${files.length}-${fileType || 'all'}-${category || 'all'}"`;
+    if (req.headers['if-none-match'] === etag) {
+      return res.status(304).end();
+    }
+
+    res.setHeader('ETag', etag);
+    res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=600');
     res.json(files);
   } catch (err) {
     console.error('Failed to fetch media files from Cloud SQL:', err);
@@ -679,6 +713,7 @@ app.post('/api/media-files', async (req, res) => {
     }
 
     const created = await createDbMediaFile(newFile);
+    mediaFilesVersion = Date.now();
 
     broadcastRealtimeEvent({
       type: 'media:created',
@@ -699,6 +734,7 @@ app.put('/api/media-files/:id', async (req, res) => {
   try {
     const { id } = req.params;
     await updateDbMediaFile(id, req.body);
+    mediaFilesVersion = Date.now();
     const updated = await getDbMediaFileById(id);
 
     broadcastRealtimeEvent({
@@ -725,6 +761,7 @@ app.put('/api/media-files/:id/toggle-publish', async (req, res) => {
     }
     const newStatus = existing.isPublished === false ? true : false;
     await updateDbMediaFile(id, { isPublished: newStatus });
+    mediaFilesVersion = Date.now();
     const updated = await getDbMediaFileById(id);
 
     broadcastRealtimeEvent({
@@ -746,6 +783,7 @@ app.delete('/api/media-files/:id', async (req, res) => {
   try {
     const { id } = req.params;
     await deleteDbMediaFile(id);
+    mediaFilesVersion = Date.now();
 
     broadcastRealtimeEvent({
       type: 'media:deleted',
@@ -1802,15 +1840,13 @@ function deduplicateSpecialistsList(list: PlumbingSpecialist[]): PlumbingSpecial
   return result;
 }
 
-// GET Specialists (public filtered or admin all)
+// GET Specialists (public filtered or admin all with ETag & 304 caching)
 app.get('/api/specialists', async (req, res) => {
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   const city = req.query.city as string;
   const isAdmin = req.query.admin === 'true';
 
   try {
-    const all = await getDbSpecialists();
-    let rawList = (all && all.length > 0) ? all : [...INITIAL_SPECIALISTS];
+    let rawList = (specialistsStore && specialistsStore.length > 0) ? specialistsStore : [...INITIAL_SPECIALISTS];
 
     // Filter out deleted and deduplicate so each master has strictly 1 card
     let uniqueList = deduplicateSpecialistsList(rawList);
@@ -1829,6 +1865,13 @@ app.get('/api/specialists', async (req, res) => {
       });
     }
 
+    const etag = `W/"specs-${specialistsVersion}-${uniqueList.length}-${city || 'all'}-${isAdmin ? 'adm' : 'pub'}"`;
+    if (req.headers['if-none-match'] === etag) {
+      return res.status(304).end();
+    }
+
+    res.setHeader('ETag', etag);
+    res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=600');
     res.json(uniqueList);
   } catch (error) {
     console.error('Error fetching specialists:', error);

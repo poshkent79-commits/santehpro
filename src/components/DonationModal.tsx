@@ -192,7 +192,8 @@ export const DonationModal: React.FC<DonationModalProps> = ({
           userName: currentUser?.name,
           email: clientEmail.trim() || currentUser?.email || undefined,
           phone: currentUser?.phone,
-          incCurrLabel: paymentMethod === 'ALL' ? undefined : paymentMethod,
+          // Do not send restrictive incCurrLabel so Robokassa displays all available banks, SBP QR, and acquiring methods
+          incCurrLabel: undefined,
         }),
       });
       const data = await response.json();
@@ -565,6 +566,37 @@ export const DonationModal: React.FC<DonationModalProps> = ({
                 <span>{paymentError}</span>
               </div>
             )}
+
+            {/* ДОБРОВОЛЬНЫЙ EMAIL ДЛЯ ЧЕКА (НЕОБЯЗАТЕЛЬНО) */}
+            <div className="space-y-1.5 pt-1">
+              <div className="flex items-center justify-between text-[11px]">
+                <label htmlFor="donation-email" className="text-slate-300 font-semibold flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5 text-slate-400" />
+                  <span>E-mail для чека об оплате</span>
+                  <span className="text-[10px] text-emerald-400 font-medium bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">необязательно</span>
+                </label>
+                {currentUser?.email && clientEmail !== currentUser.email && (
+                  <button
+                    type="button"
+                    onClick={() => setClientEmail(currentUser.email!)}
+                    className="text-[10px] text-cyan-400 hover:underline cursor-pointer"
+                  >
+                    Подставить мой
+                  </button>
+                )}
+              </div>
+              <input
+                id="donation-email"
+                type="email"
+                value={clientEmail}
+                onChange={(e) => setClientEmail(e.target.value)}
+                placeholder="mail@example.ru (можно оставить пустым)"
+                className="w-full bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/80 transition"
+              />
+              <p className="text-[10px] text-slate-400 leading-tight">
+                Без обязательств: если оставить поле пустым, пожертвование всё равно пройдёт мгновенно через СБП или банк.
+              </p>
+            </div>
 
             {/* STUNNING HIGH-CONVERSION PAY BUTTON */}
             <div className="pt-1">
