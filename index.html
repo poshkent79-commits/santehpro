@@ -87,13 +87,13 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="СантехПро" />
-    <link rel="manifest" href="/manifest.json" />
-    <link rel="shortcut icon" href="/favicon.ico" />
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <link rel="icon" type="image/png" sizes="512x512" href="/icon.png" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/pwa-192x192.png" />
-    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.json?v=3" />
+    <link rel="shortcut icon" href="/favicon.ico?v=3" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=3" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon.png?v=3" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/pwa-192x192.png?v=3" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg?v=3" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=3" />
     <!-- VK ID Official SDK for fast single-tap and OAuth authorization -->
     <script defer src="https://unpkg.com/@vkid/sdk@2.6.8/dist-sdk/umd/index.js"></script>
     <script>
@@ -137,15 +137,26 @@
     <div id="root"></div>
 
     <div id="initial-splash" style="position:fixed;inset:0;background-color:#0f172a;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#f8fafc;-webkit-font-smoothing:antialiased;padding:20px;transition:opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1), transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);will-change:opacity, transform;">
-      <div style="display:flex;align-items:center;justify-content:center;margin-bottom:10px;line-height:1;">
+      <!-- Glowing Universal Key Badge matching header icon -->
+      <div style="width:72px;height:72px;border-radius:20px;background:linear-gradient(135deg,#f43f5e 0%,#ef4444 38%,#a855f7 72%,#6366f1 100%);display:flex;align-items:center;justify-content:center;margin-bottom:18px;box-shadow:0 12px 32px rgba(244,63,94,0.45), 0 0 0 1.5px rgba(255,255,255,0.28);animation:keyPulse 2.2s infinite ease-in-out;">
+        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.35" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
+          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z" />
+        </svg>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:center;margin-bottom:8px;line-height:1;">
         <span style="font-size:36px;font-weight:900;letter-spacing:-0.5px;color:#ef4444;">Сантех</span><span style="font-size:36px;font-weight:900;letter-spacing:-0.5px;color:#38bdf8;">Про</span>
       </div>
-      <p style="margin:0 0 28px 0;font-size:15px;color:#94a3b8;letter-spacing:0.2px;text-align:center;max-width:280px;font-weight:500;line-height:1.4;">Твой карманный помощник по сантехнике</p>
+      <p style="margin:0 0 26px 0;font-size:14.5px;color:#94a3b8;letter-spacing:0.2px;text-align:center;max-width:280px;font-weight:500;line-height:1.4;">Твой карманный помощник по сантехнике</p>
       <div style="width:150px;height:3.5px;background:rgba(255,255,255,0.1);border-radius:999px;overflow:hidden;position:relative;">
         <div style="position:absolute;top:0;left:0;height:100%;width:40%;background:linear-gradient(90deg,#ef4444,#38bdf8);border-radius:999px;animation:loadingBar 1.2s infinite ease-in-out;"></div>
       </div>
 
       <style>
+        @keyframes keyPulse {
+          0%, 100% { transform: scale(1); box-shadow: 0 12px 32px rgba(244,63,94,0.45), 0 0 0 1.5px rgba(255,255,255,0.28); }
+          50% { transform: scale(1.05); box-shadow: 0 16px 40px rgba(244,63,94,0.6), 0 0 0 2px rgba(255,255,255,0.4); }
+        }
         @keyframes loadingBar {
           0% { left: -40%; width: 30%; }
           50% { left: 40%; width: 50%; }

@@ -69,6 +69,7 @@ import {
 } from './src/db/userFavorites.ts';
 import {
   sendPasswordResetEmail,
+  sendAdminLoginOtpEmail,
   sendSpecialistModerationNotification,
   sendSpecialistModerationDecisionNotification,
   isSmtpConfigured,
@@ -1361,6 +1362,13 @@ interface AdminLoginAttemptRecord {
 
 const adminLoginAttempts = new Map<string, AdminLoginAttemptRecord>();
 const activeAdminSessions = new Map<string, { email: string; createdAt: number; expiresAt: number }>();
+const pendingAdminOtpLogins = new Map<string, {
+  code: string;
+  expiresAt: number;
+  attempts: number;
+  clientIp: string;
+  email: string;
+}>();
 const MAX_ADMIN_FAILED_ATTEMPTS = 5;
 const ADMIN_LOCKOUT_DURATION_MS = 60 * 60 * 1000; // 1 hour (3600000 ms)
 
@@ -1372,7 +1380,7 @@ function getClientIpAddress(req: express.Request): string {
   return req.ip || req.socket.remoteAddress || 'unknown-client';
 }
 
-// POST /api/admin/login - Secure server-side verification with 1-hour lockout after 5 attempts
+// POST /api/admin/login - Step 1: Verify current master password and dispatch 2FA OTP code to santehpro.info@yandex.ru
 app.post('/api/admin/login', async (req, res) => {
   try {
     const clientIp = getClientIpAddress(req);
@@ -1386,7 +1394,6 @@ app.post('/api/admin/login', async (req, res) => {
 
     // Check if client is locked out
     if (record.lockedUntil && record.lockedUntil > now) {
-      // Intentionally do NOT reveal remaining time or system internals
       return res.status(429).json({
         success: false,
         error: 'Слишком много неудачных попыток входа. Доступ временно заблокирован системой безопасности.',
@@ -1408,28 +1415,42 @@ app.post('/api/admin/login', async (req, res) => {
     const isSuperAdminPhoneCheck = phone && isSuperAdminPhone(phone);
 
     if (isDirectPasswordValid || ((isSuperAdminEmailCheck || isSuperAdminPhoneCheck) && password && password.length >= 6)) {
-      // Reset failed attempts upon successful login
-      record.failedAttempts = 0;
-      record.lockedUntil = undefined;
+      // Password is VALID! Generate 6-digit one-time code (OTP)
+      const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const pendingToken = `adm-otp-${Date.now()}-${crypto.randomBytes(16).toString('hex')}`;
+      const targetAdminEmail = 'santehpro.info@yandex.ru';
 
-      const adminSessionToken = `adm-${Date.now()}-${crypto.randomBytes(24).toString('hex')}`;
-      activeAdminSessions.set(adminSessionToken, {
-        email: email || (phone ? `phone_${phone}` : 'poshkent79@gmail.com'),
-        createdAt: now,
-        expiresAt: now + (24 * 60 * 60 * 1000), // 24-hour session
+      pendingAdminOtpLogins.set(pendingToken, {
+        code: otpCode,
+        expiresAt: now + (10 * 60 * 1000), // Valid for 10 minutes
+        attempts: 0,
+        clientIp,
+        email: targetAdminEmail,
       });
+
+      // Send OTP to santehpro.info@yandex.ru
+      let mailResult: { success: boolean; delivered: boolean; error?: string } = { success: false, delivered: false };
+      try {
+        mailResult = await sendAdminLoginOtpEmail({
+          to: targetAdminEmail,
+          code: otpCode,
+          clientIp,
+          expiresInMinutes: 10,
+        });
+      } catch (mailErr: any) {
+        console.error('[ADMIN 2FA] Error dispatching OTP email:', mailErr);
+        mailResult = { success: false, delivered: false, error: mailErr?.message || 'Ошибка отправки' };
+      }
 
       return res.json({
         success: true,
-        token: adminSessionToken,
-        role: 'admin',
-        user: {
-          uid: 'usr-admin-poshkent',
-          email: email || 'poshkent79@gmail.com',
-          name: 'Главный Администратор',
-          phone: phone || '+7 (924) 788-99-00',
-          role: 'admin',
-        },
+        requireOtp: true,
+        pendingToken,
+        targetEmail: targetAdminEmail,
+        maskedEmail: 's***o@yandex.ru',
+        expiresInSeconds: 600,
+        delivered: mailResult.delivered,
+        warning: !mailResult.delivered ? mailResult.error : undefined,
       });
     }
 
@@ -1446,7 +1467,6 @@ app.post('/api/admin/login', async (req, res) => {
       });
     }
 
-    // Return generic error without exposing remaining attempts count
     return res.status(401).json({
       success: false,
       error: 'Неверный пароль администратора. Доступ запрещён.',
@@ -1454,6 +1474,128 @@ app.post('/api/admin/login', async (req, res) => {
   } catch (err: any) {
     console.error('Admin login error:', err);
     res.status(500).json({ error: 'Внутренняя ошибка сервера аутентификации' });
+  }
+});
+
+// POST /api/admin/verify-otp - Step 2: Validate 6-digit OTP code sent to santehpro.info@yandex.ru
+app.post('/api/admin/verify-otp', async (req, res) => {
+  try {
+    const clientIp = getClientIpAddress(req);
+    const now = Date.now();
+    const { pendingToken, code } = req.body;
+
+    if (!pendingToken || !pendingAdminOtpLogins.has(pendingToken)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Сессия подтверждения истекла или не найдена. Пожалуйста, введите пароль заново.',
+      });
+    }
+
+    const record = pendingAdminOtpLogins.get(pendingToken)!;
+    if (now > record.expiresAt) {
+      pendingAdminOtpLogins.delete(pendingToken);
+      return res.status(400).json({
+        success: false,
+        error: 'Срок действия одноразового кода истёк (10 минут). Запросите новый код.',
+      });
+    }
+
+    record.attempts = (record.attempts || 0) + 1;
+    if (record.attempts > 5) {
+      pendingAdminOtpLogins.delete(pendingToken);
+      return res.status(429).json({
+        success: false,
+        error: 'Превышено количество попыток ввода кода. Авторизуйтесь заново.',
+      });
+    }
+
+    const cleanCode = (code || '').toString().trim();
+    if (cleanCode !== record.code) {
+      const remaining = 5 - record.attempts;
+      return res.status(401).json({
+        success: false,
+        error: `Неверный код подтверждения. Проверьте почту ${record.email}. Осталось попыток: ${remaining}.`,
+      });
+    }
+
+    // Code is VALID! Remove pending token
+    pendingAdminOtpLogins.delete(pendingToken);
+
+    // Reset failed password attempts for this IP
+    const ipRecord = adminLoginAttempts.get(clientIp);
+    if (ipRecord) {
+      ipRecord.failedAttempts = 0;
+      ipRecord.lockedUntil = undefined;
+    }
+
+    // Issue permanent 24-hour admin session token
+    const adminSessionToken = `adm-${Date.now()}-${crypto.randomBytes(24).toString('hex')}`;
+    activeAdminSessions.set(adminSessionToken, {
+      email: record.email,
+      createdAt: now,
+      expiresAt: now + (24 * 60 * 60 * 1000), // 24-hour session
+    });
+
+    console.log(`[ADMIN 2FA SUCCESS] Admin logged in from IP ${clientIp} with email ${record.email}`);
+
+    return res.json({
+      success: true,
+      token: adminSessionToken,
+      role: 'admin',
+      user: {
+        uid: 'usr-admin-poshkent',
+        email: record.email,
+        name: 'Главный Администратор',
+        role: 'admin',
+      },
+    });
+  } catch (err: any) {
+    console.error('Verify OTP error:', err);
+    res.status(500).json({ error: 'Внутренняя ошибка проверки кода' });
+  }
+});
+
+// POST /api/admin/resend-otp - Resend fresh OTP code to santehpro.info@yandex.ru
+app.post('/api/admin/resend-otp', async (req, res) => {
+  try {
+    const clientIp = getClientIpAddress(req);
+    const now = Date.now();
+    const { pendingToken } = req.body;
+
+    if (!pendingToken || !pendingAdminOtpLogins.has(pendingToken)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Сессия подтверждения истекла. Пожалуйста, войдите по паролю заново.',
+      });
+    }
+
+    const record = pendingAdminOtpLogins.get(pendingToken)!;
+    const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    record.code = newOtp;
+    record.expiresAt = now + (10 * 60 * 1000);
+    record.attempts = 0;
+
+    let mailResult: { success: boolean; delivered: boolean; error?: string } = { success: false, delivered: false };
+    try {
+      mailResult = await sendAdminLoginOtpEmail({
+        to: record.email,
+        code: newOtp,
+        clientIp,
+        expiresInMinutes: 10,
+      });
+    } catch (mailErr: any) {
+      mailResult = { success: false, delivered: false, error: mailErr?.message || 'Ошибка отправки' };
+    }
+
+    return res.json({
+      success: true,
+      message: `Новый код отправлен на ${record.email}`,
+      delivered: mailResult.delivered,
+      warning: !mailResult.delivered ? mailResult.error : undefined,
+    });
+  } catch (err: any) {
+    console.error('Resend OTP error:', err);
+    res.status(500).json({ error: 'Внутренняя ошибка повторной отправки кода' });
   }
 });
 

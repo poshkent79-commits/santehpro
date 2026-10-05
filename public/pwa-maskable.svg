@@ -1,132 +1,58 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <!-- Background luxury navy gradient -->
-    <radialGradient id="bgGradMask" cx="50%" cy="40%" r="70%">
-      <stop offset="0%" stop-color="#1b2a47" />
-      <stop offset="55%" stop-color="#0e1726" />
-      <stop offset="100%" stop-color="#080d17" />
+    <!-- Background Gradient for the Squircle Badge -->
+    <linearGradient id="keyBadgeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f43f5e" />
+      <stop offset="38%" stop-color="#ef4444" />
+      <stop offset="72%" stop-color="#a855f7" />
+      <stop offset="100%" stop-color="#6366f1" />
+    </linearGradient>
+
+    <!-- Deep Ambient Glow -->
+    <filter id="keyBadgeGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#f43f5e" flood-opacity="0.45" />
+      <feDropShadow dx="0" dy="6" stdDeviation="12" flood-color="#000000" flood-opacity="0.6" />
+    </filter>
+
+    <filter id="wrenchShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.35" />
+    </filter>
+
+    <!-- Dark Luxury Outer Background for Maskable and App Launchers -->
+    <radialGradient id="outerBg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#111827" />
+      <stop offset="60%" stop-color="#0b1120" />
+      <stop offset="100%" stop-color="#050811" />
     </radialGradient>
-
-    <!-- 3D drop shadow filter for text and emblem -->
-    <filter id="shadow3dMask" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#000000" flood-opacity="0.8" />
-      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000000" flood-opacity="0.9" />
-    </filter>
-
-    <filter id="subtleShadowMask" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="3" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.7" />
-    </filter>
-
-    <linearGradient id="red3dMask" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#ff6b6b" />
-      <stop offset="25%" stop-color="#ee3838" />
-      <stop offset="70%" stop-color="#cc1f1f" />
-      <stop offset="100%" stop-color="#991212" />
-    </linearGradient>
-
-    <linearGradient id="blue3dMask" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#60a5fa" />
-      <stop offset="25%" stop-color="#3b82f6" />
-      <stop offset="70%" stop-color="#1d4ed8" />
-      <stop offset="100%" stop-color="#172554" />
-    </linearGradient>
-
-    <linearGradient id="wrenchGradMask" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#93c5fd" />
-      <stop offset="100%" stop-color="#60a5fa" />
-    </linearGradient>
-
-    <linearGradient id="houseGradMask" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#f87171" />
-      <stop offset="100%" stop-color="#dc2626" />
-    </linearGradient>
   </defs>
 
-  <!-- Full bleed background for Android maskable icon -->
-  <rect width="512" height="512" fill="url(#bgGradMask)" />
-  <rect width="512" height="512" fill="#000" opacity="0.12" />
+  <!-- Full-bleed background ensuring no black/white edge artifacts on Android -->
+  <rect width="512" height="512" fill="url(#outerBg)" />
 
-  <!-- Centered inside safe-zone circle (80%) -->
-  <g transform="translate(51, 51) scale(0.8)">
-    <!-- EMBLEM: Stylized Wrench embracing House with 4 Windows -->
-    <g transform="translate(186, 75)" filter="url(#shadow3dMask)">
-      <path d="M 45 10 
-               L 115 72 
-               L 100 85 
-               L 100 135 
-               L 55 135 
-               L 55 120 
-               L 85 120 
-               L 85 80 
-               L 45 44 
-               L 20 67
-               L 5 53 Z" 
-            fill="url(#houseGradMask)" />
-      
-      <rect x="80" y="25" width="16" height="32" rx="2" fill="url(#houseGradMask)" />
+  <!-- Glowing Squircle Badge centered within 80% Safe Zone (330x330, center 256, 256) -->
+  <g filter="url(#keyBadgeGlow)">
+    <rect 
+      x="91" 
+      y="91" 
+      width="330" 
+      height="330" 
+      rx="76" 
+      fill="url(#keyBadgeGrad)" 
+      stroke="rgba(255, 255, 255, 0.32)" 
+      stroke-width="5" 
+    />
+  </g>
 
-      <!-- 4 Windows -->
-      <rect x="62" y="72" width="10" height="10" rx="1.5" fill="#fca5a5" />
-      <rect x="76" y="72" width="10" height="10" rx="1.5" fill="#fca5a5" />
-      <rect x="62" y="86" width="10" height="10" rx="1.5" fill="#fca5a5" />
-      <rect x="76" y="86" width="10" height="10" rx="1.5" fill="#fca5a5" />
-
-      <!-- Wrench head and handle in Steel-Cyan -->
-      <path d="M 12 35 
-               C 12 15, 32 0, 52 5 
-               C 42 16, 42 32, 54 40
-               C 40 48, 28 62, 35 78
-               L 52 98
-               C 56 102, 54 110, 48 114
-               L 28 128
-               C 22 132, 14 130, 10 124
-               L -5 104
-               C -9 98, -8 90, -2 84
-               L 8 74
-               C 0 62, 2 48, 12 35 Z" 
-            fill="url(#wrenchGradMask)" />
-      
-      <path d="M 24 22 C 18 30, 20 42, 28 48 C 34 38, 32 26, 24 22 Z" fill="#0d1b2a" />
-    </g>
-
-    <!-- MAIN TITLE: САНТЕХ -->
-    <g filter="url(#shadow3dMask)">
-      <text x="256" y="280" 
-            text-anchor="middle" 
-            font-family="system-ui, -apple-system, 'SF Pro Display', Roboto, 'Segoe UI', sans-serif" 
-            font-size="82" 
-            font-weight="900" 
-            letter-spacing="3" 
-            fill="url(#red3dMask)">САНТЕХ</text>
-    </g>
-
-    <!-- MAIN TITLE: ПРО -->
-    <g filter="url(#shadow3dMask)">
-      <text x="256" y="375" 
-            text-anchor="middle" 
-            font-family="system-ui, -apple-system, 'SF Pro Display', Roboto, 'Segoe UI', sans-serif" 
-            font-size="94" 
-            font-weight="900" 
-            letter-spacing="5" 
-            fill="url(#blue3dMask)">ПРО</text>
-    </g>
-
-    <!-- SUBTITLE: Твой карманный помощник по сантехнике -->
-    <g filter="url(#subtleShadowMask)">
-      <text x="256" y="425" 
-            text-anchor="middle" 
-            font-family="system-ui, -apple-system, 'SF Pro Text', Roboto, 'Segoe UI', sans-serif" 
-            font-size="21" 
-            font-weight="700" 
-            letter-spacing="0.5" 
-            fill="#ffffff">Твой карманный</text>
-      <text x="256" y="455" 
-            text-anchor="middle" 
-            font-family="system-ui, -apple-system, 'SF Pro Text', Roboto, 'Segoe UI', sans-serif" 
-            font-size="21" 
-            font-weight="700" 
-            letter-spacing="0.5" 
-            fill="#ffffff">помощник по сантехнике</text>
-    </g>
+  <!-- Crisp White Lucide Wrench inside Badge -->
+  <!-- Scaled from 24x24 (scale=7.8, centered at 256,256) -->
+  <g transform="translate(162.4, 162.4) scale(7.8)" filter="url(#wrenchShadow)">
+    <path 
+      d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z" 
+      fill="none" 
+      stroke="#ffffff" 
+      stroke-width="2.35" 
+      stroke-linecap="round" 
+      stroke-linejoin="round" 
+    />
   </g>
 </svg>

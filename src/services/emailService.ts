@@ -399,6 +399,152 @@ export function getEmailAuditLogs() {
 }
 
 /**
+ * Sends a 2FA One-Time Passcode (OTP) email to administrator (santehpro.info@yandex.ru)
+ */
+export async function sendAdminLoginOtpEmail(params: {
+  to: string;
+  code: string;
+  clientIp?: string;
+  expiresInMinutes?: number;
+}): Promise<{ success: boolean; delivered: boolean; error?: string }> {
+  const { to, code, clientIp = 'unknown', expiresInMinutes = 10 } = params;
+  const config = getEffectiveSmtpConfig();
+
+  const formattedDate = new Date().toLocaleString('ru-RU', {
+    timeZone: 'Europe/Moscow',
+  });
+
+  const htmlContent = `
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Код подтверждения входа — СантехПро</title>
+</head>
+<body style="margin:0; padding:0; background-color:#0b1120; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color:#f8fafc;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#0b1120; padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" style="max-width:540px; background-color:#1e293b; border-radius:24px; border:1px solid #334155; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.6);">
+          <!-- Top Gradient Header -->
+          <tr>
+            <td style="padding:28px 32px; background: linear-gradient(135deg, #f43f5e 0%, #ef4444 40%, #6366f1 100%); text-align:center;">
+              <div style="font-size:36px; margin-bottom:6px;">🔐</div>
+              <h1 style="margin:0; font-size:22px; font-weight:900; color:#ffffff; letter-spacing:-0.5px;">
+                СантехПро • Панель управления
+              </h1>
+              <p style="margin:4px 0 0; font-size:13px; color:#fde047; font-weight:700;">
+                Двухфакторное подтверждение входа (2FA)
+              </p>
+            </td>
+          </tr>
+
+          <!-- Main Body -->
+          <tr>
+            <td style="padding:32px;">
+              <h2 style="margin:0 0 12px; font-size:18px; font-weight:700; color:#ffffff;">
+                Здравствуйте, Главный Администратор!
+              </h2>
+              <p style="margin:0 0 20px; font-size:14px; line-height:1.6; color:#cbd5e1;">
+                На сайте <strong>santehpro.info</strong> был успешно введен мастер-пароль администратора.
+                Для подтверждения входа и доступа к панели управления используйте одноразовый проверочный код:
+              </p>
+
+              <!-- Highlighted Code Box -->
+              <div style="background-color:#0f172a; border:2px dashed #f43f5e; border-radius:18px; padding:24px; text-align:center; margin:24px 0;">
+                <span style="font-size:11px; text-transform:uppercase; letter-spacing:1.5px; color:#f87171; font-weight:800; display:block; margin-bottom:8px;">
+                  Одноразовый код подтверждения
+                </span>
+                <span style="font-size:42px; font-weight:900; letter-spacing:14px; color:#ffffff; font-family:Consolas, 'Courier New', monospace; display:inline-block; padding-left:14px;">
+                  ${code}
+                </span>
+              </div>
+
+              <!-- Security Information -->
+              <div style="background-color:#0f172a; border:1px solid #334155; border-radius:14px; padding:14px 18px; margin-bottom:20px;">
+                <table width="100%" cellspacing="0" cellpadding="4" style="font-size:12px; color:#94a3b8;">
+                  <tr>
+                    <td style="color:#64748b; width:130px;">⏱ Срок действия:</td>
+                    <td style="color:#e2e8f0; font-weight:bold;">${expiresInMinutes} минут</td>
+                  </tr>
+                  <tr>
+                    <td style="color:#64748b;">🌐 IP-адрес:</td>
+                    <td style="color:#e2e8f0; font-family:monospace;">${clientIp}</td>
+                  </tr>
+                  <tr>
+                    <td style="color:#64748b;">📅 Время запроса:</td>
+                    <td style="color:#e2e8f0;">${formattedDate} (МСК)</td>
+                  </tr>
+                </table>
+              </div>
+
+              <div style="background-color:rgba(239, 68, 68, 0.12); border-left:4px solid #ef4444; padding:12px 16px; border-radius:0 12px 12px 0;">
+                <p style="margin:0; font-size:12px; line-height:1.5; color:#fca5a5;">
+                  ⚠️ <strong>Безопасность:</strong> Если вы НЕ совершали вход в систему, немедленно проверьте настройки безопасности сервера и смените пароль администратора. Никому не передавайте данный код.
+                </p>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:18px 32px; background-color:#0f172a; border-top:1px solid #334155; text-align:center;">
+              <p style="margin:0; font-size:11px; color:#64748b;">
+                Система безопасности сервиса «СантехПро» • santehpro.info
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+
+  const textContent = `
+Здравствуйте!
+
+Был получен запрос на вход в панель администратора santehpro.info.
+
+Одноразовый код подтверждения: ${code}
+
+Срок действия кода: ${expiresInMinutes} минут.
+IP-адрес: ${clientIp}
+Время: ${formattedDate} (МСК)
+
+Если вы не совершали данную попытку входа, немедленно смените пароль администратора.
+  `.trim();
+
+  console.log(`[ADMIN 2FA CODE] -> Code for ${to} is: ${code} (IP: ${clientIp})`);
+
+  if (config) {
+    const fromAddress = `«${config.fromName || 'СантехПро'}» <${config.fromEmail || config.user}>`;
+    try {
+      const { transporter } = getMailTransporter(config);
+      await transporter.sendMail({
+        from: fromAddress,
+        to,
+        subject: `🔐 Код подтверждения входа в панель администратора: ${code}`,
+        text: textContent,
+        html: htmlContent,
+      });
+
+      saveEmailToLocalAudit(to, code, 'sent_admin_otp_smtp');
+      return { success: true, delivered: true };
+    } catch (smtpError: any) {
+      const errMsg = smtpError?.message || 'SMTP delivery failed';
+      console.error('[ADMIN 2FA] SMTP error:', errMsg);
+      saveEmailToLocalAudit(to, code, `admin_otp_smtp_error: ${errMsg}`);
+      return { success: true, delivered: false, error: errMsg };
+    }
+  } else {
+    saveEmailToLocalAudit(to, code, 'admin_otp_simulated_no_smtp');
+    return { success: true, delivered: false, error: 'SMTP-шлюз еще не настроен в системе' };
+  }
+}
+
+/**
  * Sends a notification email to the administrator about a new specialist moderation request
  */
 export async function sendSpecialistModerationNotification(
