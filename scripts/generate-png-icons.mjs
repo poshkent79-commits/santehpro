@@ -2,169 +2,271 @@ import fs from 'node:fs';
 import path from 'node:path';
 import sharp from 'sharp';
 
+/**
+ * World-Class Mobile App Icon Generator for "СантехПро"
+ * Designed strictly according to Google Material 3 / Android Adaptive Icons / RuStore guidelines:
+ * - Full-bleed rich midnight background (no black borders or square corners).
+ * - Massive high-contrast 3D Hero Emblem (Gas pipe wrench + House + Golden windows + Water drop).
+ * - Single-line bold title "САНТЕХ ПРО" (NO illegible tiny slogans!).
+ * - Glowing radial ambient lighting and precision engineering subtle accents.
+ * - Perfectly framed inside Samsung One UI squircle & Android safe circle.
+ */
 function createSvg({ isMaskable = false } = {}) {
-  // Safe zone scaling: Android maskable requires content inside the inner 80% circle
-  const scale = isMaskable ? 0.82 : 0.94;
+  const scale = isMaskable ? 0.82 : 0.90;
   const transform = `translate(256, 256) scale(${scale}) translate(-256, -256)`;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <!-- Background Gradient: Deep Slate Navy (#162333 to #0a1018) -->
+    <!-- Background Gradient: Deep Midnight Sapphire to Dark Slate -->
     <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#162333" />
-      <stop offset="50%" stop-color="#121d2a" />
-      <stop offset="100%" stop-color="#0a1018" />
+      <stop offset="0%" stop-color="#0f1b2f" />
+      <stop offset="45%" stop-color="#0b1322" />
+      <stop offset="100%" stop-color="#050912" />
     </linearGradient>
 
-    <!-- Red 3D Gradient for САНТЕХ -->
-    <linearGradient id="red3D" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#ff4757" />
-      <stop offset="50%" stop-color="#ea2027" />
-      <stop offset="100%" stop-color="#b7151b" />
+    <!-- Radial Glow behind the Hero Emblem -->
+    <radialGradient id="centerGlow" cx="50%" cy="42%" r="50%">
+      <stop offset="0%" stop-color="#0284c7" stop-opacity="0.25" />
+      <stop offset="40%" stop-color="#ff4757" stop-opacity="0.10" />
+      <stop offset="80%" stop-color="#000000" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Ruby-Fire 3D Gradient for House & "САНТЕХ" -->
+    <linearGradient id="rubyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ff6b81" />
+      <stop offset="25%" stop-color="#ff4757" />
+      <stop offset="70%" stop-color="#ee2e3d" />
+      <stop offset="100%" stop-color="#b31217" />
     </linearGradient>
 
-    <!-- Blue 3D Gradient for ПРО -->
-    <linearGradient id="blue3D" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#38bdf8" />
-      <stop offset="50%" stop-color="#0284c7" />
+    <!-- Electric Cyan 3D Gradient for Wrench & "ПРО" -->
+    <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#7dd3fc" />
+      <stop offset="25%" stop-color="#38bdf8" />
+      <stop offset="70%" stop-color="#0284c7" />
       <stop offset="100%" stop-color="#0369a1" />
     </linearGradient>
 
-    <!-- Shadow filter for Emblem & Title -->
-    <filter id="drop3D" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#000000" flood-opacity="0.65" />
+    <!-- Brass / Golden Gradient for Wrench Knurl & Warm Windows -->
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fde047" />
+      <stop offset="50%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+
+    <!-- Chrome Specular Sheen -->
+    <linearGradient id="chromeSheen" x1="0%" y1="0%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.6" />
+      <stop offset="40%" stop-color="#ffffff" stop-opacity="0.1" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Heavy 3D Drop Shadow for Depth -->
+    <filter id="shadow3D" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#000000" flood-opacity="0.75" />
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000000" flood-opacity="0.5" />
     </filter>
 
-    <filter id="subtleGlow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000000" flood-opacity="0.5" />
+    <!-- Crisp Text Shadow -->
+    <filter id="textShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.8" />
     </filter>
   </defs>
 
-  <!-- Full-bleed background filling all 512x512 pixels (NO black corners!) -->
+  <!-- Edge-to-edge solid background (full-bleed, 512x512) -->
   <rect width="512" height="512" fill="url(#bgGrad)" />
 
-  <!-- Subtle vignette radial overlay for depth -->
-  <radialGradient id="vignette" cx="50%" cy="45%" r="65%">
-    <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.06" />
-    <stop offset="70%" stop-color="#000000" stop-opacity="0" />
-    <stop offset="100%" stop-color="#000000" stop-opacity="0.45" />
-  </radialGradient>
-  <rect width="512" height="512" fill="url(#vignette)" />
+  <!-- Volumetric ambient backlight -->
+  <rect width="512" height="512" fill="url(#centerGlow)" />
+
+  <!-- Subtle engineering tech circle / compass dial -->
+  <circle cx="256" cy="195" r="160" fill="none" stroke="#38bdf8" stroke-opacity="0.08" stroke-width="1.5" stroke-dasharray="6 8" />
+  <circle cx="256" cy="195" r="185" fill="none" stroke="#ffffff" stroke-opacity="0.04" stroke-width="1" />
 
   <g transform="${transform}">
-    <!-- ================= 1. EMBLEM: WRENCH + HOUSE ================= -->
-    <g transform="translate(256, 125)" filter="url(#drop3D)">
-      <!-- RED HOUSE (Stroke #e03b47, 7px thickness) -->
-      <g stroke="#e03b47" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none">
-        <!-- Chimney -->
-        <path d="M 22 -20 L 22 -36 L 36 -36 L 36 -6" />
-        <!-- Roof Peak & Slopes -->
-        <path d="M -12 -12 L 0 -26 L 46 20" />
-        <!-- House Body Walls & Base -->
-        <path d="M 40 14 L 40 46 L -10 46 L -10 20" />
+
+    <!-- ======================================================== -->
+    <!-- HERO EMBLEM: BOLD 3D PIPE WRENCH + HOUSE + WATER DROPLET -->
+    <!-- ======================================================== -->
+    <g filter="url(#shadow3D)">
+      
+      <!-- 1. THE HOUSE SILHOUETTE (Solid 3D Warm Ruby Red) -->
+      <g>
+        <!-- House Body & Roof Peak -->
+        <path
+          d="M 230 92 
+             L 345 195 
+             L 345 285 
+             C 345 292, 339 298, 332 298 
+             L 210 298 
+             C 203 298, 197 292, 197 285 
+             L 197 205 
+             Z"
+          fill="url(#rubyGrad)"
+          stroke="#ff6b81"
+          stroke-width="2"
+          stroke-linejoin="round"
+        />
+
+        <!-- Roof Chimney with subtle 3D bevel -->
+        <path
+          d="M 305 130 
+             L 305 85 
+             C 305 82, 307 80, 310 80 
+             L 330 80 
+             C 333 80, 335 82, 335 85 
+             L 335 156 
+             Z"
+          fill="url(#rubyGrad)"
+          stroke="#ff6b81"
+          stroke-width="2"
+        />
+
+        <!-- Chimney Cap -->
+        <rect x="301" y="76" width="38" height="7" rx="3.5" fill="#ff7f90" />
+
+        <!-- Glowing Warm Windows (2x2 Grid, symbol of home comfort and heating) -->
+        <g fill="url(#goldGrad)" opacity="0.95" filter="drop-shadow(0 0 6px rgba(251,191,36,0.6))">
+          <rect x="268" y="215" width="24" height="24" rx="4" />
+          <rect x="298" y="215" width="24" height="24" rx="4" />
+          <rect x="268" y="245" width="24" height="24" rx="4" />
+          <rect x="298" y="245" width="24" height="24" rx="4" />
+        </g>
       </g>
-      <!-- House Window: 4 square panes in coral red -->
-      <g fill="#e03b47">
-        <rect x="8" y="8" width="8" height="8" rx="1.5" />
-        <rect x="20" y="8" width="8" height="8" rx="1.5" />
-        <rect x="8" y="20" width="8" height="8" rx="1.5" />
-        <rect x="20" y="20" width="8" height="8" rx="1.5" />
+
+      <!-- 2. THE PIPE WRENCH (Solid 3D Heavy-Duty Cyan-Chrome Tool) -->
+      <!-- Powerful tool gripping the house roof, wrapping around with authority -->
+      <g>
+        <!-- Wrench Top Hook Jaw (wraps over the roof slope) -->
+        <path
+          d="M 175 145 
+             C 160 110, 185 68, 228 65 
+             C 255 63, 275 75, 285 92 
+             C 272 90, 255 88, 240 92 
+             C 205 100, 195 125, 202 152 
+             Z"
+          fill="url(#cyanGrad)"
+          stroke="#7dd3fc"
+          stroke-width="2.5"
+          stroke-linejoin="round"
+        />
+
+        <!-- Precision Gripping Serration Teeth on Jaw Interior -->
+        <path
+          d="M 205 130 L 213 134 M 215 120 L 223 124 M 228 112 L 235 117 M 243 105 L 250 111"
+          stroke="#ffffff"
+          stroke-width="3"
+          stroke-linecap="round"
+          opacity="0.9"
+        />
+
+        <!-- Wrench Lower Jaw & Collar Box -->
+        <path
+          d="M 160 160 
+             L 218 208 
+             L 200 230 
+             L 142 182 
+             Z"
+          fill="url(#cyanGrad)"
+          stroke="#7dd3fc"
+          stroke-width="2"
+        />
+
+        <!-- Knurled Brass Adjustment Nut (Industrial Masterpiece detail) -->
+        <g transform="translate(172, 208) rotate(40)">
+          <rect x="-8" y="-18" width="16" height="36" rx="4" fill="url(#goldGrad)" stroke="#fef08a" stroke-width="1.5" />
+          <line x1="-8" y1="-8" x2="8" y2="-8" stroke="#78350f" stroke-width="1.5" />
+          <line x1="-8" y1="0" x2="8" y2="0" stroke="#78350f" stroke-width="1.5" />
+          <line x1="-8" y1="8" x2="8" y2="8" stroke="#78350f" stroke-width="1.5" />
+        </g>
+
+        <!-- Wrench Long Ergonomic Handle (diagonal down-left) -->
+        <path
+          d="M 165 215 
+             L 108 275 
+             C 98 285, 102 300, 115 304 
+             C 125 307, 136 300, 144 290 
+             L 195 235 
+             Z"
+          fill="url(#cyanGrad)"
+          stroke="#7dd3fc"
+          stroke-width="2.5"
+          stroke-linejoin="round"
+        />
+
+        <!-- Tool Hanger Hole at bottom of handle -->
+        <circle cx="118" cy="292" r="7" fill="#0b1322" stroke="#38bdf8" stroke-width="2" />
+
+        <!-- Chrome Specular Highlight along Handle Spine -->
+        <path
+          d="M 180 225 L 126 280"
+          stroke="url(#chromeSheen)"
+          stroke-width="4"
+          stroke-linecap="round"
+        />
       </g>
 
-      <!-- CYAN-BLUE PIPE WRENCH (Stroke #38bdf8, 7.5px thickness) -->
-      <g stroke="#38bdf8" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
-        <!-- Curved Upper Hook Jaw wrapping around house peak -->
-        <path d="M -30 -16 C -38 -32 -20 -48 0 -48 C 14 -48 20 -40 18 -32 C 16 -24 4 -22 -6 -24" />
-        <!-- Lower Jaw & Wrench Collar -->
-        <path d="M -22 -10 L -36 4 L -24 16 L -10 2" />
-        <!-- Adjustment Knurl Ridges -->
-        <path d="M -27 12 L -20 19" />
-        <path d="M -32 17 L -25 24" />
-        <!-- Long Sturdy Wrench Handle pointing lower-left -->
-        <path d="M -28 20 L -56 50 C -62 56 -58 64 -50 62 L -24 36" />
+      <!-- 3. CRYSTAL WATER DROP EMBLEM (Nestled at connection) -->
+      <g transform="translate(230, 240)">
+        <path
+          d="M 0 -18 
+             C 8 -8, 14 0, 14 8 
+             C 14 16, 8 22, 0 22 
+             C -8 22, -14 16, -14 8 
+             C -14 0, -8 -8, 0 -18 
+             Z"
+          fill="#38bdf8"
+          filter="drop-shadow(0 0 8px rgba(56,189,248,0.8))"
+        />
+        <!-- Inner Water Droplet Specular Reflection -->
+        <ellipse cx="-4" cy="5" rx="3" ry="5" fill="#ffffff" opacity="0.8" transform="rotate(-20 -4 5)" />
       </g>
     </g>
 
-    <!-- ================= 2. PRIMARY TITLE: САНТЕХ ================= -->
-    <g filter="url(#drop3D)">
-      <!-- 3D Bottom Bevel Layer -->
+    <!-- ======================================================== -->
+    <!-- BOLD MODERN BRAND TITLE: "САНТЕХ ПРО" (Single clean line) -->
+    <!-- ======================================================== -->
+    <g filter="url(#textShadow)" transform="translate(256, 388)">
+      <!-- 3D Bevel Dark Underlay for Extreme Punch -->
       <text
-        x="256"
-        y="272"
+        x="0"
+        y="6"
         text-anchor="middle"
-        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Montserrat', Arial Black, sans-serif"
+        font-family="-apple-system, BlinkMacSystemFont, 'Montserrat', 'Segoe UI', Roboto, 'Arial Black', sans-serif"
         font-weight="900"
-        font-size="68"
-        letter-spacing="4"
-        fill="#5a0b0d"
-      >САНТЕХ</text>
-      <!-- Front Face Layer -->
+        font-size="54"
+        letter-spacing="2"
+      >
+        <tspan fill="#4c0508">САНТЕХ </tspan>
+        <tspan fill="#04273e">ПРО</tspan>
+      </text>
+
+      <!-- Front Lustrous Gradient Face -->
       <text
-        x="256"
-        y="268"
+        x="0"
+        y="0"
         text-anchor="middle"
-        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Montserrat', Arial Black, sans-serif"
+        font-family="-apple-system, BlinkMacSystemFont, 'Montserrat', 'Segoe UI', Roboto, 'Arial Black', sans-serif"
         font-weight="900"
-        font-size="68"
-        letter-spacing="4"
-        fill="url(#red3D)"
-      >САНТЕХ</text>
+        font-size="54"
+        letter-spacing="2"
+      >
+        <tspan fill="url(#rubyGrad)">САНТЕХ </tspan>
+        <tspan fill="url(#cyanGrad)">ПРО</tspan>
+      </text>
+
+      <!-- Subtle Accent Underline / Horizon Bar -->
+      <g opacity="0.9">
+        <rect x="-195" y="16" width="180" height="4" rx="2" fill="url(#rubyGrad)" />
+        <rect x="15" y="16" width="180" height="4" rx="2" fill="url(#cyanGrad)" />
+      </g>
     </g>
 
-    <!-- ================= 3. PRIMARY TITLE: ПРО ================= -->
-    <g filter="url(#drop3D)">
-      <!-- 3D Bottom Bevel Layer -->
-      <text
-        x="256"
-        y="350"
-        text-anchor="middle"
-        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Montserrat', Arial Black, sans-serif"
-        font-weight="900"
-        font-size="78"
-        letter-spacing="6"
-        fill="#042f48"
-      >ПРО</text>
-      <!-- Front Face Layer -->
-      <text
-        x="256"
-        y="346"
-        text-anchor="middle"
-        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Montserrat', Arial Black, sans-serif"
-        font-weight="900"
-        font-size="78"
-        letter-spacing="6"
-        fill="url(#blue3D)"
-      >ПРО</text>
-    </g>
-
-    <!-- ================= 4. SLOGAN SUBTITLE ================= -->
-    <g filter="url(#subtleGlow)">
-      <text
-        x="256"
-        y="404"
-        text-anchor="middle"
-        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif"
-        font-weight="600"
-        font-size="21"
-        letter-spacing="0.5"
-        fill="#ffffff"
-      >Твой карманный</text>
-      <text
-        x="256"
-        y="436"
-        text-anchor="middle"
-        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif"
-        font-weight="600"
-        font-size="21"
-        letter-spacing="0.5"
-        fill="#ffffff"
-      >помощник по сантехнике</text>
-    </g>
   </g>
 </svg>`;
 }
 
-export async function generateAllIcons() {
+async function main() {
   const publicDir = path.resolve('public');
   const distDir = path.resolve('dist');
   const rustoreDir = path.join(publicDir, 'rustore');
@@ -175,30 +277,35 @@ export async function generateAllIcons() {
     fs.mkdirSync(distRustoreDir, { recursive: true });
   }
 
+  console.log('Generating world-class redesigned icons for SantehPro...');
+
   const standardSvg = createSvg({ isMaskable: false });
   const maskableSvg = createSvg({ isMaskable: true });
 
   fs.writeFileSync(path.join(publicDir, 'icon.svg'), standardSvg);
 
-  // 1. RuStore 512x512 square PNG (strictly square, full bleed background, no rounded corners, no black corner artifacts)
+  // 1. RuStore 512x512 strictly square PNG (full bleed, no rounded corners, no black corner artifacts)
   const rustoreBuf = await sharp(Buffer.from(standardSvg))
     .resize(512, 512)
     .png({ compressionLevel: 9, quality: 100 })
     .toBuffer();
 
   fs.writeFileSync(path.join(rustoreDir, 'icon-512x512.png'), rustoreBuf);
+  console.log('✓ RuStore icon-512x512.png created (512x512)');
 
   // 2. Standard 512x512 app icon
   fs.writeFileSync(path.join(publicDir, 'icon.png'), rustoreBuf);
   fs.writeFileSync(path.join(publicDir, 'pwa-512x512.png'), rustoreBuf);
+  console.log('✓ Standard pwa-512x512.png created');
 
-  // 3. Android Maskable 512x512 icon (fits 100% inside 80% safe circle)
+  // 3. Android Maskable 512x512 icon (strictly inside safe circle, edge-to-edge solid dark navy)
   const maskableBuf = await sharp(Buffer.from(maskableSvg))
     .resize(512, 512)
     .png({ compressionLevel: 9, quality: 100 })
     .toBuffer();
 
   fs.writeFileSync(path.join(publicDir, 'pwa-maskable-512x512.png'), maskableBuf);
+  console.log('✓ Android Maskable pwa-maskable-512x512.png created');
 
   // 4. 192x192 icon for mobile launchers
   const buf192 = await sharp(Buffer.from(standardSvg))
@@ -206,6 +313,7 @@ export async function generateAllIcons() {
     .png({ compressionLevel: 9, quality: 100 })
     .toBuffer();
   fs.writeFileSync(path.join(publicDir, 'pwa-192x192.png'), buf192);
+  console.log('✓ pwa-192x192.png created');
 
   // 5. Apple Touch Icon (180x180)
   const buf180 = await sharp(Buffer.from(standardSvg))
@@ -213,6 +321,7 @@ export async function generateAllIcons() {
     .png({ compressionLevel: 9, quality: 100 })
     .toBuffer();
   fs.writeFileSync(path.join(publicDir, 'apple-touch-icon.png'), buf180);
+  console.log('✓ apple-touch-icon.png created');
 
   // 6. Favicon (64x64)
   const buf64 = await sharp(Buffer.from(standardSvg))
@@ -220,6 +329,7 @@ export async function generateAllIcons() {
     .png({ compressionLevel: 9, quality: 100 })
     .toBuffer();
   fs.writeFileSync(path.join(publicDir, 'favicon.ico'), buf64);
+  console.log('✓ favicon.ico created');
 
   // 7. Copy to dist/
   if (fs.existsSync(distDir)) {
@@ -231,10 +341,13 @@ export async function generateAllIcons() {
     fs.copyFileSync(path.join(publicDir, 'apple-touch-icon.png'), path.join(distDir, 'apple-touch-icon.png'));
     fs.copyFileSync(path.join(publicDir, 'favicon.ico'), path.join(distDir, 'favicon.ico'));
     fs.copyFileSync(path.join(rustoreDir, 'icon-512x512.png'), path.join(distRustoreDir, 'icon-512x512.png'));
+    console.log('✓ All icons updated in dist/ and dist/rustore/');
   }
+
+  console.log('All icons generated successfully!');
 }
 
-generateAllIcons().catch(err => {
+main().catch(err => {
   console.error('Error generating icons:', err);
   process.exit(1);
 });
