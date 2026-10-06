@@ -5,6 +5,13 @@ import {
   Loader2,
   AlertCircle,
   ExternalLink,
+  Mail,
+  Lock,
+  KeyRound,
+  ShieldCheck,
+  CheckCircle2,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { LegalTermsModal } from './LegalTermsModal';
@@ -17,10 +24,18 @@ interface AuthModalProps {
 export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
   const {
     isAuthModalOpen,
+    authModalReason,
     closeAuthModal,
     loginWithYandex,
     loginWithVk,
+    login,
   } = useAuth();
+
+  const [authMethod, setAuthMethod] = useState<'oauth' | 'credentials'>('oauth');
+  const [credLogin, setCredLogin] = useState('buyer@santehpro.info');
+  const [credPassword, setCredPassword] = useState('buyer2026');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isCredLoading, setIsCredLoading] = useState(false);
 
   const [dataConsentAccepted, setDataConsentAccepted] = useState(true);
   const [termsAccepted, setTermsAccepted] = useState(true);
@@ -36,12 +51,36 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
   // Reset state when modal opens
   useEffect(() => {
     if (isAuthModalOpen) {
+      if (authModalReason?.toLowerCase().includes('парол') || authModalReason?.toLowerCase().includes('логин')) {
+        setAuthMethod('credentials');
+      }
       setError(null);
       setPopupBlockedUrl(null);
       setIsYandexLoading(false);
       setIsVkLoading(false);
+      setIsCredLoading(false);
     }
-  }, [isAuthModalOpen]);
+  }, [isAuthModalOpen, authModalReason]);
+
+  // Handle credentials login
+  const handleCredentialsLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!dataConsentAccepted || !termsAccepted) {
+      setError('Для продолжения необходимо подтвердить согласие с Политикой обработки данных и Пользовательским соглашением');
+      return;
+    }
+    setIsCredLoading(true);
+    setError(null);
+    try {
+      await login({ email: credLogin.trim(), password: credPassword });
+      closeAuthModal();
+      if (onNavigateTab) onNavigateTab('cabinet');
+    } catch (err: any) {
+      setError(err?.message || 'Неверный логин или пароль');
+    } finally {
+      setIsCredLoading(false);
+    }
+  };
 
   // Listen to postMessage from VK OAuth callback popup
   useEffect(() => {
@@ -260,46 +299,182 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
             </div>
           )}
 
-          {/* ================= 3. КНОПКИ АВТОРИЗАЦИИ ================= */}
-          <div className="space-y-3 pt-1">
-            {/* Кнопка 1: Официальный вход через VK ID */}
+          {/* Переключатель способов входа: Быстрый вход (VK/Яндекс) или Логин и пароль */}
+          <div className="flex p-1 bg-slate-950/80 rounded-2xl border border-slate-800 text-xs">
             <button
               type="button"
-              id="auth-vk-primary-btn"
-              disabled={isVkLoading || isYandexLoading}
-              onClick={handleVkAuth}
-              className="w-full py-3.5 px-4 rounded-2xl bg-[#0077ff] hover:bg-[#0066ee] text-white font-bold text-sm sm:text-base flex items-center justify-center space-x-3 transition-all duration-200 shadow-xl shadow-blue-600/25 hover:shadow-blue-600/35 cursor-pointer active:scale-[0.99] disabled:opacity-60"
+              onClick={() => {
+                setAuthMethod('oauth');
+                setError(null);
+              }}
+              className={`flex-1 py-2 px-3 rounded-xl font-bold transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
+                authMethod === 'oauth'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                  : 'text-slate-400 hover:text-white'
+              }`}
             >
-              <div className="w-6 h-6 rounded-lg bg-white/20 text-white flex items-center justify-center font-black text-xs shrink-0">
-                {isVkLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin text-white" /> : <span>VK</span>}
-              </div>
-              <span className="font-extrabold tracking-tight">
-                {isVkLoading ? 'Подключение к VK ID...' : 'Войти через VK ID'}
-              </span>
+              <span>VK ID / Яндекс ID</span>
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMethod('credentials');
+                setError(null);
+              }}
+              className={`flex-1 py-2 px-3 rounded-xl font-bold transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
+                authMethod === 'credentials'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <KeyRound className="w-3.5 h-3.5" />
+              <span>По логину и паролю</span>
+            </button>
+          </div>
 
-            {/* Разделитель ИЛИ */}
-            <div className="flex items-center space-x-3 py-0.5">
-              <div className="flex-1 h-px bg-slate-800" />
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">или</span>
-              <div className="flex-1 h-px bg-slate-800" />
+          {/* ================= 3. ФОРМЫ АВТОРИЗАЦИИ ================= */}
+          {authMethod === 'oauth' ? (
+            <div className="space-y-3 pt-1">
+              {/* Кнопка 1: Официальный вход через VK ID */}
+              <button
+                type="button"
+                id="auth-vk-primary-btn"
+                disabled={isVkLoading || isYandexLoading}
+                onClick={handleVkAuth}
+                className="w-full py-3.5 px-4 rounded-2xl bg-[#0077ff] hover:bg-[#0066ee] text-white font-bold text-sm sm:text-base flex items-center justify-center space-x-3 transition-all duration-200 shadow-xl shadow-blue-600/25 hover:shadow-blue-600/35 cursor-pointer active:scale-[0.99] disabled:opacity-60"
+              >
+                <div className="w-6 h-6 rounded-lg bg-white/20 text-white flex items-center justify-center font-black text-xs shrink-0">
+                  {isVkLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin text-white" /> : <span>VK</span>}
+                </div>
+                <span className="font-extrabold tracking-tight">
+                  {isVkLoading ? 'Подключение к VK ID...' : 'Войти через VK ID'}
+                </span>
+              </button>
+
+              {/* Разделитель ИЛИ */}
+              <div className="flex items-center space-x-3 py-0.5">
+                <div className="flex-1 h-px bg-slate-800" />
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">или</span>
+                <div className="flex-1 h-px bg-slate-800" />
+              </div>
+
+              {/* Кнопка 2: Вход с Яндекс ID */}
+              <button
+                type="button"
+                id="auth-yandex-primary-btn"
+                disabled={isYandexLoading || isVkLoading}
+                onClick={handleYandexAuth}
+                className="w-full py-3 px-4 rounded-2xl bg-white hover:bg-slate-100 text-slate-950 font-bold text-sm sm:text-base flex items-center justify-center space-x-3 transition-all duration-200 shadow-lg shadow-black/20 cursor-pointer border border-white active:scale-[0.99] disabled:opacity-60"
+              >
+                <div className="w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+                  {isYandexLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin text-white" /> : <span>Я</span>}
+                </div>
+                <span className="text-slate-950 font-extrabold tracking-tight">
+                  {isYandexLoading ? 'Подключение к Яндекс ID...' : 'Войти с Яндекс ID'}
+                </span>
+              </button>
+
+              {/* Кнопка быстрого перехода на логин и пароль */}
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMethod('credentials');
+                    setError(null);
+                  }}
+                  className="w-full py-2.5 px-3 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white font-semibold text-xs flex items-center justify-center space-x-2 transition cursor-pointer border border-slate-700/60"
+                >
+                  <KeyRound className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Вход по логину и паролю (для покупателей и модерации)</span>
+                </button>
+              </div>
             </div>
-
-            {/* Кнопка 2: Вход с Яндекс ID */}
-            <button
-              type="button"
-              id="auth-yandex-primary-btn"
-              disabled={isYandexLoading || isVkLoading}
-              onClick={handleYandexAuth}
-              className="w-full py-3 px-4 rounded-2xl bg-white hover:bg-slate-100 text-slate-950 font-bold text-sm sm:text-base flex items-center justify-center space-x-3 transition-all duration-200 shadow-lg shadow-black/20 cursor-pointer border border-white active:scale-[0.99] disabled:opacity-60"
-            >
-              <div className="w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
-                {isYandexLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin text-white" /> : <span>Я</span>}
+          ) : (
+            <form onSubmit={handleCredentialsLogin} className="space-y-3 pt-1">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Логин или Email
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={credLogin}
+                    onChange={(e) => setCredLogin(e.target.value)}
+                    placeholder="buyer@santehpro.info"
+                    required
+                    className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-xs sm:text-sm placeholder:text-slate-500 focus:outline-none focus:border-blue-500 transition"
+                  />
+                </div>
               </div>
-              <span className="text-slate-950 font-extrabold tracking-tight">
-                {isYandexLoading ? 'Подключение к Яндекс ID...' : 'Войти с Яндекс ID'}
-              </span>
-            </button>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Пароль
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={credPassword}
+                    onChange={(e) => setCredPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    className="w-full pl-9 pr-9 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-xs sm:text-sm placeholder:text-slate-500 focus:outline-none focus:border-blue-500 transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-200 transition cursor-pointer"
+                    aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Тестовый аккаунт для модераторов ЮKassa */}
+              <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-xs text-blue-200 flex items-center justify-between">
+                <div>
+                  <div className="font-bold text-white text-[11px] flex items-center space-x-1">
+                    <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Доступ для проверки ЮKassa:</span>
+                  </div>
+                  <div className="text-[11px] text-blue-300 font-mono mt-0.5">
+                    buyer@santehpro.info • buyer2026
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCredLogin('buyer@santehpro.info');
+                    setCredPassword('buyer2026');
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-[11px] transition cursor-pointer shadow-xs"
+                >
+                  Вставить
+                </button>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isCredLoading}
+                className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm flex items-center justify-center space-x-2 transition shadow-lg shadow-blue-600/30 cursor-pointer disabled:opacity-60"
+              >
+                {isCredLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Проверка данных...</span>
+                  </>
+                ) : (
+                  <>
+                    <KeyRound className="w-4 h-4" />
+                    <span>Войти в личный кабинет</span>
+                  </>
+                )}
+              </button>
+            </form>
+          )}
 
             {/* ================= 4. БЛОК СОГЛАСИЙ (ВНИЗУ) ================= */}
             <div className="space-y-2 pt-1 text-xs text-slate-200">
@@ -353,7 +528,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
                 </span>
               </label>
             </div>
-          </div>
 
           {/* ================= 5. ФУТЕР ================= */}
           <div className="pt-2 border-t border-slate-800/60 text-center">

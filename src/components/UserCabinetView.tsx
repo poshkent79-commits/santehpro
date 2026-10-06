@@ -479,6 +479,15 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
               </div>
               <span>Войти через VK ID</span>
             </button>
+
+            <button
+              type="button"
+              onClick={() => openAuthModal('login', 'Вход по логину и паролю')}
+              className="w-full py-3 px-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm flex items-center justify-center space-x-2 transition border border-slate-700 cursor-pointer"
+            >
+              <KeyRound className="w-4 h-4 text-cyan-400" />
+              <span>Войти по логину и паролю (для аудита)</span>
+            </button>
           </div>
 
           <div className="pt-2 border-t border-slate-800 text-center">

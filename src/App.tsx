@@ -1395,6 +1395,15 @@ function AppContent() {
           {/* Legal Documents Row with uniform spacing */}
           <div className="flex flex-wrap items-center justify-center gap-x-3 sm:gap-x-5 gap-y-2 text-xs text-slate-400">
             <a
+              href="/rekvizity"
+              className="hover:text-cyan-300 transition-colors cursor-pointer"
+            >
+              Реквизиты
+            </a>
+
+            <span className="text-slate-700 select-none">•</span>
+
+            <a
               href="/oferta"
               onClick={(e) => {
                 if (!e.ctrlKey && !e.metaKey && !e.shiftKey) {
