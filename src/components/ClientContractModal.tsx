@@ -353,21 +353,12 @@ export const ClientContractModal: React.FC<ClientContractModalProps> = ({
             id="printable-client-contract"
             className={`w-full max-w-4xl bg-white text-slate-900 rounded-xl sm:rounded-2xl shadow-sm p-4 sm:p-10 lg:p-12 space-y-6 ${fontBodyClass} font-sans border border-slate-200`}
           >
-            {/* Official SantehPro Data Exchange Banner (1790635194201.jpg) */}
-            <div className="mb-4 rounded-2xl overflow-hidden shadow-sm border border-slate-200 bg-slate-950">
-              <img
-                src="/santehpro-exchange-banner.jpg"
-                alt="СантехПро — Электронный обмен договорами"
-                className="w-full h-24 sm:h-32 object-cover object-center"
-              />
-            </div>
-
             {/* Header */}
             <div className="border-b-2 border-slate-900 pb-4 flex items-start justify-between gap-4">
               <div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-blue-600 flex items-center justify-center text-white shrink-0">
-                    <Wrench className="w-4 h-4 text-white" />
+                <div className="flex items-center space-x-2.5">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-rose-500 via-purple-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-rose-950/20 shrink-0">
+                    <Wrench className="w-5 h-5 text-white" />
                   </div>
                   <span className="text-xl sm:text-2xl font-black tracking-tight">
                     <span className="text-red-600">Сантех</span>

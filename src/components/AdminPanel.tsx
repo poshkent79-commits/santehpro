@@ -59,6 +59,7 @@ import {
   Download,
   Scale,
   Cloud,
+  Share2,
 } from 'lucide-react';
 import {
   Article,
@@ -81,6 +82,7 @@ import { SpecialistRejectionModal } from './admin/SpecialistRejectionModal';
 import { SpecialistApprovalModal } from './admin/SpecialistApprovalModal';
 import { BackupRecoveryTab } from './admin/BackupRecoveryTab';
 import { RobokassaSettingsTab } from './admin/RobokassaSettingsTab';
+import { SocialPostGeneratorModal } from './admin/SocialPostGeneratorModal';
 import { compressImageFile } from '../utils/imageCompressor';
 import { useTimeWebSync } from '../services/timewebSyncClient';
 
@@ -140,6 +142,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [usersSearch, setUsersSearch] = useState('');
   const [isCleaningDemo, setIsCleaningDemo] = useState(false);
+  const [isSocialPostModalOpen, setIsSocialPostModalOpen] = useState(false);
 
   const handleCleanDemoData = async () => {
     if (!window.confirm('Очистить систему от всех тестовых/демо-заявок и демо-профилей мастеров, оставив только реальных специалистов и устранив дубликаты?')) {
@@ -1251,6 +1254,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 <span>Онлайн</span>
               </span>
               <span className="text-slate-400 font-mono text-[10px] hidden md:inline">({timeWebPingMs} мс)</span>
+            </button>
+
+            {/* SMM Post Generator Button */}
+            <button
+              type="button"
+              onClick={() => setIsSocialPostModalOpen(true)}
+              className="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs font-bold flex items-center space-x-1.5 transition cursor-pointer shadow-sm hover:border-purple-400/50"
+              title="Создать текст и описание под видео для соцсетей (ВК, Telegram, Reels, YouTube)"
+            >
+              <Share2 className="w-3.5 h-3.5 text-purple-400" />
+              <span className="hidden md:inline">Посты для видео (2в1)</span>
             </button>
 
             {/* Clean Demo & Test Data Button */}
@@ -4021,6 +4035,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           onConfirmApprove={handleConfirmApproveSpecialist}
         />
       )}
+
+      {/* SMM & Social Video Post Generator Modal */}
+      <SocialPostGeneratorModal
+        isOpen={isSocialPostModalOpen}
+        onClose={() => setIsSocialPostModalOpen(false)}
+        articles={articles}
+      />
     </div>
   );
 };

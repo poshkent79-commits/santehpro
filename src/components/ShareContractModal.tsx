@@ -34,6 +34,17 @@ export const ShareContractModal: React.FC<ShareContractModalProps> = ({
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedText, setCopiedText] = useState(false);
 
+  // Guarantee the contract is uploaded to the cloud database before link is shared
+  React.useEffect(() => {
+    if (isOpen && contract && contract.id) {
+      fetch('/api/contracts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(contract),
+      }).catch((e) => console.warn('Could not sync contract to server on share:', e));
+    }
+  }, [isOpen, contract]);
+
   if (!isOpen) return null;
 
   const formatDate = (isoStr?: string) => {

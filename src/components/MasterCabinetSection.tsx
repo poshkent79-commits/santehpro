@@ -3429,6 +3429,14 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
               const prev = JSON.parse(localStorage.getItem(key) || '[]');
               localStorage.setItem(key, JSON.stringify([newContract, ...prev]));
             } catch {}
+
+            // Sync immediately to server database
+            fetch('/api/contracts', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(newContract),
+            }).catch(() => {});
+
             setActiveSubTab('contracts');
           }}
         />

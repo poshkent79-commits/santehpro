@@ -788,6 +788,14 @@ export const MasterEstimatesTab: React.FC<MasterEstimatesTabProps> = ({
             } catch (e) {
               console.warn('Error saving contract to storage:', e);
             }
+
+            // Sync immediately to server database so the client can open it via share link
+            fetch('/api/contracts', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(savedContract),
+            }).catch((err) => console.warn('Could not sync contract to server:', err));
+
             setIsContractBuilderOpen(false);
             setContractToEdit(null);
             setViewingContract(savedContract);

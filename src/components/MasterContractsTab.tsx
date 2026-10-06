@@ -109,6 +109,14 @@ export const MasterContractsTab: React.FC<MasterContractsTabProps> = ({
           } catch {}
         } else if (initialList.length > 0) {
           setContracts(initialList);
+          // Automatically upload existing local contracts to the cloud database
+          initialList.forEach((c) => {
+            fetch('/api/contracts', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(c),
+            }).catch(() => {});
+          });
         } else {
           setContracts([defaultContract]);
           try {

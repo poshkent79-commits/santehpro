@@ -5253,17 +5253,30 @@ ${publishedArticles
       let customTitle = 'СантехПро — Твой карманный помощник по сантехнике';
       let customDesc = 'Поиск проверенных мастеров по России и СНГ, электронные сметы, калькулятор материалов, 100+ пошаговых инструкций, видеообучение и диагностика сантехники';
 
+      let ogImage = 'https://santehpro.info/og-image.jpg?v=key2026';
+
       if (estimateId) {
         customTitle = 'Электронная смета на сантехнические работы — СантехПро';
         customDesc = 'Детальная смета на работы и материалы от проверенного мастера. Прозрачный расчёт стоимости, спецификация оборудования и гарантии.';
+        ogImage = 'https://santehpro.info/og-contract.jpg?v=key2026';
       } else if (contractId) {
-        customTitle = 'Договор подряда на сантехнические работы — СантехПро';
-        customDesc = 'Официальный электронный договор подряда с актом приема-передачи и сметой. Проверка условий и гарантий мастера.';
+        const foundContract = contractsMap.get(contractId);
+        if (foundContract) {
+          customTitle = `Договор подряда № ${foundContract.contractNumber} — СантехПро`;
+          customDesc = `Официальный электронный договор подряда на сантехнические работы по адресу: ${foundContract.clientAddress || 'объект'}. Сумма: ${Number(foundContract.totalPrice || 0).toLocaleString('ru-RU')} ₽. Подписание со смартфона.`;
+        } else {
+          customTitle = 'Договор подряда на сантехнические работы — СантехПро';
+          customDesc = 'Официальный электронный договор подряда с актом приема-передачи и сметой. Проверка условий и гарантий мастера.';
+        }
+        ogImage = 'https://santehpro.info/og-contract.jpg?v=key2026';
       } else if (articleId) {
         const foundArt = articlesStore.find((a) => a.id === articleId);
         if (foundArt) {
           customTitle = `${foundArt.title} — СантехПро`;
           customDesc = foundArt.description || customDesc;
+          if (foundArt.coverImage && foundArt.coverImage.startsWith('http')) {
+            ogImage = foundArt.coverImage;
+          }
         }
       } else if (masterId) {
         customTitle = 'Профиль мастера — СантехПро';
@@ -5276,9 +5289,10 @@ ${publishedArticles
       html = html.replace(/<meta name="twitter:title" content=".*?" \/>/, `<meta name="twitter:title" content="${customTitle}" />`);
       html = html.replace(/<meta name="twitter:description" content=".*?" \/>/, `<meta name="twitter:description" content="${customDesc}" />`);
 
-      html = html.replace(/<meta property="og:image" content=".*?" \/>/, '<meta property="og:image" content="https://santehpro.info/og-image.jpg" />');
-      html = html.replace(/<meta property="og:image:secure_url" content=".*?" \/>/, '<meta property="og:image:secure_url" content="https://santehpro.info/og-image.jpg" />');
-      html = html.replace(/<meta name="twitter:image" content=".*?" \/>/, '<meta name="twitter:image" content="https://santehpro.info/og-image.jpg" />');
+      html = html.replace(/<meta property="og:image" content=".*?" \/>/, `<meta property="og:image" content="${ogImage}" />`);
+      html = html.replace(/<meta property="og:image:secure_url" content=".*?" \/>/, `<meta property="og:image:secure_url" content="${ogImage}" />`);
+      html = html.replace(/<meta name="twitter:image" content=".*?" \/>/, `<meta name="twitter:image" content="${ogImage}" />`);
+      html = html.replace(/<meta property="vk:image" content=".*?" \/>/, `<meta property="vk:image" content="${ogImage}" />`);
 
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -5332,17 +5346,30 @@ ${publishedArticles
           let customTitle = 'СантехПро — Твой карманный помощник по сантехнике';
           let customDesc = 'Поиск проверенных мастеров по России и СНГ, электронные сметы, калькулятор материалов, 100+ пошаговых инструкций, видеообучение и диагностика сантехники';
 
+          let ogImage = 'https://santehpro.info/og-image.jpg?v=key2026';
+
           if (estimateId) {
             customTitle = 'Электронная смета на сантехнические работы — СантехПро';
             customDesc = 'Детальная смета на работы и материалы от проверенного мастера. Прозрачный расчёт стоимости, спецификация оборудования и гарантии.';
+            ogImage = 'https://santehpro.info/og-contract.jpg?v=key2026';
           } else if (contractId) {
-            customTitle = 'Договор подряда на сантехнические работы — СантехПро';
-            customDesc = 'Официальный электронный договор подряда с актом приема-передачи и сметой. Проверка условий и гарантий мастера.';
+            const foundContract = contractsMap.get(contractId);
+            if (foundContract) {
+              customTitle = `Договор подряда № ${foundContract.contractNumber} — СантехПро`;
+              customDesc = `Официальный электронный договор подряда на сантехнические работы по адресу: ${foundContract.clientAddress || 'объект'}. Сумма: ${Number(foundContract.totalPrice || 0).toLocaleString('ru-RU')} ₽. Подписание со смартфона.`;
+            } else {
+              customTitle = 'Договор подряда на сантехнические работы — СантехПро';
+              customDesc = 'Официальный электронный договор подряда с актом приема-передачи и сметой. Проверка условий и гарантий мастера.';
+            }
+            ogImage = 'https://santehpro.info/og-contract.jpg?v=key2026';
           } else if (articleId) {
             const foundArt = articlesStore.find((a) => a.id === articleId);
             if (foundArt) {
               customTitle = `${foundArt.title} — СантехПро`;
               customDesc = foundArt.description || customDesc;
+              if (foundArt.coverImage && foundArt.coverImage.startsWith('http')) {
+                ogImage = foundArt.coverImage;
+              }
             }
           } else if (masterId) {
             customTitle = 'Профиль мастера — СантехПро';
@@ -5356,9 +5383,10 @@ ${publishedArticles
           html = html.replace(/<meta name="twitter:description" content=".*?" \/>/, `<meta name="twitter:description" content="${customDesc}" />`);
 
           // Ensure OpenGraph images always point to the new branding logo
-          html = html.replace(/<meta property="og:image" content=".*?" \/>/, '<meta property="og:image" content="https://santehpro.info/og-image.jpg" />');
-          html = html.replace(/<meta property="og:image:secure_url" content=".*?" \/>/, '<meta property="og:image:secure_url" content="https://santehpro.info/og-image.jpg" />');
-          html = html.replace(/<meta name="twitter:image" content=".*?" \/>/, '<meta name="twitter:image" content="https://santehpro.info/og-image.jpg" />');
+          html = html.replace(/<meta property="og:image" content=".*?" \/>/, `<meta property="og:image" content="${ogImage}" />`);
+          html = html.replace(/<meta property="og:image:secure_url" content=".*?" \/>/, `<meta property="og:image:secure_url" content="${ogImage}" />`);
+          html = html.replace(/<meta name="twitter:image" content=".*?" \/>/, `<meta name="twitter:image" content="${ogImage}" />`);
+          html = html.replace(/<meta property="vk:image" content=".*?" \/>/, `<meta property="vk:image" content="${ogImage}" />`);
 
           return res.send(html);
         } catch (e) {

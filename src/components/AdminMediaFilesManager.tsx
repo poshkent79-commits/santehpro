@@ -42,6 +42,7 @@ import { MediaFile, MediaFileType, Article } from '../types';
 import { CATEGORIES } from '../data/initialData';
 import { optimizeImageFile, extractMediaMetadata } from '../utils/mediaOptimizer';
 import { useRealtimeSync } from '../services/realtimeClient';
+import { SocialPostGeneratorModal } from './admin/SocialPostGeneratorModal';
 
 interface AdminMediaFilesManagerProps {
   articles: Article[];
@@ -103,6 +104,10 @@ export const AdminMediaFilesManager: React.FC<AdminMediaFilesManagerProps> = ({
   const [selectedBindingArticleId, setSelectedBindingArticleId] = useState('');
   const [isBindingSubmitting, setIsBindingSubmitting] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // SMM / Social Post Generator State
+  const [isSocialPostModalOpen, setIsSocialPostModalOpen] = useState(false);
+  const [selectedSocialVideo, setSelectedSocialVideo] = useState<MediaFile | null>(null);
 
   // Form Fields
   const [formTitle, setFormTitle] = useState('');
@@ -698,6 +703,18 @@ export const AdminMediaFilesManager: React.FC<AdminMediaFilesManagerProps> = ({
 
           {/* Action Buttons: Add Media & Trigger Auto-Optimization */}
           <div className="flex items-center space-x-2.5 flex-wrap gap-y-2 shrink-0">
+            <button
+              onClick={() => {
+                setSelectedSocialVideo(null);
+                setIsSocialPostModalOpen(true);
+              }}
+              className="px-3.5 py-2.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 hover:text-purple-200 border border-purple-500/40 text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer shadow-md shadow-purple-950/40"
+              title="Создать текст и описание под видео для соцсетей (ВК, Telegram, Reels, YouTube)"
+            >
+              <Share2 className="w-4 h-4 text-purple-400" />
+              <span>Текст для соцсетей (2в1)</span>
+            </button>
+
             <button
               onClick={() => handleOpenAddModal('photo')}
               className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-xs transition shadow-lg shadow-cyan-500/20 flex items-center space-x-2 cursor-pointer"
@@ -1385,6 +1402,19 @@ export const AdminMediaFilesManager: React.FC<AdminMediaFilesManagerProps> = ({
                     >
                       <Layers className="w-3.5 h-3.5" />
                     </button>
+
+                    {file.fileType === 'video' && (
+                      <button
+                        onClick={() => {
+                          setSelectedSocialVideo(file);
+                          setIsSocialPostModalOpen(true);
+                        }}
+                        className="p-1.5 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 hover:text-purple-200 transition cursor-pointer"
+                        title="Создать текст для соцсетей (ВК, Telegram, Reels, YouTube)"
+                      >
+                        <Share2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
 
                   <div className="flex items-center space-x-1.5">
@@ -2023,6 +2053,19 @@ export const AdminMediaFilesManager: React.FC<AdminMediaFilesManagerProps> = ({
                   <Copy className="w-3.5 h-3.5" />
                   <span>Скопировать URL</span>
                 </button>
+                {previewFile.fileType === 'video' && (
+                  <button
+                    onClick={() => {
+                      const f = previewFile;
+                      setSelectedSocialVideo(f);
+                      setIsSocialPostModalOpen(true);
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold transition flex items-center space-x-1 cursor-pointer shadow-md shadow-purple-600/30"
+                  >
+                    <Share2 className="w-3.5 h-3.5" />
+                    <span>Пост для соцсетей</span>
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     const fileToEdit = previewFile;
@@ -2039,6 +2082,18 @@ export const AdminMediaFilesManager: React.FC<AdminMediaFilesManagerProps> = ({
           </div>
         </div>
       )}
+
+      {/* SMM & Social Post Generator Modal */}
+      <SocialPostGeneratorModal
+        isOpen={isSocialPostModalOpen}
+        onClose={() => {
+          setIsSocialPostModalOpen(false);
+          setSelectedSocialVideo(null);
+        }}
+        initialVideo={selectedSocialVideo}
+        articles={articles}
+        mediaFiles={files}
+      />
     </div>
   );
 };

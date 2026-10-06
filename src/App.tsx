@@ -470,45 +470,51 @@ function AppContent() {
     }
 
     // Listen to ?contractId= / ?contract= parameter for client remote approval
-    const contractParam = params.get('contractId') || params.get('contract');
+    const searchParams = new URLSearchParams(window.location.search);
+    const hashParams = window.location.hash.includes('?') 
+      ? new URLSearchParams(window.location.hash.split('?')[1]) 
+      : new URLSearchParams();
+    const contractParam = searchParams.get('contractId') || searchParams.get('contract') || hashParams.get('contractId') || hashParams.get('contract');
+
     if (contractParam) {
-      fetch(`/api/contracts/${encodeURIComponent(contractParam)}`)
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (data && data.id) {
-            setViewingContractForApproval(data);
-          } else {
-            // Check in local storage
-            try {
-              for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key && key.startsWith('santehpro_master_contracts_')) {
-                  const arr = JSON.parse(localStorage.getItem(key) || '[]');
-                  const found = arr.find((c: any) => c.id === contractParam);
-                  if (found) {
-                    setViewingContractForApproval(found);
-                    break;
-                  }
-                }
-              }
-            } catch (e) {}
+      const loadContract = async (retries = 3) => {
+        try {
+          const res = await fetch(`/api/contracts/${encodeURIComponent(contractParam)}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.id) {
+              setViewingContractForApproval(data);
+              return;
+            }
           }
-        })
-        .catch(() => {
-          try {
-            for (let i = 0; i < localStorage.length; i++) {
-              const key = localStorage.key(i);
-              if (key && key.startsWith('santehpro_master_contracts_')) {
-                const arr = JSON.parse(localStorage.getItem(key) || '[]');
-                const found = arr.find((c: any) => c.id === contractParam);
-                if (found) {
-                  setViewingContractForApproval(found);
-                  break;
-                }
+          if (retries > 0) {
+            setTimeout(() => loadContract(retries - 1), 500);
+            return;
+          }
+        } catch (e) {
+          if (retries > 0) {
+            setTimeout(() => loadContract(retries - 1), 500);
+            return;
+          }
+        }
+
+        // Fallback to local storage if opened on the master's own device
+        try {
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('santehpro_master_contracts_')) {
+              const arr = JSON.parse(localStorage.getItem(key) || '[]');
+              const found = arr.find((c: any) => c.id === contractParam);
+              if (found) {
+                setViewingContractForApproval(found);
+                return;
               }
             }
-          } catch (e) {}
-        });
+          }
+        } catch (e) {}
+      };
+
+      loadContract();
     }
   }, []);
 
