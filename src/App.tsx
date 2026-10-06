@@ -1352,7 +1352,7 @@ function AppContent() {
           {/* Header Brand and Description */}
           <div className="flex flex-col items-center justify-center text-center space-y-2">
             <div className="flex items-center space-x-2.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-rose-500 via-purple-600 to-indigo-600 flex items-center justify-center text-white font-bold shadow-md shadow-rose-500/35 border border-white/20">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-rose-500 via-red-500 to-indigo-500 flex items-center justify-center text-white font-bold shadow-md shadow-rose-500/35 border border-white/20">
                 <Wrench className="w-5 h-5 text-white stroke-[2.2]" />
               </div>
               <span className="text-lg font-black tracking-tight">

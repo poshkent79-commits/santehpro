@@ -1,5 +1,5 @@
 // Service Worker for СантехПро PWA (High-performance caching with Stale-While-Revalidate & Image Cache)
-const CACHE_NAME = 'santehpro-v7';
+const CACHE_NAME = 'santehpro-v8';
 const API_CACHE_NAME = 'santehpro-api-cache-v2';
 const MEDIA_CACHE_NAME = 'santehpro-media-cache-v1';
 

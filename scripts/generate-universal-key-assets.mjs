@@ -18,20 +18,13 @@ import sharp from 'sharp';
 function getFullBleedIconSvg() {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <!-- Vibrant Brand Gradient (Rose-Magenta -> Deep Violet-Indigo) -->
-    <linearGradient id="brandGrad" x1="10%" y1="90%" x2="90%" y2="10%">
+    <!-- Original Fiery Red to Indigo Gradient matching Screenshot_20261007_070848_Chrome.jpg -->
+    <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#f43f5e" />
-      <stop offset="28%" stop-color="#ec4899" />
-      <stop offset="68%" stop-color="#a855f7" />
+      <stop offset="38%" stop-color="#ef4444" />
+      <stop offset="72%" stop-color="#a855f7" />
       <stop offset="100%" stop-color="#6366f1" />
     </linearGradient>
-
-    <!-- Subtle Depth Vignette for Edge Balance -->
-    <radialGradient id="edgeDepth" cx="50%" cy="50%" r="70%">
-      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.08" />
-      <stop offset="70%" stop-color="#000000" stop-opacity="0" />
-      <stop offset="100%" stop-color="#000000" stop-opacity="0.22" />
-    </radialGradient>
 
     <!-- Clean Shadow for Wrench -->
     <filter id="wrenchShadow" x="-30%" y="-30%" width="160%" height="160%">
@@ -42,7 +35,6 @@ function getFullBleedIconSvg() {
 
   <!-- Full-bleed background covering ALL 512x512 pixels with NO black padding or borders -->
   <rect width="512" height="512" fill="url(#brandGrad)" />
-  <rect width="512" height="512" fill="url(#edgeDepth)" />
 
   <!-- Crisp White Wrench perfectly centered at (256, 256) inside Android 80% Safe Zone -->
   <!-- Scale 12.0 gives width ~269px, well within 410px safe circle -->
@@ -59,21 +51,21 @@ function getFullBleedIconSvg() {
 </svg>`;
 }
 
-// Standalone Squircle Icon SVG (512x512) for browser tab / desktop view (Screenshot_20261006_223238_Chrome.jpg)
+// Standalone Squircle Icon SVG (512x512) for browser tab / desktop view (Screenshot_20261007_070848_Chrome.jpg)
 function getSquircleIconSvg() {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <!-- Vibrant Brand Gradient (Rose-Magenta -> Deep Violet-Indigo) -->
-    <linearGradient id="brandGrad" x1="10%" y1="90%" x2="90%" y2="10%">
+    <!-- Original Fiery Red to Indigo Gradient matching Screenshot_20261007_070848_Chrome.jpg -->
+    <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#f43f5e" />
-      <stop offset="28%" stop-color="#ec4899" />
-      <stop offset="68%" stop-color="#a855f7" />
+      <stop offset="38%" stop-color="#ef4444" />
+      <stop offset="72%" stop-color="#a855f7" />
       <stop offset="100%" stop-color="#6366f1" />
     </linearGradient>
 
-    <!-- Deep Ambient Glow around the Squircle -->
-    <filter id="squircleGlow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#f43f5e" flood-opacity="0.38" />
+    <!-- Deep Ambient Glow around the Squircle in fiery Rose-Red matching Screenshot_20261007_070848_Chrome.jpg -->
+    <filter id="squircleGlow" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="16" stdDeviation="22" flood-color="#f43f5e" flood-opacity="0.45" />
       <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000000" flood-opacity="0.3" />
     </filter>
 
@@ -83,7 +75,7 @@ function getSquircleIconSvg() {
     </filter>
   </defs>
 
-  <!-- Glowing Squircle Badge matching Chrome preview (Screenshot_20261006_223238_Chrome.jpg) -->
+  <!-- Glowing Squircle Badge matching header preview (Screenshot_20261007_070848_Chrome.jpg) -->
   <g filter="url(#squircleGlow)">
     <rect 
       x="24" 

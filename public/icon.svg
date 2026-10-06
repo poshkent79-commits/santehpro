@@ -1,16 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <!-- Vibrant Brand Gradient (Rose-Magenta -> Deep Violet-Indigo) -->
-    <linearGradient id="brandGrad" x1="10%" y1="90%" x2="90%" y2="10%">
+    <!-- Original Fiery Red to Indigo Gradient matching Screenshot_20261007_070848_Chrome.jpg -->
+    <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#f43f5e" />
-      <stop offset="28%" stop-color="#ec4899" />
-      <stop offset="68%" stop-color="#a855f7" />
+      <stop offset="38%" stop-color="#ef4444" />
+      <stop offset="72%" stop-color="#a855f7" />
       <stop offset="100%" stop-color="#6366f1" />
     </linearGradient>
 
-    <!-- Deep Ambient Glow around the Squircle -->
-    <filter id="squircleGlow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#f43f5e" flood-opacity="0.38" />
+    <!-- Deep Ambient Glow around the Squircle in fiery Rose-Red matching Screenshot_20261007_070848_Chrome.jpg -->
+    <filter id="squircleGlow" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="16" stdDeviation="22" flood-color="#f43f5e" flood-opacity="0.45" />
       <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000000" flood-opacity="0.3" />
     </filter>
 
@@ -20,7 +20,7 @@
     </filter>
   </defs>
 
-  <!-- Glowing Squircle Badge matching Chrome preview (Screenshot_20261006_223238_Chrome.jpg) -->
+  <!-- Glowing Squircle Badge matching header preview (Screenshot_20261007_070848_Chrome.jpg) -->
   <g filter="url(#squircleGlow)">
     <rect 
       x="24" 

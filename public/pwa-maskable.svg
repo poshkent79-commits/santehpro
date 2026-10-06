@@ -1,19 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <!-- Vibrant Brand Gradient (Rose-Magenta -> Deep Violet-Indigo) -->
-    <linearGradient id="brandGrad" x1="10%" y1="90%" x2="90%" y2="10%">
+    <!-- Original Fiery Red to Indigo Gradient matching Screenshot_20261007_070848_Chrome.jpg -->
+    <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#f43f5e" />
-      <stop offset="28%" stop-color="#ec4899" />
-      <stop offset="68%" stop-color="#a855f7" />
+      <stop offset="38%" stop-color="#ef4444" />
+      <stop offset="72%" stop-color="#a855f7" />
       <stop offset="100%" stop-color="#6366f1" />
     </linearGradient>
-
-    <!-- Subtle Depth Vignette for Edge Balance -->
-    <radialGradient id="edgeDepth" cx="50%" cy="50%" r="70%">
-      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.08" />
-      <stop offset="70%" stop-color="#000000" stop-opacity="0" />
-      <stop offset="100%" stop-color="#000000" stop-opacity="0.22" />
-    </radialGradient>
 
     <!-- Clean Shadow for Wrench -->
     <filter id="wrenchShadow" x="-30%" y="-30%" width="160%" height="160%">
@@ -24,7 +17,6 @@
 
   <!-- Full-bleed background covering ALL 512x512 pixels with NO black padding or borders -->
   <rect width="512" height="512" fill="url(#brandGrad)" />
-  <rect width="512" height="512" fill="url(#edgeDepth)" />
 
   <!-- Crisp White Wrench perfectly centered at (256, 256) inside Android 80% Safe Zone -->
   <!-- Scale 12.0 gives width ~269px, well within 410px safe circle -->
