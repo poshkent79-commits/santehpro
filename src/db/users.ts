@@ -488,6 +488,44 @@ export async function syncYandexDbUser(data: {
 export async function loginDbUser(identifier: string, password?: string) {
   const trimmed = (identifier || '').trim();
   const normalizedEmail = trimmed.toLowerCase();
+
+  // 1. Dedicated test account for App Store / RuStore / VK ID moderation and technical reviews
+  const isModeratorIdentifier =
+    normalizedEmail === 'moderator@santehpro.ru' ||
+    normalizedEmail === 'demo@santehpro.ru' ||
+    normalizedEmail === 'moderator' ||
+    normalizedEmail === 'user@santehpro.ru';
+
+  const isAcceptedModeratorPassword =
+    password === 'demo123' ||
+    password === '123456' ||
+    password === 'Password123!' ||
+    password === 'moderator123';
+
+  if (isModeratorIdentifier && isAcceptedModeratorPassword) {
+    let modUser = await getUserByEmail('moderator@santehpro.ru');
+    if (!modUser) {
+      modUser = await getUserByEmail('user@santehpro.ru');
+    }
+    if (!modUser) {
+      modUser = await registerDbUser({
+        email: 'moderator@santehpro.ru',
+        password: password,
+        name: 'Модератор (Пользователь)',
+        phone: '+7 (999) 777-00-11',
+        city: 'Москва',
+        role: 'user',
+        dataConsent: true,
+        legalConsent: true,
+      });
+    }
+    // Return with role 'user' (regular user access)
+    return {
+      ...modUser,
+      role: 'user',
+    };
+  }
+
   let user = await getUserByEmail(normalizedEmail);
 
   if (!user) {

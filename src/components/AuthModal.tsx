@@ -5,6 +5,9 @@ import {
   Loader2,
   AlertCircle,
   ExternalLink,
+  KeyRound,
+  Lock,
+  UserCheck,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { LegalTermsModal } from './LegalTermsModal';
@@ -20,6 +23,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
     closeAuthModal,
     loginWithYandex,
     loginWithVk,
+    login,
   } = useAuth();
 
   const [dataConsentAccepted, setDataConsentAccepted] = useState(true);
@@ -28,6 +32,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
   const [isVkLoading, setIsVkLoading] = useState(false);
   const [popupBlockedUrl, setPopupBlockedUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Login by credentials state
+  const [showPasswordLogin, setShowPasswordLogin] = useState(false);
+  const [emailInput, setEmailInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [isPasswordLoading, setIsPasswordLoading] = useState(false);
 
   // Legal modal state
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
@@ -40,8 +50,32 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
       setPopupBlockedUrl(null);
       setIsYandexLoading(false);
       setIsVkLoading(false);
+      setIsPasswordLoading(false);
     }
   }, [isAuthModalOpen]);
+
+  const handlePasswordLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!dataConsentAccepted || !termsAccepted) {
+      setError('Для продолжения необходимо подтвердить согласие с Политикой конфиденциальности и Пользовательским соглашением');
+      return;
+    }
+    if (!emailInput.trim() || !passwordInput.trim()) {
+      setError('Введите логин или email и пароль');
+      return;
+    }
+
+    setIsPasswordLoading(true);
+    setError(null);
+    try {
+      await login({ email: emailInput.trim(), password: passwordInput });
+      if (onNavigateTab) onNavigateTab('cabinet');
+    } catch (err: any) {
+      setError(formatErrorMessage(err));
+    } finally {
+      setIsPasswordLoading(false);
+    }
+  };
 
   // Listen to postMessage from VK OAuth callback popup
   useEffect(() => {
@@ -300,6 +334,64 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
                 {isYandexLoading ? 'Подключение к Яндекс ID...' : 'Войти с Яндекс ID'}
               </span>
             </button>
+
+            {/* Кнопка 3: Переключатель для входа по логину и паролю */}
+            <div className="pt-1 text-center">
+              <button
+                type="button"
+                id="toggle-password-auth-btn"
+                onClick={() => setShowPasswordLogin(!showPasswordLogin)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-xs font-semibold text-slate-300 hover:text-white border border-slate-700/60 transition cursor-pointer select-none"
+              >
+                <KeyRound className="w-3.5 h-3.5 text-blue-400" />
+                <span>{showPasswordLogin ? 'Скрыть форму входа' : 'Вход по логину и паролю'}</span>
+              </button>
+            </div>
+
+            {/* Выпадающая форма ввода логина и пароля */}
+            {showPasswordLogin && (
+              <form onSubmit={handlePasswordLogin} className="space-y-2.5 p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 animate-in fade-in duration-200">
+                <div className="flex items-center justify-between pb-0.5">
+                  <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-blue-400" />
+                    Вход по логину и паролю
+                  </span>
+                </div>
+
+                <div>
+                  <input
+                    type="text"
+                    value={emailInput}
+                    onChange={(e) => setEmailInput(e.target.value)}
+                    placeholder="Email или телефон"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-blue-500 transition"
+                  />
+                </div>
+
+                <div>
+                  <input
+                    type="password"
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    placeholder="Пароль"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-blue-500 transition"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isPasswordLoading}
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition cursor-pointer disabled:opacity-60"
+                >
+                  {isPasswordLoading ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <UserCheck className="w-3.5 h-3.5" />
+                  )}
+                  <span>Войти</span>
+                </button>
+              </form>
+            )}
 
             {/* ================= 4. БЛОК СОГЛАСИЙ (ВНИЗУ) ================= */}
             <div className="space-y-2 pt-1 text-xs text-slate-200">

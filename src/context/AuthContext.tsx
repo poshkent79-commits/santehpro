@@ -63,6 +63,14 @@ const SUPER_ADMIN_PHONES = ['+79247889900', '79247889900', '89247889900', '92478
 const isSuperAdminUser = (user?: Partial<UserProfile> | null): boolean => {
   if (!user) return false;
   const email = user.email?.toLowerCase().trim();
+  if (
+    email === 'buyer@santehpro.info' ||
+    email === 'yookassa@santehpro.info' ||
+    user.id === 'yookassa-buyer-audit-id' ||
+    user.id === 'yookassa-inspector-user-id'
+  ) {
+    return false;
+  }
   if (email && SUPER_ADMIN_EMAILS.includes(email)) return true;
   const phoneDigits = user.phone?.replace(/\D/g, '') || '';
   if (phoneDigits === '79247889900' || phoneDigits === '89247889900' || phoneDigits.endsWith('9247889900')) return true;

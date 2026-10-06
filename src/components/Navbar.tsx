@@ -47,7 +47,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           onClick={() => setActiveTab('handbook')}
           className="flex items-center space-x-3 cursor-pointer group"
         >
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-rose-500 via-red-500 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-rose-500/35 group-hover:scale-105 transition transform shrink-0 border border-white/20">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-rose-500 via-purple-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-rose-500/35 group-hover:scale-105 transition transform shrink-0 border border-white/20">
             <Wrench className="w-5 h-5 text-white stroke-[2.2]" />
           </div>
           <div>

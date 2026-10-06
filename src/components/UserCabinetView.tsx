@@ -113,6 +113,17 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
   // Find linked specialist profile with robust multi-factor matching
   const userSpecialist = specialists.find((s) => {
     if (!currentUser) return false;
+
+    // Explicitly exclude test buyer audit accounts from ever linking to a specialist / master profile
+    const currentEmail = (currentUser.email || '').toLowerCase().trim();
+    if (
+      currentEmail === 'buyer@santehpro.info' ||
+      currentEmail === 'yookassa@santehpro.info' ||
+      currentUser.id === 'yookassa-buyer-audit-id' ||
+      currentUser.id === 'yookassa-inspector-user-id'
+    ) {
+      return false;
+    }
     
     // 0. Manual link from localStorage if user picked it
     const storedSpecialistId = typeof window !== 'undefined' ? localStorage.getItem('santehpro_master_specialist_id') : null;
@@ -139,7 +150,6 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
 
     // 4. Owner & founder auto-match (Достонджон Туйчиев, Находка, +79247889900, poshkent79@gmail.com, sommoni@bk.ru, etc.)
     const currentName = (currentUser.name || '').toLowerCase();
-    const currentEmail = (currentUser.email || '').toLowerCase().trim();
     const currentPhone = (currentUser.phone || '').replace(/\D/g, '');
     const isOwnerUser =
       currentName.includes('достонджон') ||
@@ -147,7 +157,7 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
       currentEmail.includes('poshkent') ||
       currentEmail.includes('dostonjon') ||
       currentEmail.includes('sommoni') ||
-      currentEmail.includes('santehpro.info') ||
+      currentEmail === 'admin@santehpro.info' ||
       currentPhone.endsWith('9247889900') ||
       currentUser.role === 'admin';
 
@@ -183,14 +193,25 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
   const currentName = (currentUser?.name || '').toLowerCase();
   const currentEmail = (currentUser?.email || '').toLowerCase().trim();
   const currentPhone = (currentUser?.phone || '').replace(/\D/g, '');
-  const isOwnerUser = Boolean(
+
+  const isAuditBuyer = Boolean(
     currentUser && (
+      currentEmail === 'buyer@santehpro.info' ||
+      currentEmail === 'yookassa@santehpro.info' ||
+      currentUser.id === 'yookassa-buyer-audit-id' ||
+      currentUser.id === 'yookassa-inspector-user-id'
+    )
+  );
+
+  const isOwnerUser = Boolean(
+    currentUser &&
+    !isAuditBuyer && (
       currentName.includes('достонджон') ||
       currentName.includes('туйчиев') ||
       currentEmail.includes('poshkent') ||
       currentEmail.includes('dostonjon') ||
       currentEmail.includes('sommoni') ||
-      currentEmail.includes('santehpro.info') ||
+      currentEmail === 'admin@santehpro.info' ||
       currentPhone.endsWith('9247889900') ||
       currentUser.role === 'admin'
     )
@@ -199,6 +220,7 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
   // "У мастеров, прошедших проверку, автоматически открывается личный кабинет"
   const isVerifiedMaster = Boolean(
     currentUser &&
+    !isAuditBuyer &&
     (
       isOwnerUser ||
       currentUser.role === 'specialist' ||
@@ -208,7 +230,7 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
 
   const [activeTab, setActiveTab] = useState<'favorites' | 'requests' | 'profile' | 'master'>(() => {
     if (initialTab && initialTab !== 'purchases') return initialTab;
-    if (isOwnerUser || isVerifiedMaster || currentUser?.role === 'specialist') return 'master';
+    if (!isAuditBuyer && (isOwnerUser || isVerifiedMaster || currentUser?.role === 'specialist')) return 'master';
     return 'favorites';
   });
 
@@ -478,6 +500,15 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
                 VK
               </div>
               <span>Войти через VK ID</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => openAuthModal('login', 'Вход по логину и паролю')}
+              className="w-full py-3 px-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm flex items-center justify-center space-x-2 transition border border-slate-700 cursor-pointer"
+            >
+              <KeyRound className="w-4 h-4 text-cyan-400" />
+              <span>Войти по логину и паролю</span>
             </button>
           </div>
 
@@ -1020,7 +1051,7 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
       {/* Tabs Navigation */}
       <div className="flex items-center space-x-2 border-b border-slate-800 pb-2 overflow-x-auto">
         {/* Master's Cabinet Tab: moved to the very BEGINNING (position 1) for verified masters, specialists, or pending applicants */}
-        {(isVerifiedMaster || userSpecialist || currentUser?.role === 'specialist' || currentUser?.role === 'admin' || isOwnerUser) && (
+        {!isAuditBuyer && (isVerifiedMaster || userSpecialist || currentUser?.role === 'specialist' || currentUser?.role === 'admin' || isOwnerUser) && (
           <button
             type="button"
             id="cabinet-master-tab-btn"

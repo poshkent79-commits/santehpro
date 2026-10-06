@@ -14,56 +14,91 @@ import sharp from 'sharp';
  * - Data exchange banner (santehpro-exchange-banner.jpg) for estimates and contracts
  */
 
-// 1. Icon SVG template (512x512)
-function getUniversalKeyIconSvg(isTransparentBg = false) {
+// 1. Full-Bleed Icon SVG template (512x512) for Android Maskable, iOS Apple-Touch, and full scale
+function getFullBleedIconSvg() {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <!-- Background Gradient for the Squircle Badge -->
-    <linearGradient id="keyBadgeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+    <!-- Vibrant Brand Gradient (Rose-Magenta -> Deep Violet-Indigo) -->
+    <linearGradient id="brandGrad" x1="10%" y1="90%" x2="90%" y2="10%">
       <stop offset="0%" stop-color="#f43f5e" />
-      <stop offset="38%" stop-color="#ef4444" />
-      <stop offset="72%" stop-color="#a855f7" />
+      <stop offset="28%" stop-color="#ec4899" />
+      <stop offset="68%" stop-color="#a855f7" />
       <stop offset="100%" stop-color="#6366f1" />
     </linearGradient>
 
-    <!-- Deep Ambient Glow -->
-    <filter id="keyBadgeGlow" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#f43f5e" flood-opacity="0.45" />
-      <feDropShadow dx="0" dy="6" stdDeviation="12" flood-color="#000000" flood-opacity="0.6" />
-    </filter>
-
-    <filter id="wrenchShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.35" />
-    </filter>
-
-    <!-- Dark Luxury Outer Background for Maskable and App Launchers -->
-    <radialGradient id="outerBg" cx="50%" cy="50%" r="70%">
-      <stop offset="0%" stop-color="#111827" />
-      <stop offset="60%" stop-color="#0b1120" />
-      <stop offset="100%" stop-color="#050811" />
+    <!-- Subtle Depth Vignette for Edge Balance -->
+    <radialGradient id="edgeDepth" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.08" />
+      <stop offset="70%" stop-color="#000000" stop-opacity="0" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.22" />
     </radialGradient>
+
+    <!-- Clean Shadow for Wrench -->
+    <filter id="wrenchShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#000000" flood-opacity="0.32" />
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000000" flood-opacity="0.2" />
+    </filter>
   </defs>
 
-  <!-- Full-bleed background ensuring no black/white edge artifacts on Android -->
-  ${isTransparentBg ? '' : '<rect width="512" height="512" fill="url(#outerBg)" />'}
+  <!-- Full-bleed background covering ALL 512x512 pixels with NO black padding or borders -->
+  <rect width="512" height="512" fill="url(#brandGrad)" />
+  <rect width="512" height="512" fill="url(#edgeDepth)" />
 
-  <!-- Glowing Squircle Badge centered within 80% Safe Zone (330x330, center 256, 256) -->
-  <g filter="url(#keyBadgeGlow)">
+  <!-- Crisp White Wrench perfectly centered at (256, 256) inside Android 80% Safe Zone -->
+  <!-- Scale 12.0 gives width ~269px, well within 410px safe circle -->
+  <g transform="translate(112, 112) scale(12.0)" filter="url(#wrenchShadow)">
+    <path 
+      d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z" 
+      fill="none" 
+      stroke="#ffffff" 
+      stroke-width="2.35" 
+      stroke-linecap="round" 
+      stroke-linejoin="round" 
+    />
+  </g>
+</svg>`;
+}
+
+// Standalone Squircle Icon SVG (512x512) for browser tab / desktop view (Screenshot_20261006_223238_Chrome.jpg)
+function getSquircleIconSvg() {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Vibrant Brand Gradient (Rose-Magenta -> Deep Violet-Indigo) -->
+    <linearGradient id="brandGrad" x1="10%" y1="90%" x2="90%" y2="10%">
+      <stop offset="0%" stop-color="#f43f5e" />
+      <stop offset="28%" stop-color="#ec4899" />
+      <stop offset="68%" stop-color="#a855f7" />
+      <stop offset="100%" stop-color="#6366f1" />
+    </linearGradient>
+
+    <!-- Deep Ambient Glow around the Squircle -->
+    <filter id="squircleGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#f43f5e" flood-opacity="0.38" />
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000000" flood-opacity="0.3" />
+    </filter>
+
+    <filter id="wrenchShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#000000" flood-opacity="0.3" />
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000000" flood-opacity="0.18" />
+    </filter>
+  </defs>
+
+  <!-- Glowing Squircle Badge matching Chrome preview (Screenshot_20261006_223238_Chrome.jpg) -->
+  <g filter="url(#squircleGlow)">
     <rect 
-      x="91" 
-      y="91" 
-      width="330" 
-      height="330" 
-      rx="76" 
-      fill="url(#keyBadgeGrad)" 
-      stroke="rgba(255, 255, 255, 0.32)" 
-      stroke-width="5" 
+      x="24" 
+      y="24" 
+      width="464" 
+      height="464" 
+      rx="106" 
+      fill="url(#brandGrad)" 
+      stroke="rgba(255, 255, 255, 0.28)" 
+      stroke-width="4" 
     />
   </g>
 
-  <!-- Crisp White Lucide Wrench inside Badge -->
-  <!-- Scaled from 24x24 (scale=7.8, centered at 256,256) -->
-  <g transform="translate(162.4, 162.4) scale(7.8)" filter="url(#wrenchShadow)">
+  <!-- White Wrench centered at (256, 256) -->
+  <g transform="translate(118, 118) scale(11.5)" filter="url(#wrenchShadow)">
     <path 
       d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z" 
       fill="none" 
@@ -330,48 +365,59 @@ async function generateAllAssets() {
     fs.mkdirSync(distRustoreDir, { recursive: true });
   }
 
-  const iconSvgContent = getUniversalKeyIconSvg(false);
-  const pwaMaskableSvg = getUniversalKeyIconSvg(false);
+  const squircleSvg = getSquircleIconSvg();
+  const fullBleedSvg = getFullBleedIconSvg();
   const ogSvg = getOpenGraphSvg();
   const exchangeSvg = getDataExchangeBannerSvg();
 
   // Save SVGs
-  fs.writeFileSync(path.join(publicDir, 'icon.svg'), iconSvgContent);
-  fs.writeFileSync(path.join(publicDir, 'pwa-maskable.svg'), pwaMaskableSvg);
+  fs.writeFileSync(path.join(publicDir, 'icon.svg'), squircleSvg);
+  fs.writeFileSync(path.join(publicDir, 'pwa-maskable.svg'), fullBleedSvg);
   fs.writeFileSync(path.join(publicDir, 'og-image.svg'), ogSvg);
   fs.writeFileSync(path.join(publicDir, 'santehpro-exchange-banner.svg'), exchangeSvg);
 
-  // 1. High-Res 512x512 PNGs (RuStore & Standard PWA)
-  const buf512 = await sharp(Buffer.from(iconSvgContent))
+  // 1. Full-Bleed 512x512 PNGs (Android Maskable, RuStore, Standard PWA) - NO BLACK MARGINS!
+  const buf512FullBleed = await sharp(Buffer.from(fullBleedSvg))
     .resize(512, 512)
     .png({ compressionLevel: 9, quality: 100 })
     .toBuffer();
 
-  fs.writeFileSync(path.join(publicDir, 'icon.png'), buf512);
-  fs.writeFileSync(path.join(publicDir, 'pwa-512x512.png'), buf512);
-  fs.writeFileSync(path.join(publicDir, 'pwa-maskable-512x512.png'), buf512);
-  fs.writeFileSync(path.join(rustoreDir, 'icon-512x512.png'), buf512);
+  // Standalone Squircle 512x512 PNG (for browser tabs and preview)
+  const buf512Squircle = await sharp(Buffer.from(squircleSvg))
+    .resize(512, 512)
+    .png({ compressionLevel: 9, quality: 100 })
+    .toBuffer();
 
-  // 2. 192x192 PNG for mobile devices
-  const buf192 = await sharp(Buffer.from(iconSvgContent))
+  fs.writeFileSync(path.join(publicDir, 'icon.png'), buf512Squircle);
+  fs.writeFileSync(path.join(publicDir, 'pwa-512x512.png'), buf512FullBleed);
+  fs.writeFileSync(path.join(publicDir, 'pwa-maskable-512x512.png'), buf512FullBleed);
+  fs.writeFileSync(path.join(rustoreDir, 'icon-512x512.png'), buf512FullBleed);
+
+  // Also write to workspace root for fallbacks
+  fs.writeFileSync(path.resolve('icon.png'), buf512Squircle);
+
+  // 2. 192x192 PNG for mobile devices (Full-Bleed)
+  const buf192 = await sharp(Buffer.from(fullBleedSvg))
     .resize(192, 192)
     .png({ compressionLevel: 9, quality: 100 })
     .toBuffer();
   fs.writeFileSync(path.join(publicDir, 'pwa-192x192.png'), buf192);
 
-  // 3. Apple Touch Icon (180x180)
-  const buf180 = await sharp(Buffer.from(iconSvgContent))
+  // 3. Apple Touch Icon (180x180) (Full-Bleed - iOS automatically clips to squircle)
+  const buf180 = await sharp(Buffer.from(fullBleedSvg))
     .resize(180, 180)
     .png({ compressionLevel: 9, quality: 100 })
     .toBuffer();
   fs.writeFileSync(path.join(publicDir, 'apple-touch-icon.png'), buf180);
+  fs.writeFileSync(path.resolve('apple-touch-icon.png'), buf180);
 
   // 4. Favicon (64x64)
-  const buf64 = await sharp(Buffer.from(iconSvgContent))
+  const buf64 = await sharp(Buffer.from(squircleSvg))
     .resize(64, 64)
     .png({ compressionLevel: 9, quality: 100 })
     .toBuffer();
   fs.writeFileSync(path.join(publicDir, 'favicon.ico'), buf64);
+  fs.writeFileSync(path.resolve('favicon.ico'), buf64);
 
   // 5. OpenGraph JPEG (1200x630) for link preview in Telegram, WhatsApp, VK
   const ogJpg = await sharp(Buffer.from(ogSvg))
