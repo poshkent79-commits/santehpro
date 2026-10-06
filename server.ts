@@ -3115,6 +3115,45 @@ function loadContractsFromDisk(): void {
 
 loadContractsFromDisk();
 
+function formatServerLegalTimestamp(isoDate?: string): string {
+  try {
+    const d = isoDate ? new Date(isoDate) : new Date();
+    const msk = new Intl.DateTimeFormat('ru-RU', {
+      timeZone: 'Europe/Moscow',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    }).format(d);
+    const utc = new Intl.DateTimeFormat('ru-RU', {
+      timeZone: 'UTC',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    }).format(d);
+    return `${msk} МСК (${utc} UTC)`;
+  } catch {
+    return `${new Date().toISOString()} UTC`;
+  }
+}
+
+// Client network info endpoint for digital signature audit
+app.get('/api/client-network-info', (req, res) => {
+  const forwarded = req.headers['x-forwarded-for'];
+  const rawIp = typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : req.socket.remoteAddress || '';
+  const ip = rawIp.replace(/^::ffff:/, '') || '127.0.0.1';
+  res.json({
+    ip,
+    userAgent: req.headers['user-agent'] || '',
+    timestampUtc: new Date().toISOString(),
+  });
+});
+
 // GET all contracts
 app.get('/api/contracts', (req, res) => {
   const { specialistId, clientPhone } = req.query;
@@ -3200,19 +3239,42 @@ app.post('/api/contracts/:id/sign', (req, res) => {
     if (!existing) {
       return res.status(404).json({ error: 'Договор не найден' });
     }
+
+    const forwarded = req.headers['x-forwarded-for'];
+    const rawIp = typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : req.socket.remoteAddress || '';
+    const requestIp = rawIp.replace(/^::ffff:/, '') || '127.0.0.1';
+    const userAgent = (req.headers['user-agent'] as string) || 'Web Browser';
+
     const {
       clientSignature,
       clientSignedAt,
+      clientSignedAtMsk,
+      clientIp,
+      clientDeviceId,
+      clientAuthAccount,
       clientSignMethod,
       masterSignature,
       masterSignedAt,
+      masterSignedAtMsk,
+      masterIp,
+      masterDeviceId,
+      masterAuthAccount,
       digitalSealId,
       status,
       actDate,
       actSignedAt,
       actMasterSignature,
+      actMasterSignedAt,
+      actMasterSignedAtMsk,
+      actMasterIp,
+      actMasterDeviceId,
+      actMasterAuthAccount,
       actClientSignature,
       actClientSignedAt,
+      actClientSignedAtMsk,
+      actClientIp,
+      actClientDeviceId,
+      actClientAuthAccount,
       actSealId,
       actStatus,
       warrantyCertificateNumber,
@@ -3220,18 +3282,81 @@ app.post('/api/contracts/:id/sign', (req, res) => {
     } = req.body;
 
     const nowIso = new Date().toISOString();
+
     const updated = {
       ...existing,
       ...(clientSignature !== undefined ? { clientSignature } : {}),
       ...(clientSignedAt !== undefined ? { clientSignedAt } : {}),
+      ...(clientSignedAtMsk !== undefined
+        ? { clientSignedAtMsk }
+        : clientSignedAt
+        ? { clientSignedAtMsk: formatServerLegalTimestamp(clientSignedAt) }
+        : clientSignature
+        ? { clientSignedAtMsk: formatServerLegalTimestamp(nowIso) }
+        : {}),
+      ...(clientIp !== undefined ? { clientIp } : clientSignature ? { clientIp: requestIp } : {}),
+      ...(clientDeviceId !== undefined ? { clientDeviceId } : clientSignature ? { clientDeviceId: userAgent } : {}),
+      ...(clientAuthAccount !== undefined
+        ? { clientAuthAccount }
+        : clientSignature
+        ? { clientAuthAccount: existing.clientPhone || existing.clientName }
+        : {}),
       ...(clientSignMethod !== undefined ? { clientSignMethod } : {}),
+
       ...(masterSignature !== undefined ? { masterSignature } : {}),
       ...(masterSignedAt !== undefined ? { masterSignedAt } : {}),
+      ...(masterSignedAtMsk !== undefined
+        ? { masterSignedAtMsk }
+        : masterSignedAt
+        ? { masterSignedAtMsk: formatServerLegalTimestamp(masterSignedAt) }
+        : masterSignature
+        ? { masterSignedAtMsk: formatServerLegalTimestamp(nowIso) }
+        : {}),
+      ...(masterIp !== undefined ? { masterIp } : masterSignature ? { masterIp: requestIp } : {}),
+      ...(masterDeviceId !== undefined ? { masterDeviceId } : masterSignature ? { masterDeviceId: userAgent } : {}),
+      ...(masterAuthAccount !== undefined
+        ? { masterAuthAccount }
+        : masterSignature
+        ? { masterAuthAccount: existing.specialistPhone || existing.specialistName }
+        : {}),
+
       ...(actDate !== undefined ? { actDate } : {}),
       ...(actSignedAt !== undefined ? { actSignedAt } : {}),
+
       ...(actMasterSignature !== undefined ? { actMasterSignature } : {}),
+      ...(actMasterSignedAt !== undefined ? { actMasterSignedAt } : {}),
+      ...(actMasterSignedAtMsk !== undefined
+        ? { actMasterSignedAtMsk }
+        : actMasterSignedAt
+        ? { actMasterSignedAtMsk: formatServerLegalTimestamp(actMasterSignedAt) }
+        : actMasterSignature
+        ? { actMasterSignedAtMsk: formatServerLegalTimestamp(nowIso) }
+        : {}),
+      ...(actMasterIp !== undefined ? { actMasterIp } : actMasterSignature ? { actMasterIp: requestIp } : {}),
+      ...(actMasterDeviceId !== undefined ? { actMasterDeviceId } : actMasterSignature ? { actMasterDeviceId: userAgent } : {}),
+      ...(actMasterAuthAccount !== undefined
+        ? { actMasterAuthAccount }
+        : actMasterSignature
+        ? { actMasterAuthAccount: existing.specialistPhone || existing.specialistName }
+        : {}),
+
       ...(actClientSignature !== undefined ? { actClientSignature } : {}),
       ...(actClientSignedAt !== undefined ? { actClientSignedAt } : {}),
+      ...(actClientSignedAtMsk !== undefined
+        ? { actClientSignedAtMsk }
+        : actClientSignedAt
+        ? { actClientSignedAtMsk: formatServerLegalTimestamp(actClientSignedAt) }
+        : actClientSignature
+        ? { actClientSignedAtMsk: formatServerLegalTimestamp(nowIso) }
+        : {}),
+      ...(actClientIp !== undefined ? { actClientIp } : actClientSignature ? { actClientIp: requestIp } : {}),
+      ...(actClientDeviceId !== undefined ? { actClientDeviceId } : actClientSignature ? { actClientDeviceId: userAgent } : {}),
+      ...(actClientAuthAccount !== undefined
+        ? { actClientAuthAccount }
+        : actClientSignature
+        ? { actClientAuthAccount: existing.clientPhone || existing.clientName }
+        : {}),
+
       ...(actSealId !== undefined ? { actSealId } : {}),
       ...(actStatus !== undefined ? { actStatus } : {}),
       ...(warrantyCertificateNumber !== undefined ? { warrantyCertificateNumber } : {}),
@@ -3376,33 +3501,9 @@ app.post('/api/auth/register', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, identifier, login, password } = req.body;
-    const inputIdentifier = (identifier || email || login || '').trim().toLowerCase();
+    const inputIdentifier = (identifier || email || login || '').trim();
     if (!inputIdentifier || !password) {
       return res.status(400).json({ error: 'Введите email или телефон и пароль' });
-    }
-
-    // Direct guaranteed login for YooKassa and audit moderators
-    if (
-      (inputIdentifier === 'yookassa@santehpro.info' && password === 'yookassa2026') ||
-      (inputIdentifier === 'demo@santehpro.info' && password === 'demo123456') ||
-      (inputIdentifier === 'buyer@santehpro.info' && password === 'buyer2026')
-    ) {
-      const auditUser = {
-        id: 'yookassa-buyer-audit-id',
-        uid: 'yookassa-buyer-audit-uid',
-        email: inputIdentifier,
-        name: 'Покупатель',
-        phone: '+7 (900) 123-45-67',
-        city: 'Москва',
-        role: 'user' as const,
-        dataConsent: true,
-        consentTimestamp: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-      };
-      try {
-        res.setHeader('Set-Cookie', `santehpro_auth_user=${encodeURIComponent(JSON.stringify(auditUser))}; Path=/; Max-Age=2592000; SameSite=Lax`);
-      } catch {}
-      return res.json({ user: auditUser });
     }
 
     const user = await loginDbUser(inputIdentifier, password);
@@ -5016,12 +5117,6 @@ async function start() {
     '/oferta-donation',
     '/oferta-donation/',
     '/oferta-donation.html',
-    '/requisites',
-    '/requisites/',
-    '/requisites.html',
-    '/rekvizity',
-    '/rekvizity/',
-    '/rekvizity.html',
   ], (_req, res) => {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(`<!DOCTYPE html>
@@ -5029,8 +5124,8 @@ async function start() {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Контакты, реквизиты и публичная оферта — Сервис «СантехПро»</title>
-  <meta name="description" content="Официальные реквизиты самозанятого Туйчиева Д. Н., ИНН 250900981804, контакты и публичная оферта сервиса СантехПро. Подключение платежей через ЮKassa, банковские карты, СБП.">
+  <title>Публичная оферта о добровольном пожертвовании на развитие проекта — СантехПро</title>
+  <meta name="description" content="Публичная оферта о заключении договора добровольного пожертвования на развитие открытого проекта «СантехПро». Прием платежей через Robokassa, банковские карты, СБП.">
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1e293b; background: #f8fafc; padding: 24px 16px; margin: 0; }
     .container { max-width: 840px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 36px 28px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
@@ -5039,52 +5134,83 @@ async function start() {
     p, li { font-size: 14px; color: #334155; }
     ul, ol { padding-left: 20px; }
     .badge { display: inline-block; background: #dcfce7; color: #15803d; font-weight: 700; font-size: 12px; padding: 4px 12px; border-radius: 999px; margin-bottom: 14px; }
-    .box { background: #f1f5f9; border-left: 4px solid #0284c7; padding: 14px 18px; border-radius: 0 8px 8px 0; margin: 16px 0; font-size: 13px; line-height: 1.8; }
+    .box { background: #f1f5f9; border-left: 4px solid #0284c7; padding: 14px 18px; border-radius: 0 8px 8px 0; margin: 16px 0; font-size: 13px; line-height: 1.6; }
     .highlight-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 14px 18px; margin: 18px 0; font-size: 13px; }
-    .requisites { background: #0f172a; color: #f8fafc; border-radius: 12px; padding: 20px; margin: 16px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; line-height: 1.9; }
-    .requisites strong { color: #94a3b8; font-weight: 600; display: inline-block; min-width: 170px; }
-    .requisites span { color: #38bdf8; font-weight: 700; }
+    .requisites { background: #0f172a; color: #f8fafc; border-radius: 12px; padding: 18px; margin: 16px 0; font-family: monospace; font-size: 13px; line-height: 1.8; }
+    .requisites span { color: #38bdf8; font-weight: bold; }
     .footer-link { display: inline-block; margin-top: 24px; color: #0284c7; text-decoration: none; font-weight: 600; font-size: 14px; }
     .footer-link:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="badge">Официальные реквизиты и оферта • ст. 435, 437, 582 ГК РФ • 422-ФЗ</div>
-    <h1>Реквизиты, контакты и публичная оферта онлайн-платформы «СантехПро»</h1>
+    <div class="badge">Редакция 3.1 от 1 октября 2026 года • ст. 435, 437, 582 ГК РФ</div>
+    <h1>Публичная оферта о заключении договора добровольного пожертвования на развитие открытого проекта «СантехПро»</h1>
     
     <div class="box">
-      <strong>Владелец и оператор сервиса:</strong> Самозанятый Туйчиев Достонджон Нортожович<br>
-      <strong>ИНН:</strong> 250900981804 (Плательщик налога на профессиональный доход, НПД 422-ФЗ)<br>
+      <strong>Получатель пожертвования:</strong> Самозанятый Туйчиев Достонджон Нортожович<br>
+      <strong>ИНН:</strong> 250900981804<br>
       <strong>Адрес регистрации:</strong> РФ, Приморский край, г. Находка, ул. Озерный бульвар, д. 7, кв. 52<br>
-      <strong>Электронная почта:</strong> <a href="mailto:santehpro.info@gmail.com">santehpro.info@gmail.com</a> | <a href="mailto:santehpro.info@yandex.ru">santehpro.info@yandex.ru</a><br>
-      <strong>Телефон:</strong> +7 (924) 788-99-00<br>
-      <strong>Официальный сайт:</strong> <a href="https://santehpro.info">https://santehpro.info</a>
-    </div>
-
-    <h2>1. Официальные реквизиты для ЮKassa и контролирующих органов</h2>
-    <div class="requisites">
-      <div><strong>Получатель платежей:</strong> <span>Самозанятый Туйчиев Достонджон Нортожович</span></div>
-      <div><strong>ИНН:</strong> <span>250900981804</span></div>
-      <div><strong>Налоговый режим:</strong> <span>Налог на профессиональный доход (самозанятый, 422-ФЗ)</span></div>
-      <div><strong>Юридический адрес:</strong> <span>692900, РФ, Приморский край, г. Находка, ул. Озерный бульвар, д. 7, кв. 52</span></div>
-      <div><strong>Платежный оператор:</strong> <span>ЮKassa (ООО НКО «ЮМани») / СБП / Банковские карты / SberPay / Т-Банк</span></div>
-      <div><strong>Официальный домен:</strong> <span>https://santehpro.info</span></div>
-      <div><strong>Служба поддержки:</strong> <span>santehpro.info@gmail.com, тел. +7 (924) 788-99-00</span></div>
+      <strong>Служба поддержки:</strong> <a href="mailto:santehpro.info@gmail.com">santehpro.info@gmail.com</a> | Официальный сайт: <a href="https://santehpro.info">https://santehpro.info</a>
     </div>
 
     <div class="highlight-box">
-      <strong>Назначение платежей:</strong> Добровольные пожертвования на развитие открытого некоммерческого просветительского сервиса «СантехПро», оплату облачных серверов, баз данных и создание бесплатных обучающих материалов по сантехнике. Доступ ко всем материалам, статьям, схемам и калькуляторам на сайте предоставляется <strong>100% бесплатно</strong>.
+      <strong>Статус проекта:</strong> Сервис «СантехПро» — это открытая некоммерческая обучающая платформа по сантехнике. Все материалы, пошаговые инструкции, интерактивный калькулятор материалов и каталог проверенных мастеров предоставляются пользователям на <strong>100% бесплатной основе</strong>. Платные подписки отсутствуют. Пожертвования вносятся пользователями добровольно по их собственному желанию в общеполезных целях.
     </div>
 
-    <h2>2. Оферта и условия приёма платежей</h2>
-    <p>2.1. Платежи и пожертвования принимаются в соответствии со ст. 435, 437, 582 Гражданского кодекса РФ и Федеральным законом № 422-ФЗ.</p>
-    <p>2.2. Приём платежей осуществляется через платёжную систему <strong>ЮKassa</strong> с использованием банковских карт платёжных систем «Мир», Visa, MasterCard, Системы быстрых платежей (СБП), SberPay, Mir Pay, Т-Pay, ЮMoney.</p>
-    <p>2.3. Вся передача платёжных данных защищена сертификатами безопасности по международному стандарту PCI DSS. Сервис «СантехПро» не хранит и не обрабатывает банковские реквизиты карт плательщиков.</p>
-    <p>2.4. Электронные чеки формируются в автоматическом порядке в соответствии с Федеральным законом № 54-ФЗ и Федеральным законом № 422-ФЗ и направляются на электронную почту плательщика при указании.</p>
+    <h2>1. Общие положения и предмет оферты</h2>
+    <p>1.1. Настоящий документ представляет собой официальное публичное предложение (публичную оферту в соответствии со ст. 435 и ч. 2 ст. 437 Гражданского кодекса РФ) Получателя пожертвования — Самозанятого Туйчиева Достонджона Нортожовича заключить Договор добровольного пожертвования на общеполезные цели поддержки, сопровождения и развития открытого просветительского онлайн-проекта «СантехПро».</p>
+    <p>1.2. Предметом настоящего договора является добровольное и безвозмездное перечисление Пользователем (Жертвователем) денежных средств в пользу Получателя пожертвования для использования исключительно по целевому назначению:
+      <ul>
+        <li>Оплата аренды серверов, вычислительных мощностей, доменных имен и базы данных проекта;</li>
+        <li>Приобретение сантехнических расходных материалов, фитингов, инструмента для съёмки новых бесплатных обучающих видеоуроков и схем;</li>
+        <li>Техническая поддержка и совершенствование мобильной и веб-версий сервиса.</li>
+      </ul>
+    </p>
 
-    <h2>3. Порядок возврата</h2>
-    <p>3.1. В соответствии со ст. 582 ГК РФ добровольные пожертвования на общеполезные цели не подлежат возврату, за исключением случаев ошибочных или несанкционированных списаний. При возникновении вопросов плательщик может обратиться в службу поддержки по адресу: <a href="mailto:santehpro.info@gmail.com">santehpro.info@gmail.com</a>.</p>
+    <h2>2. Порядок акцепта оферты и способы внесения пожертвования</h2>
+    <p>2.1. В соответствии со ст. 438 Гражданского кодекса РФ акцептом настоящей оферты признается факт совершения Пользователем перечисления денежных средств любым из доступных способов, предложенных в интерфейсе Сервиса.</p>
+    <p>2.2. Договор добровольного пожертвования считается заключенным в письменной форме с момента успешного подтверждения транзакции авторизованным платежным сервисом либо с момента поступления средств на счет Получателя.</p>
+    <p>2.3. Доступные способы внесения добровольного пожертвования:
+      <ul>
+        <li><strong>Через уполномоченный платежный сервис (агрегатор платежей) Robokassa (Робокасса):</strong>
+          <ul>
+            <li>Банковскими картами национальных и международных платежных систем «Мир», Visa, MasterCard;</li>
+            <li>Электронными средствами платежа и платежными сервисами (SberPay, Mir Pay, ЮMoney и др.).</li>
+          </ul>
+        </li>
+        <li><strong>Прямой перевод по официальным банковским реквизитам Получателя:</strong>
+          <ul>
+            <li>На банковскую карту «Мир»: 2200 7020 1270 2739 (Банк: Т-Банк, Получатель: Достонджон Т.).</li>
+          </ul>
+        </li>
+      </ul>
+    </p>
+
+    <h2>3. Безопасность платежей и конфиденциальность</h2>
+    <p>3.1. Перечисление пожертвований через платежный сервис Robokassa осуществляется в защищенном режиме с использованием шифрования по протоколу HTTPS и международного стандарта безопасности индустрии платежных карт PCI DSS.</p>
+    <p>3.2. Сервис «СантехПро» не собирает, не запрашивает и не сохраняет данные банковских карт Жертвователя (включая номера карт, сроки действия и CVV/CVC коды).</p>
+    <p>3.3. Обработка персональных данных (имя, email для отправки чека) осуществляется в строгом соответствии с Федеральным законом РФ № 152-ФЗ «О персональных данных».</p>
+
+    <h2>4. Сумма пожертвования и безвозмездный характер</h2>
+    <p>4.1. Размер добровольного пожертвования определяется Жертвователем самостоятельно исходя из комфортной для него суммы.</p>
+    <p>4.2. Пожертвование является безвозмездным целевым взносом и не влечет возникновения у Получателя встречных обязательств по продаже товаров, выполнению работ или оказанию услуг. Доступ ко всем материалам проекта предоставляется в полном объёме на равных условиях независимо от факта пожертвования.</p>
+    <p>4.3. В соответствии с подпунктом 1 пункта 2 статьи 146 Налогового кодекса РФ добровольные пожертвования не облагаются НДС.</p>
+
+    <h2>5. Невозвратность пожертвования</h2>
+    <p>5.1. В соответствии со ст. 582 Гражданского кодекса РФ совершённое добровольное пожертвование возврату не подлежит, так как направляется на общеполезные цели содержания некоммерческого проекта.</p>
+    <p>5.2. Получатель ведёт учёт поступивших средств и обеспечивает их расходование строго по целевому назначению.</p>
+
+    <h2>6. Реквизиты Получателя пожертвования</h2>
+    <div class="requisites">
+      <div>Получатель: <span>Самозанятый Туйчиев Достонджон Нортожович</span></div>
+      <div>ИНН: <span>250900981804</span></div>
+      <div>Адрес: <span>692900, РФ, Приморский край, г. Находка, ул. Озерный бульвар, д. 7, кв. 52</span></div>
+      <div>Платежный шлюз: <span>Robokassa (банковские карты, Mir Pay, SberPay)</span></div>
+      <div>Карта «Мир»: <span>2200 7020 1270 2739 (Т-Банк, Достонджон Т.)</span></div>
+      <div>Электронная почта: <span>santehpro.info@gmail.com</span></div>
+      <div>Официальный сайт: <span>https://santehpro.info</span></div>
+    </div>
 
     <a href="/" class="footer-link">← Вернуться на главную страницу «СантехПро»</a>
   </div>

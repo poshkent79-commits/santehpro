@@ -439,8 +439,17 @@ export interface PlumbingContract {
   // Hybrid Digital Signature fields (Простая Электронная Подпись & Факсимиле)
   masterSignature?: string; // Base64 data URL
   masterSignedAt?: string; // ISO date
+  masterSignedAtMsk?: string; // Дата и точное время (МСК/UTC)
+  masterIp?: string; // IP-адрес мастера
+  masterDeviceId?: string; // ID устройства мастера
+  masterAuthAccount?: string; // Номер телефона / аккаунт мастера
+
   clientSignature?: string; // Base64 data URL
   clientSignedAt?: string; // ISO date
+  clientSignedAtMsk?: string; // Дата и точное время (МСК/UTC)
+  clientIp?: string; // IP-адрес заказчика
+  clientDeviceId?: string; // ID устройства заказчика
+  clientAuthAccount?: string; // Номер телефона / аккаунт заказчика
   clientSignMethod?: 'onsite_finger' | 'remote_link' | 'paper';
   clientSignedPhone?: string;
   digitalSealId?: string; // e.g. ПЭП-RU-2026-XXXX
@@ -450,8 +459,18 @@ export interface PlumbingContract {
   actDate?: string;
   actSignedAt?: string;
   actMasterSignature?: string;
+  actMasterSignedAt?: string;
+  actMasterSignedAtMsk?: string;
+  actMasterIp?: string;
+  actMasterDeviceId?: string;
+  actMasterAuthAccount?: string;
+
   actClientSignature?: string;
   actClientSignedAt?: string;
+  actClientSignedAtMsk?: string;
+  actClientIp?: string;
+  actClientDeviceId?: string;
+  actClientAuthAccount?: string;
   actSealId?: string;
   actStatus?: 'pending' | 'signed';
   warrantyCertificateNumber?: string;

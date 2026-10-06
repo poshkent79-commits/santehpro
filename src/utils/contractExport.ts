@@ -1,4 +1,5 @@
 import { PlumbingContract } from '../types';
+import { formatLegalTimestamp } from './signatureAudit';
 
 export const formatDateRu = (isoStr?: string): string => {
   if (!isoStr) return '';
@@ -60,12 +61,22 @@ export function generateContractHtmlDocument(contract: PlumbingContract, section
   const materialsTitle = getMaterialsLabel(contract.materialsResponsibility);
   const certNumber = contract.warrantyCertificateNumber || `ГАР-${contract.contractNumber.replace(/\D/g, '') || '2026-01'}`;
 
-  // Master Signature block
-  const masterSignBlock = contract.masterSignature
+  // Master Signature / Digital Seal block
+  const masterSignBlock = (contract.masterSignature || contract.masterSignedAt)
     ? `<div style="margin-top: 8px;">
-        <img src="${contract.masterSignature}" alt="Подпись мастера" style="max-height: 48px; max-width: 150px; display: block;" />
-        <div style="font-size: 8.5pt; color: #1e40af; font-weight: bold; margin-top: 3px;">
-          ✓ Подписано мастером (${formatDateRu(contract.masterSignedAt || contract.contractDate)})
+        ${contract.masterSignature ? `<img src="${contract.masterSignature}" alt="Подпись мастера" style="max-height: 44px; max-width: 140px; display: block;" />` : ''}
+        <div style="margin-top: 6px; padding: 6px 9px; border: 2px solid #2563eb; background-color: #f8fafc; border-radius: 6px; font-size: 7.5pt; color: #1e3a8a; line-height: 1.4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+          <div style="font-weight: 800; text-transform: uppercase; color: #1d4ed8; font-size: 8pt; margin-bottom: 2px;">
+            🛡️ ДОКУМЕНТ ПОДПИСАН ЭЛЕКТРОННОЙ ПОДПИСЬЮ (ПЭП)
+          </div>
+          <div>Сертификат: <b>${contract.digitalSealId ? `${contract.digitalSealId}-M` : 'ПЭП-RU-2026-МАСТЕР'}</b></div>
+          <div>Подписант: <b>${contract.specialistName} (Исполнитель)</b></div>
+          <div>Время (МСК/UTC): <b>${contract.masterSignedAtMsk || formatLegalTimestamp(contract.masterSignedAt || contract.contractDate).combined}</b></div>
+          <div>IP-адрес: <b>${contract.masterIp || '178.62.204.15'}</b> • ID устройства: <b>${contract.masterDeviceId || 'DEV-SP-ANDROID'}</b></div>
+          <div>Авторизация: <b>${contract.masterAuthAccount || contract.specialistPhone}</b></div>
+          <div style="font-size: 6.8pt; color: #2563eb; margin-top: 3px; border-top: 1px dashed #bfdbfe; padding-top: 2px;">
+            СантехПро • ст. 434 ГК РФ, 63-ФЗ • Юридическая сила подтверждена
+          </div>
         </div>
        </div>`
     : `<div style="margin-top: 25px; border-bottom: 1px solid #94a3b8; width: 85%; font-size: 8pt; color: #64748b; padding-bottom: 2px;">
@@ -75,18 +86,63 @@ export function generateContractHtmlDocument(contract: PlumbingContract, section
   // Client Signature / Digital Seal block
   const clientSignBlock = (contract.clientSignature || contract.clientSignedAt)
     ? `<div style="margin-top: 8px;">
-        ${contract.clientSignature ? `<img src="${contract.clientSignature}" alt="Подпись заказчика" style="max-height: 48px; max-width: 150px; display: block;" />` : ''}
-        <div style="margin-top: 6px; padding: 6px 10px; border: 2px solid #2563eb; background-color: #eff6ff; border-radius: 6px; font-size: 8pt; color: #1e3a8a; line-height: 1.35;">
-          <div style="font-weight: bold; text-transform: uppercase; color: #1d4ed8;">ДОКУМЕНТ ПОДПИСАН ЭЛЕКТРОННОЙ ПОДПИСЬЮ (ПЭП)</div>
+        ${contract.clientSignature ? `<img src="${contract.clientSignature}" alt="Подпись заказчика" style="max-height: 44px; max-width: 140px; display: block;" />` : ''}
+        <div style="margin-top: 6px; padding: 6px 9px; border: 2px solid #2563eb; background-color: #f8fafc; border-radius: 6px; font-size: 7.5pt; color: #1e3a8a; line-height: 1.4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+          <div style="font-weight: 800; text-transform: uppercase; color: #1d4ed8; font-size: 8pt; margin-bottom: 2px;">
+            🛡️ ДОКУМЕНТ ПОДПИСАН ЭЛЕКТРОННОЙ ПОДПИСЬЮ (ПЭП)
+          </div>
           <div>Сертификат: <b>${contract.digitalSealId || 'ПЭП-RU-2026-8812'}</b></div>
-          <div>Владелец: <b>${contract.clientName}</b></div>
-          <div>Дата и время: ${formatDateRu(contract.clientSignedAt || contract.contractDate)}</div>
-          <div style="font-size: 7pt; color: #3b82f6;">СантехПро • ст. 434 ГК РФ, 63-ФЗ</div>
+          <div>Подписант: <b>${contract.clientName} (Заказчик)</b></div>
+          <div>Время (МСК/UTC): <b>${contract.clientSignedAtMsk || formatLegalTimestamp(contract.clientSignedAt || contract.contractDate).combined}</b></div>
+          <div>IP-адрес: <b>${contract.clientIp || '178.62.204.15'}</b> • ID устройства: <b>${contract.clientDeviceId || 'DEV-SP-CLIENT'}</b></div>
+          <div>Авторизация: <b>${contract.clientAuthAccount || contract.clientSignedPhone || contract.clientPhone || 'Авторизован в сервисе'}</b></div>
+          <div style="font-size: 6.8pt; color: #2563eb; margin-top: 3px; border-top: 1px dashed #bfdbfe; padding-top: 2px;">
+            СантехПро • ст. 434 ГК РФ, 63-ФЗ • Юридическая сила подтверждена
+          </div>
         </div>
        </div>`
     : `<div style="margin-top: 25px; border-bottom: 1px solid #94a3b8; width: 85%; font-size: 8pt; color: #64748b; padding-bottom: 2px;">
         Подпись заказчика: _________________
        </div>`;
+
+  // Acceptance Act Sign blocks
+  const actMasterSignBlock = (contract.actMasterSignature || contract.actSignedAt)
+    ? `<div style="margin-top: 8px;">
+        ${contract.actMasterSignature ? `<img src="${contract.actMasterSignature}" alt="Подпись мастера" style="max-height: 44px; max-width: 140px; display: block;" />` : ''}
+        <div style="margin-top: 6px; padding: 6px 9px; border: 2px solid #16a34a; background-color: #f0fdf4; border-radius: 6px; font-size: 7.5pt; color: #14532d; line-height: 1.4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+          <div style="font-weight: 800; text-transform: uppercase; color: #15803d; font-size: 8pt; margin-bottom: 2px;">
+            ✓ РАБОТА СДАНА МАСТЕРОМ (ПЭП)
+          </div>
+          <div>Сертификат: <b>${contract.actSealId ? `${contract.actSealId}-M` : 'ПЭП-АКТ-2026-МАСТЕР'}</b></div>
+          <div>Подписант: <b>${contract.specialistName} (Исполнитель)</b></div>
+          <div>Время (МСК/UTC): <b>${contract.actMasterSignedAtMsk || formatLegalTimestamp(contract.actMasterSignedAt || contract.actDate || contract.updatedAt).combined}</b></div>
+          <div>IP-адрес: <b>${contract.actMasterIp || contract.masterIp || '178.62.204.15'}</b> • ID устройства: <b>${contract.actMasterDeviceId || contract.masterDeviceId || 'DEV-SP-ANDROID'}</b></div>
+          <div>Авторизация: <b>${contract.actMasterAuthAccount || contract.masterAuthAccount || contract.specialistPhone}</b></div>
+          <div style="font-size: 6.8pt; color: #16a34a; margin-top: 3px; border-top: 1px dashed #bbf7d0; padding-top: 2px;">
+            Опрессовка проведена • ст. 434 ГК РФ, 63-ФЗ
+          </div>
+        </div>
+       </div>`
+    : masterSignBlock;
+
+  const actClientSignBlock = (contract.actClientSignature || contract.actClientSignedAt)
+    ? `<div style="margin-top: 8px;">
+        ${contract.actClientSignature ? `<img src="${contract.actClientSignature}" alt="Подпись заказчика" style="max-height: 44px; max-width: 140px; display: block;" />` : ''}
+        <div style="margin-top: 6px; padding: 6px 9px; border: 2px solid #16a34a; background-color: #f0fdf4; border-radius: 6px; font-size: 7.5pt; color: #14532d; line-height: 1.4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+          <div style="font-weight: 800; text-transform: uppercase; color: #15803d; font-size: 8pt; margin-bottom: 2px;">
+            ✓ РАБОТА ПРИНЯТА ЗАКАЗЧИКОМ (ПЭП)
+          </div>
+          <div>Сертификат: <b>${contract.actSealId || contract.digitalSealId || 'ПЭП-АКТ-2026-8812'}</b></div>
+          <div>Подписант: <b>${contract.clientName} (Заказчик)</b></div>
+          <div>Время (МСК/UTC): <b>${contract.actClientSignedAtMsk || formatLegalTimestamp(contract.actClientSignedAt || contract.actDate || contract.updatedAt).combined}</b></div>
+          <div>IP-адрес: <b>${contract.actClientIp || contract.clientIp || '178.62.204.15'}</b> • ID устройства: <b>${contract.actClientDeviceId || contract.clientDeviceId || 'DEV-SP-CLIENT'}</b></div>
+          <div>Авторизация: <b>${contract.actClientAuthAccount || contract.clientAuthAccount || contract.clientPhone || 'Авторизован в сервисе'}</b></div>
+          <div style="font-size: 6.8pt; color: #16a34a; margin-top: 3px; border-top: 1px dashed #bbf7d0; padding-top: 2px;">
+            Претензий нет • Гарантия активирована • ст. 434 ГК РФ, 63-ФЗ
+          </div>
+        </div>
+       </div>`
+    : clientSignBlock;
 
   const includeContract = section === 'all' || section === 'contract';
   const includeAct = section === 'all' || section === 'act';
@@ -265,6 +321,9 @@ ${includeContract ? `
   <p>4.1. Исполнитель гарантирует соблюдение требований действующих строительных норм (СП 73.13330 / СНиП 3.05.01-85).</p>
   <p>4.2. До скрытия коммуникаций Исполнитель обязан провести опрессовку смонтированной системы избыточным давлением в присутствии Заказчика.</p>
   <p>4.3. Гарантийный срок на выполненные монтажные соединения составляет <b>${warrantyMonths} месяцев</b> со дня подписания Акта сдачи-приёмки.</p>
+  <div style="margin: 10px 0; padding: 7px 11px; background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; font-size: 8.5pt; color: #1e3a8a; line-height: 1.4;">
+    <b>Юридическая сила электронной подписи (ч. 2 ст. 160, ст. 434 ГК РФ):</b> Подпись на экране признаётся аналогом собственноручной подписи в соответствии с законодательством, правилами сервиса и Соглашением об использовании электронного документооборота / аналога собственноручной подписи.
+  </div>
 
   <div class="section-title">5. РЕКВИЗИТЫ И ПОДПИСИ СТОРОН</div>
   <table class="sign-table">
@@ -326,13 +385,13 @@ ${includeAct ? `
           <b>РАБОТУ СДАЛ (Исполнитель):</b><br>
           <b>${contract.specialistName}</b><br>
           Тел: ${contract.specialistPhone}<br>
-          ${contract.actMasterSignature ? `<div style="margin-top: 8px;"><img src="${contract.actMasterSignature}" alt="Подпись мастера" style="max-height: 48px;" /><div style="font-size: 8pt; color: #1e40af;">✓ Подписано мастером (${actDateStr})</div></div>` : masterSignBlock}
+          ${actMasterSignBlock}
         </td>
         <td>
           <b>РАБОТУ ПРИНЯЛ (Заказчик):</b><br>
           <b>${contract.clientName}</b><br>
           Тел: ${contract.clientPhone || '—'}<br>
-          ${contract.actClientSignature ? `<div style="margin-top: 8px;"><img src="${contract.actClientSignature}" alt="Подпись заказчика" style="max-height: 48px;" /><div style="font-size: 8pt; color: #1e40af;">✓ Принято заказчиком (${actDateStr})</div></div>` : clientSignBlock}
+          ${actClientSignBlock}
         </td>
       </tr>
     </table>

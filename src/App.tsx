@@ -187,7 +187,17 @@ function AppContent() {
   const [viewingEstimate, setViewingEstimate] = useState<MasterPlumbingEstimate | null>(null);
   const [viewingContractForApproval, setViewingContractForApproval] = useState<PlumbingContract | null>(null);
 
-  const { currentUser, openAuthModal, authNotice, dismissAuthNotice, refreshPurchases, updateProfile } = useAuth();
+  const { currentUser, isLoading, openAuthModal, authNotice, dismissAuthNotice, refreshPurchases, updateProfile } = useAuth();
+
+  // When an unauthenticated user is on cabinet (e.g. upon logout), redirect to handbook and open AuthModal
+  useEffect(() => {
+    if (activeTab === 'cabinet' && !currentUser && !isLoading) {
+      setActiveTab('handbook');
+      openAuthModal('login', 'Вход в СантехПро', () => {
+        setActiveTab('cabinet');
+      });
+    }
+  }, [activeTab, currentUser, isLoading, openAuthModal]);
 
   // Automatic admin login upon authentication with confirmed super-admin email or phone (+79247889900)
   useEffect(() => {
@@ -1173,15 +1183,7 @@ function AppContent() {
         )}
 
         {activeTab === 'cabinet' && (
-          !currentUser ? (
-            <ProtectedSectionGuard
-              section="cabinet"
-              onBackToHandbook={() => setActiveTab('handbook')}
-              onRegister={() => handleOpenAuthForSection('cabinet', 'register')}
-              onLogin={() => handleOpenAuthForSection('cabinet', 'login')}
-              onOpenLegalModal={() => setIsFooterLegalModalOpen(true)}
-            />
-          ) : (
+          !currentUser ? null : (
             <UserCabinetView
               articles={articles}
               serviceRequests={serviceRequests}

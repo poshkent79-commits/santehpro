@@ -13,9 +13,10 @@ import {
   TERMS_OF_USE_SECTIONS,
   OFERTA_SECTIONS,
   MASTER_MODERATION_AGREEMENT_SECTIONS,
+  EDO_AGREEMENT_SECTIONS,
 } from '../data/legalTerms';
 
-export type LegalDocType = 'privacy' | 'terms' | 'offer' | 'master_moderation';
+export type LegalDocType = 'privacy' | 'terms' | 'offer' | 'master_moderation' | 'edo_agreement';
 
 interface LegalTermsModalProps {
   isOpen: boolean;
@@ -56,7 +57,9 @@ export const LegalTermsModal: React.FC<LegalTermsModalProps> = ({
   if (!isOpen) return null;
 
   const currentSections =
-    activeDoc === 'master_moderation'
+    activeDoc === 'edo_agreement'
+      ? EDO_AGREEMENT_SECTIONS
+      : activeDoc === 'master_moderation'
       ? MASTER_MODERATION_AGREEMENT_SECTIONS
       : activeDoc === 'privacy'
       ? PRIVACY_POLICY_SECTIONS
@@ -65,7 +68,9 @@ export const LegalTermsModal: React.FC<LegalTermsModalProps> = ({
       : TERMS_OF_USE_SECTIONS;
 
   const currentTitle =
-    activeDoc === 'master_moderation'
+    activeDoc === 'edo_agreement'
+      ? 'Соглашение об использовании электронного документооборота и аналога собственноручной подписи (ПЭП)'
+      : activeDoc === 'master_moderation'
       ? 'Соглашение о модерации и верификации документов исполнителя'
       : activeDoc === 'privacy'
       ? 'Политика конфиденциальности (152-ФЗ)'
@@ -74,7 +79,9 @@ export const LegalTermsModal: React.FC<LegalTermsModalProps> = ({
       : 'Пользовательское соглашение сервиса';
 
   const CurrentIcon =
-    activeDoc === 'master_moderation'
+    activeDoc === 'edo_agreement'
+      ? FileCheck2
+      : activeDoc === 'master_moderation'
       ? BadgeCheck
       : activeDoc === 'privacy'
       ? ShieldCheck
@@ -115,6 +122,17 @@ export const LegalTermsModal: React.FC<LegalTermsModalProps> = ({
 
           {/* Quick tab switcher between all legal documents */}
           <div className="flex items-center gap-1.5 p-1 bg-slate-900/90 rounded-xl border border-slate-800 text-xs overflow-x-auto no-scrollbar">
+            <button
+              type="button"
+              onClick={() => setActiveDoc('edo_agreement')}
+              className={`flex-1 min-w-[170px] px-3 py-1.5 rounded-lg font-medium transition cursor-pointer text-center whitespace-nowrap ${
+                activeDoc === 'edo_agreement'
+                  ? 'bg-cyan-500 text-slate-950 font-bold shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              Электронный документооборот (ПЭП)
+            </button>
             <button
               type="button"
               onClick={() => setActiveDoc('master_moderation')}
