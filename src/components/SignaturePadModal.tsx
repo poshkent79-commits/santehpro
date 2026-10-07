@@ -22,7 +22,6 @@ export const SignaturePadModal: React.FC<SignaturePadModalProps> = ({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
-  const [hasAgreedToEdo, setHasAgreedToEdo] = useState(true);
   const [isEdoModalOpen, setIsEdoModalOpen] = useState(false);
   const [errorNotice, setErrorNotice] = useState<string | null>(null);
 
@@ -134,10 +133,6 @@ export const SignaturePadModal: React.FC<SignaturePadModalProps> = ({
       setErrorNotice('Пожалуйста, распишитесь пальцем или стилусом на экране');
       return;
     }
-    if (!hasAgreedToEdo) {
-      setErrorNotice('Для подписания документа подтвердите согласие с Соглашением об ЭДО (ч. 2 ст. 160 ГК РФ)');
-      return;
-    }
     setErrorNotice(null);
     const dataUrl = canvas.toDataURL('image/png');
     onSave(dataUrl);
@@ -216,39 +211,26 @@ export const SignaturePadModal: React.FC<SignaturePadModalProps> = ({
                 Подпись на экране признаётся аналогом собственноручной подписи в соответствии с законодательством и правилами сервиса.
               </p>
             </div>
-            <p className="text-[10px] text-slate-500 pl-6 border-t border-slate-800/80 pt-1">
-              🔒 <b>Протокол ПЭП (63-ФЗ / 434 ГК РФ):</b> в итоговый штамп вносятся дата и точное время (МСК/UTC), IP-адрес, ID устройства и аккаунт авторизации.
+            <p className="text-[10px] text-slate-400 pl-6 border-t border-slate-800/80 pt-1 leading-snug">
+              🔒 <b>Электронный протокол:</b> в итоговый штамп вносятся дата и точное время (UTC), IP-адрес, ID устройства и данные авторизации.
             </p>
           </div>
 
-          {/* Agreement Checkbox (ч. 2 ст. 160 ГК РФ) */}
-          <label className="flex items-start gap-2.5 cursor-pointer text-[11px] sm:text-xs text-slate-300 leading-snug select-none p-2.5 sm:p-3 rounded-2xl bg-slate-950/80 border border-slate-800 hover:border-slate-700 transition shadow-inner">
-            <input
-              type="checkbox"
-              checked={hasAgreedToEdo}
-              onChange={(e) => {
-                setHasAgreedToEdo(e.target.checked);
-                if (errorNotice) setErrorNotice(null);
+          {/* Agreement Notice without checkbox */}
+          <div className="p-2.5 sm:p-3 rounded-2xl bg-slate-950/80 border border-slate-800 text-[11px] sm:text-xs text-slate-300 leading-snug shadow-inner">
+            Нажимая «Применить подпись», вы соглашаетесь с условиями Договора и{' '}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsEdoModalOpen(true);
               }}
-              className="mt-0.5 w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-600 bg-slate-800 cursor-pointer shrink-0"
-            />
-            <span className="text-slate-300">
-              Нажимая «Применить подпись», я подтверждаю ознакомление и согласие с условиями Договора и{' '}
-              <span
-                role="button"
-                tabIndex={0}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setIsEdoModalOpen(true);
-                }}
-                className="text-cyan-400 hover:text-cyan-300 underline font-semibold cursor-pointer inline"
-              >
-                Соглашением об использовании электронного документооборота / аналога собственноручной подписи
-              </span>{' '}
-              (ч. 2 ст. 160 ГК РФ, 63-ФЗ).
-            </span>
-          </label>
+              className="text-cyan-400 hover:text-cyan-300 underline font-semibold cursor-pointer inline"
+            >
+              Соглашением об использовании электронного документооборота
+            </button>.
+          </div>
 
           {errorNotice && (
             <div className="p-2.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-medium animate-in fade-in duration-150">
@@ -279,7 +261,7 @@ export const SignaturePadModal: React.FC<SignaturePadModalProps> = ({
             <button
               type="button"
               onClick={handleSave}
-              disabled={!hasDrawn || !hasAgreedToEdo}
+              disabled={!hasDrawn}
               className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-emerald-500/20 cursor-pointer disabled:cursor-not-allowed"
             >
               <Check className="w-4 h-4" />

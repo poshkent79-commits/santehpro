@@ -53,7 +53,6 @@ export const ClientContractModal: React.FC<ClientContractModalProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(true);
   const [fontScale, setFontScale] = useState<1 | 2 | 3>(2);
   const [isEdoModalOpen, setIsEdoModalOpen] = useState(false);
-  const [hasAgreedToEdo, setHasAgreedToEdo] = useState(true);
 
   if (!isOpen || !contract) return null;
 
@@ -448,6 +447,9 @@ export const ClientContractModal: React.FC<ClientContractModalProps> = ({
                   <p className="text-slate-700">
                     Подпись на экране признаётся аналогом собственноручной подписи в соответствии с законодательством и правилами сервиса.
                   </p>
+                  <p className="text-[11px] text-blue-900 pt-1 border-t border-blue-200/80 leading-snug">
+                    🔒 <b>Электронный протокол:</b> в итоговый штамп вносятся дата и точное время (UTC), IP-адрес, ID устройства и данные авторизации.
+                  </p>
                 </div>
 
                 {/* Signatures Row */}
@@ -677,30 +679,16 @@ export const ClientContractModal: React.FC<ClientContractModalProps> = ({
                 <p className="font-extrabold text-slate-950 text-xs sm:text-sm">
                   {activeTab === 'contract' ? 'Вы согласны с условиями договора?' : 'Вы принимаете выполненные работы?'}
                 </p>
-                <label className="flex items-start gap-2 text-[11px] text-slate-600 max-w-xl cursor-pointer select-none text-left">
-                  <input
-                    type="checkbox"
-                    checked={hasAgreedToEdo}
-                    onChange={(e) => setHasAgreedToEdo(e.target.checked)}
-                    className="mt-0.5 w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300 bg-white cursor-pointer shrink-0"
-                  />
-                  <span>
-                    Нажимая «Применить подпись», я подтверждаю ознакомление и согласие с условиями Договора и{' '}
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setIsEdoModalOpen(true);
-                      }}
-                      className="text-blue-600 hover:text-blue-700 underline font-semibold cursor-pointer inline"
-                    >
-                      Соглашением об использовании электронного документооборота / аналога собственноручной подписи
-                    </span>{' '}
-                    (ч. 2 ст. 160 ГК РФ, 63-ФЗ).
-                  </span>
-                </label>
+                <p className="text-[11px] text-slate-600 max-w-xl text-left leading-relaxed">
+                  Нажимая «Применить подпись», вы соглашаетесь с условиями Договора и{' '}
+                  <button
+                    type="button"
+                    onClick={() => setIsEdoModalOpen(true)}
+                    className="text-blue-600 hover:text-blue-800 underline font-semibold cursor-pointer inline"
+                  >
+                    Соглашением об использовании электронного документооборота
+                  </button>.
+                </p>
               </div>
 
               <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
@@ -716,7 +704,7 @@ export const ClientContractModal: React.FC<ClientContractModalProps> = ({
                 <button
                   type="button"
                   onClick={() => handleApplySignature()}
-                  disabled={isSubmitting || !hasAgreedToEdo}
+                  disabled={isSubmitting}
                   className="flex-1 sm:flex-initial px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white font-black text-xs transition flex items-center justify-center gap-1.5 shadow-sm shadow-emerald-500/25 cursor-pointer disabled:cursor-not-allowed active:scale-95"
                 >
                   <Check className="w-4 h-4" />

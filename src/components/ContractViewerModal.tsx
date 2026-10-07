@@ -734,13 +734,16 @@ ${contract.worksList}
                 </div>
 
                 {/* Legal PEP info */}
-                <div className="p-3.5 bg-blue-50/80 border border-blue-200 rounded-xl space-y-1 text-xs">
+                <div className="p-3.5 bg-blue-50/80 border border-blue-200 rounded-xl space-y-1.5 text-xs">
                   <p className="font-bold text-blue-950 flex items-center gap-1.5">
                     <ShieldCheck className="w-4 h-4 text-blue-600" />
-                    ЮРИДИЧЕСКАЯ СИЛА ЭЛЕКТРОННОЙ ПОДПИСИ (ч. 2 ст. 160, ст. 434 ГК РФ):
+                    ЮРИДИЧЕСКАЯ СИЛА ЭЛЕКТРОННОЙ ПОДПИСИ (ст. 434 ГК РФ):
                   </p>
                   <p className="text-slate-700">
                     Подпись на экране признаётся аналогом собственноручной подписи в соответствии с законодательством и правилами сервиса.
+                  </p>
+                  <p className="text-[11px] text-blue-900 pt-1 border-t border-blue-200/80 leading-snug">
+                    🔒 <b>Электронный протокол:</b> в итоговый штамп вносятся дата и точное время (UTC), IP-адрес, ID устройства и данные авторизации.
                   </p>
                   <div className="text-[11px] text-blue-800 pt-1 border-t border-blue-200/80 flex items-center gap-1">
                     <span>Электронное взаимодействие регулируется:</span>
@@ -749,7 +752,7 @@ ${contract.worksList}
                       onClick={() => setIsEdoModalOpen(true)}
                       className="text-blue-700 hover:text-blue-900 underline font-semibold cursor-pointer"
                     >
-                      Соглашением об использовании ЭДО / аналога подписи
+                      Соглашением об использовании электронного документооборота
                     </button>
                   </div>
                 </div>
