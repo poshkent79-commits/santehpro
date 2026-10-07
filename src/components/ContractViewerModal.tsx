@@ -21,7 +21,9 @@ import {
   ArrowRight,
   Clock,
   CheckCircle2,
-  Globe
+  Globe,
+  Lock,
+  AlertTriangle
 } from 'lucide-react';
 import { PlumbingContract } from '../types';
 import { SignaturePadModal } from './SignaturePadModal';
@@ -80,6 +82,10 @@ export const ContractViewerModal: React.FC<ContractViewerModalProps> = ({
   const statusLabel = getStatusLabel(contract.specialistStatus);
   const materialsLabel = getMaterialsLabel(contract.materialsResponsibility);
   const warrantyMonths = contract.warrantyMonths || 24;
+  const isActFullySigned = Boolean(
+    (contract.actMasterSignature || contract.actMasterSignedAt) &&
+    (contract.actClientSignature || contract.actClientSignedAt)
+  );
 
   const handleToggleFullscreen = () => {
     const nextState = !isFullscreen;
@@ -843,7 +849,7 @@ ${contract.worksList}
                     5. Стоимость фактически выполненных работ: <b className="text-blue-700">{contract.totalPrice.toLocaleString('ru-RU')} рублей</b>. Расчёт произведён полностью.
                   </p>
                   <p>
-                    6. С даты подписания настоящего Акта вступает в силу Гарантийный талон сроком на <b className="text-emerald-700">{warrantyMonths} месяцев</b>.
+                    6. С даты подписания настоящего Акта вступает в силу Гарантийный талон сроком на <b className="text-emerald-700">{warrantyMonths} месяцев</b>. Доступ к скачиванию Гарантийного сертификата разблокирован.
                   </p>
                 </div>
 
@@ -912,56 +918,84 @@ ${contract.worksList}
                   </p>
                 </div>
 
-                <div className="p-6 rounded-2xl border-2 border-blue-500/80 bg-gradient-to-br from-blue-50/50 via-white to-slate-50 space-y-4 shadow-sm">
-                  <div className="flex flex-wrap items-center justify-between border-b border-slate-200 pb-3 gap-2">
-                    <div>
-                      <span className="text-xs text-slate-500">Номер сертификата:</span>
-                      <div className="font-mono font-black text-blue-700 text-base">
-                        {contract.warrantyCertificateNumber || `ГАР-${contract.contractNumber.replace(/\D/g, '') || '2026-01'}`}
+                {!isActFullySigned ? (
+                  <div className="p-6 sm:p-8 rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/70 text-center space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto shadow-xs">
+                      <Lock className="w-6 h-6" />
+                    </div>
+                    <h3 className="font-extrabold text-sm sm:text-base text-slate-950">
+                      Доступ к скачиванию гарантийного талона ограничен
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-600 max-w-lg mx-auto leading-relaxed">
+                      Согласно <b>п. 4.4 Договора</b>, официальный Гарантийный талон активируется и предоставляется для скачивания и печати <b>только после подписания двустороннего Акта сдачи-приёмки</b> обеими сторонами (Исполнителем и Заказчиком). До выполнения данного условия функционал загрузки ограничен.
+                    </p>
+                    <div className="pt-2 flex flex-wrap items-center justify-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-100/90 text-amber-900 text-xs font-bold border border-amber-300">
+                        <Clock className="w-3.5 h-3.5 text-amber-700" />
+                        <span>Статус: Ожидает подписания Акта приёмки</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('act')}
+                        className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 cursor-pointer transition active:scale-95 shadow-sm"
+                      >
+                        <FileCheck className="w-3.5 h-3.5" />
+                        <span>Перейти к подписанию Акта →</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-6 rounded-2xl border-2 border-blue-500/80 bg-gradient-to-br from-blue-50/50 via-white to-slate-50 space-y-4 shadow-sm">
+                    <div className="flex flex-wrap items-center justify-between border-b border-slate-200 pb-3 gap-2">
+                      <div>
+                        <span className="text-xs text-slate-500">Номер сертификата:</span>
+                        <div className="font-mono font-black text-blue-700 text-base">
+                          {contract.warrantyCertificateNumber || `ГАР-${contract.contractNumber.replace(/\D/g, '') || '2026-01'}`}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs text-slate-500">Срок официальной гарантии:</span>
+                        <div className="font-black text-emerald-700 text-base">
+                          {warrantyMonths} месяцев
+                        </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <span className="text-xs text-slate-500">Срок официальной гарантии:</span>
-                      <div className="font-black text-emerald-700 text-base">
-                        {warrantyMonths} месяцев
+
+                    <div className="space-y-2 text-xs sm:text-sm">
+                      <p><b>Объект гарантии:</b> {contract.clientAddress}</p>
+                      <p><b>Заказчик:</b> {contract.clientName} (тел: {contract.clientPhone || '—'})</p>
+                      <p><b>Исполнитель:</b> {contract.specialistName} (тел: {contract.specialistPhone})</p>
+                      <p><b>Основание:</b> Договор № {contract.contractNumber} и двусторонний Акт сдачи-приёмки выполненных работ</p>
+                    </div>
+
+                    <hr className="border-slate-200" />
+
+                    <div className="space-y-2 text-xs text-slate-700 leading-relaxed">
+                      <p className="font-bold text-slate-900">УСЛОВИЯ ГАРАНТИЙНОГО ОБСЛУЖИВАНИЯ:</p>
+                      <ul className="list-disc pl-5 space-y-1">
+                        <li>Гарантия покрывает герметичность всех смонтированных трубных соединений (пресс-фитинги, резьбы, пайка).</li>
+                        <li>При выявлении дефекта монтажа Исполнитель обязан прибыть и устранить недостаток <b>бесплатно</b>.</li>
+                        <li>Гарантия не распространяется на механические повреждения третьими лицами и заводской брак приборов Заказчика.</li>
+                      </ul>
+                    </div>
+
+                    <div className="pt-2 flex flex-wrap items-center justify-between gap-3">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-900 font-extrabold text-xs border border-emerald-300">
+                        <ShieldCheck className="w-4 h-4 text-emerald-700" />
+                        <span>ГАРАНТИЯ АКТИВИРОВАНА В СЕРВИСЕ САНТЕХПРО</span>
                       </div>
+
+                      <button
+                        type="button"
+                        onClick={handlePrint}
+                        className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
+                      >
+                        <Printer className="w-3.5 h-3.5" />
+                        <span>Распечатать сертификат</span>
+                      </button>
                     </div>
                   </div>
-
-                  <div className="space-y-2 text-xs sm:text-sm">
-                    <p><b>Объект гарантии:</b> {contract.clientAddress}</p>
-                    <p><b>Заказчик:</b> {contract.clientName} (тел: {contract.clientPhone || '—'})</p>
-                    <p><b>Исполнитель:</b> {contract.specialistName} (тел: {contract.specialistPhone})</p>
-                    <p><b>Основание:</b> Договор № {contract.contractNumber} и Акт сдачи-приёмки выполненных работ</p>
-                  </div>
-
-                  <hr className="border-slate-200" />
-
-                  <div className="space-y-2 text-xs text-slate-700 leading-relaxed">
-                    <p className="font-bold text-slate-900">УСЛОВИЯ ГАРАНТИЙНОГО ОБСЛУЖИВАНИЯ:</p>
-                    <ul className="list-disc pl-5 space-y-1">
-                      <li>Гарантия покрывает герметичность всех смонтированных трубных соединений (пресс-фитинги, резьбы, пайка).</li>
-                      <li>При выявлении дефекта монтажа Исполнитель обязан прибыть и устранить недостаток <b>бесплатно</b>.</li>
-                      <li>Гарантия не распространяется на механические повреждения третьими лицами и заводской брак приборов Заказчика.</li>
-                    </ul>
-                  </div>
-
-                  <div className="pt-2 flex flex-wrap items-center justify-between gap-3">
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-900 font-extrabold text-xs border border-emerald-300">
-                      <ShieldCheck className="w-4 h-4 text-emerald-700" />
-                      <span>ГАРАНТИЯ АКТИВИРОВАНА В СЕРВИСЕ САНТЕХПРО</span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={handlePrint}
-                      className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
-                    >
-                      <Printer className="w-3.5 h-3.5" />
-                      <span>Распечатать сертификат</span>
-                    </button>
-                  </div>
-                </div>
+                )}
               </div>
             )}
           </div>

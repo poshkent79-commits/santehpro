@@ -15,7 +15,10 @@ import {
   ZoomIn,
   ZoomOut,
   Type,
-  Award
+  Award,
+  Lock,
+  AlertTriangle,
+  Clock
 } from 'lucide-react';
 import { PlumbingContract } from '../types';
 import { SignaturePadModal } from './SignaturePadModal';
@@ -58,6 +61,8 @@ export const ClientContractModal: React.FC<ClientContractModalProps> = ({
 
   const isContractClientSigned = Boolean(current.clientSignature || current.clientSignedAt);
   const isActClientSigned = Boolean(current.actClientSignature || current.actClientSignedAt);
+  const isActMasterSigned = Boolean(current.actMasterSignature || current.actMasterSignedAt);
+  const isActFullySigned = isActClientSigned && isActMasterSigned;
 
   const warrantyMonths = current.warrantyMonths || 24;
   const certNumber = current.warrantyCertificateNumber || `ГАР-${current.contractNumber.replace(/\D/g, '') || '2026-01'}`;
@@ -427,7 +432,10 @@ export const ClientContractModal: React.FC<ClientContractModalProps> = ({
                   )}
                   <p>2.3. Сроки: с «{formatDateRu(current.startDate)}» по «{formatDateRu(current.endDate)}»</p>
                   <p>
-                    2.4. Гарантийный срок на монтаж: <b className="text-emerald-700">{warrantyMonths} месяцев</b> со дня подписания Акта.
+                    2.4. Гарантийный срок на монтаж: <b className="text-emerald-700">{warrantyMonths} месяцев</b> со дня подписания двустороннего Акта приёмки.
+                  </p>
+                  <p className="text-blue-950 bg-blue-50/70 p-2.5 rounded-lg border border-blue-200 text-xs">
+                    2.5. Доступ к формированию и скачиванию Гарантийного сертификата (талона) предоставляется Заказчику только после подписания Акта сдачи-приёмки Исполнителем и Заказчиком. До выполнения данного условия функционал загрузки гарантийного талона ограничен.
                   </p>
                 </div>
 
@@ -523,7 +531,7 @@ export const ClientContractModal: React.FC<ClientContractModalProps> = ({
                   </p>
                   <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-950 text-xs sm:text-sm flex items-center space-x-2.5">
                     <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
-                    <span>Гарантийные обязательства активированы на <b>{warrantyMonths} мес.</b></span>
+                    <span>Гарантийные обязательства активированы на <b>{warrantyMonths} мес.</b> Доступ к скачиванию талона разблокирован.</span>
                   </div>
                 </div>
 
@@ -594,40 +602,68 @@ export const ClientContractModal: React.FC<ClientContractModalProps> = ({
                   </p>
                 </div>
 
-                <div className="p-6 rounded-2xl border-2 border-blue-500/80 bg-gradient-to-br from-blue-50/50 via-white to-slate-50 space-y-4">
-                  <div className="flex flex-wrap items-center justify-between border-b border-slate-200 pb-3 gap-2">
-                    <div>
-                      <span className="text-xs text-slate-500">Номер сертификата:</span>
-                      <div className="font-mono font-black text-blue-700 text-base">{certNumber}</div>
+                {!isActFullySigned ? (
+                  <div className="p-6 sm:p-8 rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/70 text-center space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto shadow-xs">
+                      <Lock className="w-6 h-6" />
                     </div>
-                    <div className="text-right">
-                      <span className="text-xs text-slate-500">Срок официальной гарантии:</span>
-                      <div className="font-black text-emerald-700 text-base">{warrantyMonths} месяцев</div>
+                    <h3 className="font-extrabold text-sm sm:text-base text-slate-950">
+                      Доступ к скачиванию гарантийного талона ограничен
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-600 max-w-lg mx-auto leading-relaxed">
+                      Согласно <b>п. 2.5 Договора</b>, официальный Гарантийный талон предоставляется для скачивания и печати <b>только после подписания двустороннего Акта сдачи-приёмки</b> обеими сторонами. До выполнения данного условия функционал загрузки ограничен.
+                    </p>
+                    <div className="pt-2 flex flex-wrap items-center justify-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-100/90 text-amber-900 text-xs font-bold border border-amber-300">
+                        <Clock className="w-3.5 h-3.5 text-amber-700" />
+                        <span>Статус: Ожидает подписания Акта приёмки</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('act')}
+                        className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 cursor-pointer transition active:scale-95 shadow-sm"
+                      >
+                        <FileCheck className="w-3.5 h-3.5" />
+                        <span>Перейти к подписанию Акта →</span>
+                      </button>
                     </div>
                   </div>
-
-                  <div className="space-y-2 text-xs sm:text-sm">
-                    <p><b>Объект:</b> {current.clientAddress}</p>
-                    <p><b>Заказчик:</b> {current.clientName}</p>
-                    <p><b>Исполнитель:</b> {current.specialistName} (тел: {current.specialistPhone})</p>
-                  </div>
-
-                  <div className="pt-2 flex items-center justify-between gap-2">
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-900 font-bold text-xs border border-emerald-300">
-                      <ShieldCheck className="w-4 h-4 text-emerald-700" />
-                      <span>ГАРАНТИЯ АКТИВИРОВАНА</span>
+                ) : (
+                  <div className="p-6 rounded-2xl border-2 border-blue-500/80 bg-gradient-to-br from-blue-50/50 via-white to-slate-50 space-y-4">
+                    <div className="flex flex-wrap items-center justify-between border-b border-slate-200 pb-3 gap-2">
+                      <div>
+                        <span className="text-xs text-slate-500">Номер сертификата:</span>
+                        <div className="font-mono font-black text-blue-700 text-base">{certNumber}</div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs text-slate-500">Срок официальной гарантии:</span>
+                        <div className="font-black text-emerald-700 text-base">{warrantyMonths} месяцев</div>
+                      </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={handlePrint}
-                      className="px-3.5 py-1.5 rounded-xl bg-blue-600 text-white font-bold text-xs flex items-center gap-1 cursor-pointer"
-                    >
-                      <Printer className="w-3.5 h-3.5" />
-                      <span>Сохранить в PDF</span>
-                    </button>
+                    <div className="space-y-2 text-xs sm:text-sm">
+                      <p><b>Объект:</b> {current.clientAddress}</p>
+                      <p><b>Заказчик:</b> {current.clientName}</p>
+                      <p><b>Исполнитель:</b> {current.specialistName} (тел: {current.specialistPhone})</p>
+                    </div>
+
+                    <div className="pt-2 flex items-center justify-between gap-2">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-900 font-bold text-xs border border-emerald-300">
+                        <ShieldCheck className="w-4 h-4 text-emerald-700" />
+                        <span>ГАРАНТИЯ АКТИВИРОВАНА</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handlePrint}
+                        className="px-3.5 py-1.5 rounded-xl bg-blue-600 text-white font-bold text-xs flex items-center gap-1 cursor-pointer"
+                      >
+                        <Printer className="w-3.5 h-3.5" />
+                        <span>Сохранить в PDF</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
           </div>

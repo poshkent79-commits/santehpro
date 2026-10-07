@@ -223,7 +223,9 @@ export const ContractBuilderModal: React.FC<ContractBuilderModalProps> = ({
   );
   const [totalPrice, setTotalPrice] = useState<number>(initialContract?.totalPrice || 25000);
   const [advancePayment, setAdvancePayment] = useState<number>(initialContract?.advancePayment || 0);
-  const [warrantyMonths, setWarrantyMonths] = useState<number>(initialContract?.warrantyMonths || 24);
+  const [warrantyMonths, setWarrantyMonths] = useState<number>(
+    initialContract?.warrantyMonths || 24
+  );
   const [materialsResponsibility, setMaterialsResponsibility] = useState<'contractor' | 'client' | 'mixed'>(
     initialContract?.materialsResponsibility || 'mixed'
   );

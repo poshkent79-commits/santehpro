@@ -430,7 +430,8 @@ export const MasterContractsTab: React.FC<MasterContractsTabProps> = ({
                   {/* Highlights */}
                   <div className="flex flex-wrap items-center gap-2 text-[11px]">
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-800 text-slate-300 border border-slate-700">
-                      <Award className="w-3 h-3 text-emerald-400" /> Гарантия: {contract.warrantyMonths || 24} мес.
+                      <Award className="w-3 h-3 text-emerald-400" />
+                      Гарантия: {contract.warrantyMonths || 24} мес.
                     </span>
                     {contract.advancePayment > 0 && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-950/60 text-blue-300 border border-blue-800/50">
@@ -467,7 +468,8 @@ export const MasterContractsTab: React.FC<MasterContractsTabProps> = ({
                       type="button"
                       onClick={() => {
                         const shareUrl = `${window.location.origin}/?contractId=${encodeURIComponent(contract.id)}`;
-                        const text = `Здравствуйте, ${contract.clientName}!\n\nНаправляю вам официальный договор подряда и акт № ${contract.contractNumber} на сантехнические работы по адресу: ${contract.clientAddress}.\nСумма: ${contract.totalPrice.toLocaleString('ru-RU')} ₽. Гарантия: ${contract.warrantyMonths || 24} мес.\nСсылка для согласования и подписи:\n${shareUrl}`;
+                        const warrantyTxt = `Гарантия: ${contract.warrantyMonths || 24} мес.`;
+                        const text = `Здравствуйте, ${contract.clientName}!\n\nНаправляю вам официальный договор подряда и акт № ${contract.contractNumber} на сантехнические работы по адресу: ${contract.clientAddress}.\nСумма: ${contract.totalPrice.toLocaleString('ru-RU')} ₽. ${warrantyTxt}.\nСсылка для согласования и подписи:\n${shareUrl}`;
                         const url = `https://wa.me/${contract.clientPhone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;
                         window.open(url, '_blank');
                       }}

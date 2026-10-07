@@ -63,8 +63,10 @@ export const ShareContractModal: React.FC<ShareContractModalProps> = ({
 
   const cleanPhone = (contract.clientPhone || '').replace(/\D/g, '');
 
+  const warrantyTxt = `Официальная гарантия на монтаж: ${contract.warrantyMonths || 24} мес.`;
+
   // Formatted message text
-  const shareMessage = `Здравствуйте, ${contract.clientName}!\n\nНаправляю вам официальный договор подряда и акт № ${contract.contractNumber} от ${formatDate(contract.contractDate)} на выполнение сантехнических работ по адресу: ${contract.clientAddress}.\n\nСумма договора: ${contract.totalPrice.toLocaleString('ru-RU')} ₽.\nОфициальная гарантия на монтаж: ${contract.warrantyMonths} мес.\n\nПожалуйста, ознакомьтесь и подпишите договор со своего смартфона по защищённой ссылке:\n${shareUrl}\n\nС уважением, мастер ${contract.specialistName} (${contract.specialistPhone})\nСервис «СантехПро»: https://santehpro.info`;
+  const shareMessage = `Здравствуйте, ${contract.clientName}!\n\nНаправляю вам официальный договор подряда и акт № ${contract.contractNumber} от ${formatDate(contract.contractDate)} на выполнение сантехнических работ по адресу: ${contract.clientAddress}.\n\nСумма договора: ${contract.totalPrice.toLocaleString('ru-RU')} ₽.\n${warrantyTxt}\n\nПожалуйста, ознакомьтесь и подпишите договор со своего смартфона по защищённой ссылке:\n${shareUrl}\n\nС уважением, мастер ${contract.specialistName} (${contract.specialistPhone})\nСервис «СантехПро»: https://santehpro.info`;
 
   // WhatsApp
   const handleSendWhatsApp = () => {

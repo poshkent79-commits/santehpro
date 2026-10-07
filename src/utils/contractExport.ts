@@ -44,6 +44,10 @@ export function generateContractHtmlDocument(contract: PlumbingContract, section
   const endDateStr = formatDateRu(contract.endDate);
   const actDateStr = formatDateRu(contract.actDate || contract.endDate || contract.contractDate);
   const warrantyMonths = contract.warrantyMonths || 24;
+  const isActFullySigned = Boolean(
+    (contract.actMasterSignature || contract.actMasterSignedAt) &&
+    (contract.actClientSignature || contract.actClientSignedAt)
+  );
 
   // Calculate warranty valid until date
   let warrantyUntilStr = contract.warrantyValidUntil ? formatDateRu(contract.warrantyValidUntil) : '';
@@ -146,7 +150,7 @@ export function generateContractHtmlDocument(contract: PlumbingContract, section
 
   const includeContract = section === 'all' || section === 'contract';
   const includeAct = section === 'all' || section === 'act';
-  const includeWarranty = section === 'all' || section === 'warranty';
+  const includeWarranty = isActFullySigned && (section === 'all' || section === 'warranty');
 
   return `<!DOCTYPE html>
 <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
@@ -320,7 +324,8 @@ ${includeContract ? `
   <div class="section-title">4. КАЧЕСТВО И ГАРАНТИЙНЫЕ ОБЯЗАТЕЛЬСТВА</div>
   <p>4.1. Исполнитель гарантирует соблюдение требований действующих строительных норм (СП 73.13330 / СНиП 3.05.01-85).</p>
   <p>4.2. До скрытия коммуникаций Исполнитель обязан провести опрессовку смонтированной системы избыточным давлением в присутствии Заказчика.</p>
-  <p>4.3. Гарантийный срок на выполненные монтажные соединения составляет <b>${warrantyMonths} месяцев</b> со дня подписания Акта сдачи-приёмки.</p>
+  <p>4.3. Гарантийный срок на выполненные монтажные соединения составляет <b>${warrantyMonths} месяцев</b> со дня подписания двустороннего Акта сдачи-приёмки.</p>
+  <p>4.4. Доступ к формированию и скачиванию Гарантийного сертификата (талона) предоставляется Заказчику только после подписания Акта сдачи-приёмки Исполнителем и Заказчиком. До выполнения данного условия функционал загрузки гарантийного талона ограничен.</p>
   <div style="margin: 10px 0; padding: 7px 11px; background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; font-size: 8.5pt; color: #1e3a8a; line-height: 1.4;">
     <b>Юридическая сила электронной подписи (ч. 2 ст. 160, ст. 434 ГК РФ):</b> Подпись на экране признаётся аналогом собственноручной подписи в соответствии с законодательством, правилами сервиса и Соглашением об использовании электронного документооборота / аналога собственноручной подписи.
   </div>
@@ -377,7 +382,7 @@ ${includeAct ? `
     <p>3. <b>Результаты гидравлических испытаний (опрессовки):</b> система проверена избыточным давлением. Соединения герметичны, видимых подтёков и дефектов не выявлено.</p>
     <p>4. Заказчик подтверждает, что работы выполнены качественно, в полном объёме и в установленный срок. <b>Претензий по качеству, объёму и срокам Заказчик к Исполнителю не имеет.</b></p>
     <p>5. Общая стоимость фактически выполненных работ составляет: <b>${contract.totalPrice.toLocaleString('ru-RU')} рублей</b>. Расчёт между Сторонами произведён полностью.</p>
-    <p>6. С момента подписания настоящего Акта вступает в силу Гарантийный сертификат сроком на <b>${warrantyMonths} месяцев</b>.</p>
+    <p>6. С момента подписания настоящего Акта вступает в силу Гарантийный сертификат сроком на <b>${warrantyMonths} месяцев</b>. Доступ к скачиванию гарантийного талона разблокирован.</p>
 
     <table class="sign-table">
       <tr>

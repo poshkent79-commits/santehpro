@@ -66,8 +66,8 @@ const isSuperAdminUser = (user?: Partial<UserProfile> | null): boolean => {
   if (
     email === 'buyer@santehpro.info' ||
     email === 'yookassa@santehpro.info' ||
-    user.id === 'yookassa-buyer-audit-id' ||
-    user.id === 'yookassa-inspector-user-id'
+    String(user.id) === 'yookassa-buyer-audit-id' ||
+    String(user.id) === 'yookassa-inspector-user-id'
   ) {
     return false;
   }
