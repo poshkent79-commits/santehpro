@@ -255,53 +255,77 @@ function AppContent() {
   const approvedMasterSpecialist = useMemo(() => {
     if (!currentUser) return null;
     const storedSpecialistId = typeof window !== 'undefined' ? localStorage.getItem('santehpro_master_specialist_id') : null;
-    return (
-      specialists.find((s) => {
-        if (storedSpecialistId && s.id === storedSpecialistId) return true;
-        if (s.userUid && s.userUid === currentUser.uid) return true;
-        if (s.email && currentUser.email && s.email.toLowerCase().trim() === currentUser.email.toLowerCase().trim()) return true;
-        if (s.phone && currentUser.phone) {
-          const cleanS = s.phone.replace(/\D/g, '');
-          const cleanU = currentUser.phone.replace(/\D/g, '');
-          if (cleanS.length >= 10 && cleanU.length >= 10 && (cleanS === cleanU || cleanS.slice(-10) === cleanU.slice(-10))) return true;
-        }
-        if (currentUser.name && s.name && s.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase()) return true;
+    const matched = specialists.find((s) => {
+      if (storedSpecialistId && s.id === storedSpecialistId) return true;
+      if (s.userUid && s.userUid === currentUser.uid) return true;
+      if (s.email && currentUser.email && s.email.toLowerCase().trim() === currentUser.email.toLowerCase().trim()) return true;
+      if (s.phone && currentUser.phone) {
+        const cleanS = s.phone.replace(/\D/g, '');
+        const cleanU = currentUser.phone.replace(/\D/g, '');
+        if (cleanS.length >= 10 && cleanU.length >= 10 && (cleanS === cleanU || cleanS.slice(-10) === cleanU.slice(-10))) return true;
+      }
+      if (currentUser.name && s.name && s.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase()) return true;
 
-        const curName = (currentUser.name || '').toLowerCase();
-        const curEmail = (currentUser.email || '').toLowerCase().trim();
-        const curPhone = (currentUser.phone || '').replace(/\D/g, '');
-        const isOwner =
-          curName.includes('достонджон') ||
-          curName.includes('туйчиев') ||
-          curEmail.includes('poshkent') ||
-          curEmail.includes('dostonjon') ||
-          curEmail.includes('sommoni') ||
-          curEmail.includes('santehpro.info') ||
-          curPhone.endsWith('9247889900') ||
-          currentUser.role === 'admin';
+      const curName = (currentUser.name || '').toLowerCase();
+      const curEmail = (currentUser.email || '').toLowerCase().trim();
+      const curPhone = (currentUser.phone || '').replace(/\D/g, '');
+      const isOwner =
+        curName.includes('достонджон') ||
+        curName.includes('туйчиев') ||
+        curEmail.includes('poshkent') ||
+        curEmail.includes('dostonjon') ||
+        curEmail.includes('sommoni') ||
+        curEmail.includes('santehpro.info') ||
+        curPhone.endsWith('9247889900') ||
+        currentUser.role === 'admin';
 
-        if (isOwner) {
-          const specName = (s.name || '').toLowerCase();
-          if (
-            specName.includes('достонджон') ||
-            specName.includes('туйчиев') ||
-            s.id === 'spec-1790212144464' ||
-            s.id === 'spec-dostonjon' ||
-            (s.phone && s.phone.replace(/\D/g, '').endsWith('9247889900'))
-          ) {
-            return true;
-          }
+      if (isOwner) {
+        const specName = (s.name || '').toLowerCase();
+        if (
+          specName.includes('достонджон') ||
+          specName.includes('туйчиев') ||
+          s.id === 'spec-1790212144464' ||
+          s.id === 'spec-dostonjon' ||
+          (s.phone && s.phone.replace(/\D/g, '').endsWith('9247889900'))
+        ) {
+          return true;
         }
-        return false;
-      }) || (currentUser.role === 'specialist' ? specialists.find((s) => s.verified || s.status === 'approved') || null : null)
-    );
+      }
+      return false;
+    });
+
+    if (matched) return matched;
+
+    // Check localStorage questionnaire backup
+    try {
+      const cached = typeof window !== 'undefined'
+        ? (localStorage.getItem(`santehpro_master_questionnaire_${currentUser.uid}`) ||
+           localStorage.getItem('santehpro_last_master_application') ||
+           localStorage.getItem('santehpro_master_profile_cache'))
+        : null;
+      if (cached) {
+        const p = JSON.parse(cached);
+        if (p && (p.name || p.phone)) {
+          return {
+            ...p,
+            userUid: currentUser.uid || p.userUid,
+            email: currentUser.email || p.email,
+            phone: currentUser.phone || p.phone,
+            status: 'approved',
+            verified: true,
+          };
+        }
+      }
+    } catch {}
+
+    return null;
   }, [currentUser, specialists]);
 
   const isApprovedMaster = Boolean(
     currentUser &&
     (
       (approvedMasterSpecialist && (approvedMasterSpecialist.verified || approvedMasterSpecialist.status === 'approved')) ||
-      currentUser.role === 'specialist'
+      (currentUser.role === 'specialist' && approvedMasterSpecialist)
     )
   );
 
@@ -684,11 +708,36 @@ function AppContent() {
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
-          setArticles(data);
+          // Merge with any locally cached admin enhancements to prevent losing custom uploaded covers
+          const localCacheRaw = localStorage.getItem('santehpro_cached_articles');
+          let mergedData = data;
+          if (localCacheRaw) {
+            try {
+              const localArts = JSON.parse(localCacheRaw);
+              if (Array.isArray(localArts)) {
+                const localMap = new Map(localArts.map((a: any) => [a.id, a]));
+                mergedData = data.map((serverArt: any) => {
+                  const localArt = localMap.get(serverArt.id);
+                  if (localArt) {
+                    return {
+                      ...serverArt,
+                      coverImage: serverArt.coverImage || localArt.coverImage,
+                      steps: Array.isArray(serverArt.steps) ? serverArt.steps.map((s: any, idx: number) => ({
+                        ...s,
+                        imageUrl: s.imageUrl || localArt.steps?.[idx]?.imageUrl,
+                      })) : serverArt.steps,
+                    };
+                  }
+                  return serverArt;
+                });
+              }
+            } catch {}
+          }
+          setArticles(mergedData);
           const newEtag = res.headers.get('ETag');
           if (newEtag) localStorage.setItem('santehpro_articles_etag', newEtag);
           try {
-            localStorage.setItem('santehpro_cached_articles', JSON.stringify(data));
+            localStorage.setItem('santehpro_cached_articles', JSON.stringify(mergedData));
           } catch (storageErr) {
             console.warn('Failed to cache articles in localStorage:', storageErr);
           }
@@ -726,6 +775,19 @@ function AppContent() {
       console.warn('Notice: Using cached specialists while syncing with server:', err);
     }
   };
+
+  // Auto self-heal master to server if approved but not in specialists array
+  useEffect(() => {
+    if (isApprovedMaster && approvedMasterSpecialist && !specialists.some(s => s.id === approvedMasterSpecialist.id)) {
+      fetch('/api/specialists/self-heal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ specialist: approvedMasterSpecialist }),
+      }).then(() => {
+        fetchSpecialists();
+      }).catch(() => {});
+    }
+  }, [isApprovedMaster, approvedMasterSpecialist, specialists]);
 
   // Fetch service requests from backend API with automatic retry
   const fetchServiceRequests = async () => {

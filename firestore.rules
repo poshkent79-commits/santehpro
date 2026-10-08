@@ -17,22 +17,15 @@ service cloud.firestore {
     // Master works
     match /masterWorks/{workId} {
       allow read: if resource.data.status == 'approved' || isAuthenticated() || isAdmin();
-      allow create: if isAuthenticated() || true; // allow submissions for moderation
-      allow update, delete: if isAdmin() || isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
     }
 
     // Articles
     match /articles/{articleId} {
       allow read: if resource.data.isPublished == true || resource.data.moderationStatus == 'approved' || isAuthenticated() || isAdmin();
-      allow create: if isAuthenticated() || true; // allow master article submissions
-      allow update, delete: if isAdmin() || isAuthenticated();
-    }
-
-    // Specialists
-    match /specialists/{specialistId} {
-      allow read: if true;
-      allow create: if true; // allow application
-      allow update, delete: if isAdmin() || (isAuthenticated() && (resource.data.userUid == request.auth.uid || resource.data.email == request.auth.token.email));
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
     }
 
     // Default fallback

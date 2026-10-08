@@ -1,57 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Lock, ArrowRight, ShieldCheck, Mail, RefreshCw, AlertCircle } from 'lucide-react';
-import { PaymentMethodId, PaymentRegion, PaymentMethodOption, SmartPaymentInitResponse } from '../../types/payment';
-import { PaymentMethodTile } from './PaymentMethodTile';
-
-const RU_PAYMENT_METHODS: PaymentMethodOption[] = [
-  {
-    id: 'sbp',
-    title: 'СБП',
-    subtitle: 'Без комиссии • 0%',
-    badge: '0% СБП',
-    badgeColor: 'emerald',
-    iconType: 'sbp',
-    popular: true,
-  },
-  {
-    id: 'sberpay',
-    title: 'SberPay',
-    subtitle: 'СберБанк Онлайн',
-    badge: 'Быстро',
-    badgeColor: 'emerald',
-    iconType: 'sberpay',
-  },
-  {
-    id: 'tpay',
-    title: 'T-Pay',
-    subtitle: 'Т-Банк в 1 клик',
-    iconType: 'tpay',
-  },
-  {
-    id: 'card_ru',
-    title: 'Карта РФ',
-    subtitle: 'МИР, Visa, Mastercard',
-    iconType: 'card',
-  },
-];
-
-const CIS_INTL_PAYMENT_METHODS: PaymentMethodOption[] = [
-  {
-    id: 'card_intl',
-    title: 'Карта СНГ / Зарубеж',
-    subtitle: 'Visa, MC, Uzcard, Humo, Mir',
-    badge: 'СНГ и Мир',
-    badgeColor: 'blue',
-    iconType: 'globe',
-    popular: true,
-  },
-  {
-    id: 'wallets',
-    title: 'Электронные кошельки',
-    subtitle: 'ЮMoney, баланс и сервисы',
-    iconType: 'wallet',
-  },
-];
+import { ArrowRight, ShieldCheck, Mail, RefreshCw, AlertCircle } from 'lucide-react';
+import { PaymentRegion, SmartPaymentInitResponse } from '../../types/payment';
 
 const CIS_COUNTRIES = ['UZ', 'TJ', 'KZ', 'BY', 'AM', 'KG', 'AZ', 'MD', 'TM', 'GE'];
 
@@ -80,7 +29,6 @@ export const SmartPaymentModule: React.FC<SmartPaymentModuleProps> = ({
 }) => {
   const [region, setRegion] = useState<PaymentRegion>('RU');
   const [detectedCountry, setDetectedCountry] = useState<string>('RU');
-  const [paymentMethodId, setPaymentMethodId] = useState<PaymentMethodId>('sbp');
   const [email, setEmail] = useState<string>(userEmail || '');
   const [emailError, setEmailError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
@@ -99,10 +47,8 @@ export const SmartPaymentModule: React.FC<SmartPaymentModuleProps> = ({
             setDetectedCountry(country);
             if (country !== 'RU' && (CIS_COUNTRIES.includes(country) || country.length === 2)) {
               setRegion('CIS_INTL');
-              setPaymentMethodId('card_intl');
             } else {
               setRegion('RU');
-              setPaymentMethodId('sbp');
             }
           }
         }
@@ -120,10 +66,8 @@ export const SmartPaymentModule: React.FC<SmartPaymentModuleProps> = ({
   const toggleRegion = () => {
     if (region === 'RU') {
       setRegion('CIS_INTL');
-      setPaymentMethodId('card_intl');
     } else {
       setRegion('RU');
-      setPaymentMethodId('sbp');
     }
     setPaymentError(null);
   };
@@ -166,7 +110,7 @@ export const SmartPaymentModule: React.FC<SmartPaymentModuleProps> = ({
           userUid,
           userName,
           countryCode: region === 'CIS_INTL' ? (detectedCountry !== 'RU' ? detectedCountry : 'KZ') : 'RU',
-          paymentMethodId,
+          paymentMethodId: region === 'RU' ? 'sbp' : 'card_intl',
         }),
       });
 
@@ -188,36 +132,76 @@ export const SmartPaymentModule: React.FC<SmartPaymentModuleProps> = ({
     }
   };
 
-  const currentMethods = region === 'RU' ? RU_PAYMENT_METHODS : CIS_INTL_PAYMENT_METHODS;
-
   return (
     <div className="space-y-4 pt-1">
-      {/* Сетка методов оплаты */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <label className="text-[11px] font-black text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
-            <span>Способ оплаты:</span>
-          </label>
-          <span className="text-[10px] text-cyan-300 font-bold bg-cyan-500/10 px-2.5 py-0.5 rounded-full border border-cyan-500/20">
-            {region === 'RU' ? 'РФ • 0% комиссии' : 'СНГ / Зарубеж • 0%'}
+      {/* Краткая информационная плашка без громоздкой сетки плиток */}
+      <div className="flex items-center justify-between text-xs text-slate-300 px-3.5 py-2.5 bg-slate-950/70 rounded-xl border border-slate-800/90 shadow-sm">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0 animate-pulse"></span>
+          <span className="font-semibold text-slate-200 truncate">
+            {region === 'RU'
+              ? 'СБП • Карты МИР, Visa, Mastercard'
+              : 'Карты стран СНГ и зарубежные карты'}
           </span>
         </div>
-
-        <div className="grid grid-cols-2 gap-2.5">
-          {currentMethods.map((method) => (
-            <PaymentMethodTile
-              key={method.id}
-              method={method}
-              isSelected={paymentMethodId === method.id}
-              onSelect={setPaymentMethodId}
-            />
-          ))}
-        </div>
+        <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 shrink-0">
+          0% комиссии
+        </span>
       </div>
 
-      {/* Поле Email для отправки чека — с пометкой (необязательно), чисто и минималистично */}
-      <div className="space-y-1.5">
+      {/* Ошибка оплаты с быстрым повтором в один клик */}
+      {paymentError && (
+        <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-500/40 text-xs text-rose-300 flex items-start gap-2.5">
+          <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+          <div className="flex-1 space-y-1">
+            <div>{paymentError}</div>
+            <button
+              type="button"
+              onClick={handlePay}
+              className="text-[11px] font-bold text-cyan-300 underline hover:text-cyan-200 cursor-pointer flex items-center gap-1"
+            >
+              <RefreshCw className="w-3 h-3" />
+              <span>Повторить попытку</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Единая главная кнопка подтверждения: «Оплатить [Сумма] ₽» (без замочка) */}
+      <div className="pt-1">
+        <button
+          type="button"
+          disabled={isProcessing || amount <= 0}
+          onClick={handlePay}
+          className="relative group w-full py-3.5 sm:py-4 px-6 rounded-2xl bg-gradient-to-r from-cyan-500 via-teal-400 to-emerald-400 hover:from-cyan-400 hover:via-teal-300 hover:to-emerald-300 active:scale-[0.98] disabled:opacity-50 text-slate-950 font-black text-base sm:text-lg flex items-center justify-center space-x-2 transition-all shadow-xl shadow-cyan-950/40 hover:shadow-cyan-500/30 cursor-pointer overflow-hidden border border-cyan-300/40"
+        >
+          {/* Световой блик при наведении */}
+          <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/30 to-transparent pointer-events-none" />
+
+          {isProcessing ? (
+            <div className="flex items-center space-x-2 text-slate-950 font-black">
+              <RefreshCw className="w-5 h-5 animate-spin" />
+              <span>Формирование платежа...</span>
+            </div>
+          ) : (
+            <>
+              <span className="tracking-tight">
+                Оплатить {amount > 0 ? `${amount.toLocaleString('ru-RU')} ₽` : '0 ₽'}
+              </span>
+              <ArrowRight className="w-5 h-5 text-slate-950 stroke-[2.5] group-hover:translate-x-1 transition-transform" />
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Безопасность транзакции — перенесено выше E-mail, сразу под кнопку оплаты */}
+      <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 pt-0.5">
+        <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+        <span>Безопасная оплата • Защита 3-D Secure • 0% комиссии</span>
+      </div>
+
+      {/* Поле Email для отправки чека — с пометкой (необязательно) */}
+      <div className="space-y-1.5 pt-0.5">
         <label
           htmlFor="smart-pay-email"
           className="text-xs font-semibold text-slate-300 flex items-center gap-1.5"
@@ -247,60 +231,6 @@ export const SmartPaymentModule: React.FC<SmartPaymentModuleProps> = ({
         {emailError && (
           <p className="text-[10px] text-rose-400 font-medium">{emailError}</p>
         )}
-      </div>
-
-      {/* Ошибка оплаты с быстрым повтором в один клик */}
-      {paymentError && (
-        <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-500/40 text-xs text-rose-300 flex items-start gap-2.5">
-          <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-          <div className="flex-1 space-y-1">
-            <div>{paymentError}</div>
-            <button
-              type="button"
-              onClick={handlePay}
-              className="text-[11px] font-bold text-cyan-300 underline hover:text-cyan-200 cursor-pointer flex items-center gap-1"
-            >
-              <RefreshCw className="w-3 h-3" />
-              <span>Повторить попытку</span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Единая главная кнопка подтверждения: «Оплатить [Сумма] ₽» (dark mode fintech style) */}
-      <div className="pt-1">
-        <button
-          type="button"
-          disabled={isProcessing || amount <= 0}
-          onClick={handlePay}
-          className="relative group w-full py-3.5 sm:py-4 px-6 rounded-2xl bg-gradient-to-r from-cyan-500 via-teal-400 to-emerald-400 hover:from-cyan-400 hover:via-teal-300 hover:to-emerald-300 active:scale-[0.98] disabled:opacity-50 text-slate-950 font-black text-base sm:text-lg flex items-center justify-center space-x-2.5 transition-all shadow-xl shadow-cyan-950/40 hover:shadow-cyan-500/30 cursor-pointer overflow-hidden border border-cyan-300/40"
-        >
-          {/* Световой блик при наведении */}
-          <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/30 to-transparent pointer-events-none" />
-
-          {isProcessing ? (
-            <div className="flex items-center space-x-2 text-slate-950 font-black">
-              <RefreshCw className="w-5 h-5 animate-spin" />
-              <span>Формирование платежа...</span>
-            </div>
-          ) : (
-            <>
-              <div className="w-7 h-7 rounded-xl bg-slate-950/15 flex items-center justify-center">
-                <Lock className="w-4 h-4 text-slate-950 stroke-[2.5]" />
-              </div>
-              <span className="tracking-tight">
-                Оплатить {amount > 0 ? `${amount.toLocaleString('ru-RU')} ₽` : '0 ₽'}
-              </span>
-              <ArrowRight className="w-5 h-5 text-slate-950 stroke-[2.5] group-hover:translate-x-1 transition-transform" />
-            </>
-          )}
-        </button>
-
-        {/* Безопасность транзакции */}
-        <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 pt-2.5">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-          <span>Безопасная оплата • Защита 3-D Secure • 0% комиссии</span>
-        </div>
       </div>
 
       {/* Аккуратная ссылка-переключатель региона внизу экрана */}

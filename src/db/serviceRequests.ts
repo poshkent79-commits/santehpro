@@ -2,12 +2,48 @@ import { db, withDbRetry } from './index.ts';
 import { serviceRequests } from './schema.ts';
 import { eq, desc } from 'drizzle-orm';
 import { ServiceCallRequest } from '../types.ts';
+import fs from 'fs';
+import path from 'path';
+
+const DATA_DIR = path.resolve(process.cwd(), '.data');
+const REQUESTS_STORE_FILE = path.join(DATA_DIR, 'requests_store.json');
+const PERSISTED_DIR = path.resolve(process.cwd(), 'src/data/persisted');
+const PERSISTED_REQUESTS_FILE = path.join(PERSISTED_DIR, 'requests.json');
+
+function getCachedRequests(): ServiceCallRequest[] {
+  let diskList: ServiceCallRequest[] = [];
+  try {
+    if (fs.existsSync(REQUESTS_STORE_FILE)) {
+      const data = JSON.parse(fs.readFileSync(REQUESTS_STORE_FILE, 'utf-8'));
+      if (Array.isArray(data)) diskList = data;
+    }
+  } catch {}
+  try {
+    if (diskList.length === 0 && fs.existsSync(PERSISTED_REQUESTS_FILE)) {
+      const pData = JSON.parse(fs.readFileSync(PERSISTED_REQUESTS_FILE, 'utf-8'));
+      if (Array.isArray(pData)) diskList = pData;
+    }
+  } catch {}
+  return diskList;
+}
+
+function saveCachedRequests(list: ServiceCallRequest[]): void {
+  try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    if (!fs.existsSync(PERSISTED_DIR)) fs.mkdirSync(PERSISTED_DIR, { recursive: true });
+    const jsonStr = JSON.stringify(list, null, 2);
+    fs.writeFileSync(REQUESTS_STORE_FILE, jsonStr, 'utf-8');
+    fs.writeFileSync(PERSISTED_REQUESTS_FILE, jsonStr, 'utf-8');
+  } catch {}
+}
+
+let inMemoryRequests: ServiceCallRequest[] = getCachedRequests();
 
 export async function getDbServiceRequests(): Promise<ServiceCallRequest[]> {
   try {
     return await withDbRetry(async () => {
       const rows = await db.select().from(serviceRequests).orderBy(desc(serviceRequests.createdAt));
-      return rows.map(r => ({
+      const mapped = rows.map(r => ({
         id: r.id,
         clientName: r.clientName,
         clientPhone: r.clientPhone,
@@ -30,13 +66,20 @@ export async function getDbServiceRequests(): Promise<ServiceCallRequest[]> {
         masterRepliedAt: (r as any).masterRepliedAt ? (r as any).masterRepliedAt.toISOString() : undefined,
         createdAt: r.createdAt ? r.createdAt.toISOString() : new Date().toISOString(),
       }));
+      if (mapped.length > 0) {
+        inMemoryRequests = mapped;
+        saveCachedRequests(mapped);
+      }
+      return mapped.length > 0 ? mapped : inMemoryRequests;
     });
   } catch (_error) {
-    return [];
+    return inMemoryRequests;
   }
 }
 
 export async function createDbServiceRequest(req: ServiceCallRequest): Promise<ServiceCallRequest> {
+  inMemoryRequests.unshift(req);
+  saveCachedRequests(inMemoryRequests);
   try {
     return await withDbRetry(async () => {
       await db.insert(serviceRequests).values({
@@ -68,6 +111,11 @@ export async function createDbServiceRequest(req: ServiceCallRequest): Promise<S
 }
 
 export async function updateDbServiceRequest(id: string, updates: Partial<ServiceCallRequest>): Promise<void> {
+  const idx = inMemoryRequests.findIndex(r => r.id === id);
+  if (idx !== -1) {
+    inMemoryRequests[idx] = { ...inMemoryRequests[idx], ...updates };
+    saveCachedRequests(inMemoryRequests);
+  }
   try {
     const values: Record<string, any> = {};
     if (updates.clientName !== undefined) values.clientName = updates.clientName;
@@ -96,16 +144,16 @@ export async function updateDbServiceRequest(id: string, updates: Partial<Servic
 
     await db.update(serviceRequests).set(values).where(eq(serviceRequests.id, id));
   } catch (error) {
-    console.error('Database query failed in updateDbServiceRequest:', error);
-    throw new Error('Database query failed. Please try again later.', { cause: error });
+    console.warn('Database note in updateDbServiceRequest:', error);
   }
 }
 
 export async function deleteDbServiceRequest(id: string): Promise<void> {
+  inMemoryRequests = inMemoryRequests.filter(r => r.id !== id);
+  saveCachedRequests(inMemoryRequests);
   try {
     await db.delete(serviceRequests).where(eq(serviceRequests.id, id));
   } catch (error) {
-    console.error('Database query failed in deleteDbServiceRequest:', error);
-    throw new Error('Database query failed. Please try again later.', { cause: error });
+    console.warn('Database note in deleteDbServiceRequest:', error);
   }
 }

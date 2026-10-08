@@ -25,7 +25,7 @@ import { INITIAL_DIAGNOSTIC_SESSIONS, detectDiagnosticCategory } from './src/uti
 import { getDbServiceRequests, createDbServiceRequest, updateDbServiceRequest, deleteDbServiceRequest } from './src/db/serviceRequests.ts';
 import { getDbSpecialists, createDbSpecialist, updateDbSpecialist, deleteDbSpecialist, getDbDeletedSpecialists, saveCachedSpecialists, getCachedSpecialists } from './src/db/specialists.ts';
 import { createSystemSnapshot, listAllBackups, readBackupPayload } from './src/services/backupEngine.ts';
-import { getDbMasterWorks, createDbMasterWork, updateDbMasterWork, deleteDbMasterWork } from './src/db/masterWorks.ts';
+import { getDbMasterWorks, createDbMasterWork, updateDbMasterWork, deleteDbMasterWork, deleteDbMasterWorksBySpecialistId } from './src/db/masterWorks.ts';
 import { getDbSavedEstimates, createDbSavedEstimate, deleteDbSavedEstimate, getDbSavedEstimateById, updateDbSavedEstimate } from './src/db/estimates.ts';
 import { getDbArticles, createDbArticle, updateDbArticle, deleteDbArticle, getCachedArticles, saveCachedArticles } from './src/db/articles.ts';
 import { getDbMediaFiles, getDbMediaFileById, createDbMediaFile, updateDbMediaFile, deleteDbMediaFile } from './src/db/mediaFiles.ts';
@@ -213,10 +213,40 @@ let articlesVersion = Date.now();
 let specialistsVersion = Date.now();
 let mediaFilesVersion = Date.now();
 
+// Helper for persistent Q&A community questions on TimWeb server
+const QUESTIONS_STORE_FILE = path.join(process.cwd(), '.data', 'questions_store.json');
+const PERSISTED_QUESTIONS_FILE = path.join(process.cwd(), 'src/data/persisted', 'questions.json');
+
+function getCachedQuestions(): CommunityQuestion[] {
+  try {
+    if (fs.existsSync(QUESTIONS_STORE_FILE)) {
+      const data = JSON.parse(fs.readFileSync(QUESTIONS_STORE_FILE, 'utf-8'));
+      if (Array.isArray(data) && data.length > 0) return data;
+    }
+    if (fs.existsSync(PERSISTED_QUESTIONS_FILE)) {
+      const data = JSON.parse(fs.readFileSync(PERSISTED_QUESTIONS_FILE, 'utf-8'));
+      if (Array.isArray(data) && data.length > 0) return data;
+    }
+  } catch {}
+  return [...INITIAL_QUESTIONS];
+}
+
+function saveCachedQuestions(list: CommunityQuestion[]): void {
+  try {
+    const dataDir = path.join(process.cwd(), '.data');
+    const persistedDir = path.join(process.cwd(), 'src/data/persisted');
+    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+    if (!fs.existsSync(persistedDir)) fs.mkdirSync(persistedDir, { recursive: true });
+    const jsonStr = JSON.stringify(list, null, 2);
+    fs.writeFileSync(QUESTIONS_STORE_FILE, jsonStr, 'utf-8');
+    fs.writeFileSync(PERSISTED_QUESTIONS_FILE, jsonStr, 'utf-8');
+  } catch {}
+}
+
 // In-memory persistent data store during server runtime (backed by persistent disk & Cloud SQL)
 let articlesStore: Article[] = getCachedArticles();
-let specialistsStore: PlumbingSpecialist[] = [...INITIAL_SPECIALISTS];
-let questionsStore: CommunityQuestion[] = [...INITIAL_QUESTIONS];
+let specialistsStore: PlumbingSpecialist[] = getCachedSpecialists();
+let questionsStore: CommunityQuestion[] = getCachedQuestions();
 let serviceRequestsStore: ServiceCallRequest[] = [];
 let diagnosticSessionsStore: DiagnosticSession[] = [...INITIAL_DIAGNOSTIC_SESSIONS];
 
@@ -225,17 +255,20 @@ getDbSpecialists()
   .then((dbSpecs) => {
     if (Array.isArray(dbSpecs) && dbSpecs.length > 0) {
       // Filter out old demo mock specialists and deduplicate
-      specialistsStore = deduplicateSpecialistsList(
-        dbSpecs.filter(s => !['spec-2', 'spec-3', 'spec-4', 'spec-5'].includes(s.id))
-      );
-      console.log(`[Specialists] Synced ${specialistsStore.length} real specialists from DB.`);
+      const current = getCachedSpecialists();
+      specialistsStore = deduplicateSpecialistsList([
+        ...current,
+        ...dbSpecs.filter(s => !['spec-2', 'spec-3', 'spec-4', 'spec-5'].includes(s.id))
+      ]);
+      saveCachedSpecialists(specialistsStore);
+      console.log(`[Specialists] Synced ${specialistsStore.length} real specialists from DB & persistent storage.`);
     } else {
-      specialistsStore = [...INITIAL_SPECIALISTS];
+      specialistsStore = getCachedSpecialists();
     }
   })
   .catch((err) => {
-    console.warn('[Specialists] Initial database load note:', err);
-    specialistsStore = [...INITIAL_SPECIALISTS];
+    console.warn('[Specialists] Initial database load note, using persistent cache:', err);
+    specialistsStore = getCachedSpecialists();
   });
 
 // Asynchronously sync service requests from DB on startup (clearing demo/test calls)
@@ -1360,36 +1393,59 @@ app.post('/api/admin/backups/upload', express.json({ limit: '50mb' }), async (re
 app.post('/api/specialists/self-heal', async (req, res) => {
   try {
     const { specialist } = req.body;
-    if (!specialist || !specialist.phone) {
+    if (!specialist) {
       return res.status(400).json({ error: 'Не переданы данные мастера' });
     }
 
-    const cleanPhone = specialist.phone.replace(/\D/g, '');
-    let existing = specialistsStore.find((s) => {
-      const sPhone = (s.phone || '').replace(/\D/g, '');
-      return sPhone && (sPhone === cleanPhone || sPhone.endsWith(cleanPhone.slice(-10)));
+    // Safety guard: NEVER restore masters who were deleted, put on pause, or went on vacation!
+    const deletedSpecialistsList = await getDbDeletedSpecialists();
+    const isDeleted = deletedSpecialistsList.some((d) => 
+      (specialist.id && d.masterId === specialist.id) ||
+      (specialist.userUid && (d as any).userUid === specialist.userUid)
+    );
+    if (isDeleted) {
+      return res.status(403).json({
+        error: 'Анкета мастера была удалена пользователем, поставлена на паузу или находится в отпуске.',
+        deleted: true,
+      });
+    }
+
+    const cleanPhone = (specialist.phone || '').replace(/\D/g, '');
+    let existingIndex = specialistsStore.findIndex((s) => {
+      if (specialist.id && s.id === specialist.id) return true;
+      if (specialist.userUid && s.userUid && s.userUid === specialist.userUid) return true;
+      if (specialist.email && s.email && s.email.toLowerCase().trim() === specialist.email.toLowerCase().trim()) return true;
+      if (cleanPhone && s.phone) {
+        const sPhone = s.phone.replace(/\D/g, '');
+        return sPhone && (sPhone === cleanPhone || sPhone.endsWith(cleanPhone.slice(-10)));
+      }
+      return false;
     });
 
-    if (existing) {
-      existing.status = 'approved';
-      existing.verified = true;
+    if (existingIndex >= 0) {
+      specialistsStore[existingIndex] = {
+        ...specialistsStore[existingIndex],
+        ...specialist,
+        status: specialist.status || 'approved',
+        verified: specialist.verified !== undefined ? specialist.verified : true,
+      };
       saveCachedSpecialists(specialistsStore);
-      return res.json({ success: true, specialist: existing });
+      console.log(`[Self-Heal] Successfully updated & healed master "${specialistsStore[existingIndex].name}"`);
+      return res.json({ success: true, specialist: specialistsStore[existingIndex] });
     }
 
     const restoredSpec: PlumbingSpecialist = {
       ...specialist,
-      id: specialist.id || `master_${cleanPhone}_${Date.now()}`,
-      status: 'approved',
-      verified: true,
+      id: specialist.id || `master_${cleanPhone || Date.now()}`,
+      status: specialist.status || 'approved',
+      verified: specialist.verified !== undefined ? specialist.verified : true,
       rating: specialist.rating || 5.0,
       reviewsCount: specialist.reviewsCount || 1,
     };
 
     specialistsStore.unshift(restoredSpec);
     saveCachedSpecialists(specialistsStore);
-    createSystemSnapshot(specialistsStore, [], serviceRequestsStore, articlesStore, `Самоисцеление мастера ${restoredSpec.phone}`);
-    console.log(`[Self-Heal] Successfully self-healed master "${restoredSpec.name}" (${restoredSpec.phone})!`);
+    console.log(`[Self-Heal] Successfully self-healed and restored master "${restoredSpec.name}"`);
     return res.json({ success: true, healed: true, specialist: restoredSpec });
   } catch (err: any) {
     console.error('Error in /api/specialists/self-heal:', err);
@@ -2270,21 +2326,45 @@ app.put('/api/specialists/:id/status', async (req, res) => {
 });
 
 // DELETE Specialist (Permanent removal with audit record of registration & deletion retained in DB)
+// When master clicks Pause, Vacation, or Deletes Account - ALL their data is deleted from the server
 app.delete('/api/specialists/:id', async (req, res) => {
   const { id } = req.params;
+  const reasonParam = String(req.query.reason || req.body?.reason || '').toLowerCase();
+  let reasonLabel = 'Удаление профиля мастера';
+  if (reasonParam === 'pause' || reasonParam.includes('пауз')) {
+    reasonLabel = 'Пауза (приостановка приема заказов)';
+  } else if (reasonParam === 'vacation' || reasonParam.includes('отпуск')) {
+    reasonLabel = 'Уход в отпуск';
+  } else if (reasonParam === 'delete' || reasonParam.includes('удал')) {
+    reasonLabel = 'Удаление анкеты мастера';
+  }
+
   try {
+    const existing = specialistsStore.find(s => s.id === id);
     specialistsStore = specialistsStore.filter(s => s.id !== id);
-    const auditRecord = await deleteDbSpecialist(id);
+    saveCachedSpecialists(specialistsStore, true);
+    const auditRecord = await deleteDbSpecialist(id, reasonLabel);
+    await deleteDbMasterWorksBySpecialistId(id);
+
+    if (existing?.userUid) {
+      try {
+        await updateUserProfile(existing.userUid, { role: 'user' });
+      } catch (uErr) {
+        console.warn('Failed to reset user role after specialist delete:', uErr);
+      }
+    }
+
     broadcastRealtimeEvent({
       type: 'specialist:deleted',
-      data: { id, auditRecord },
+      data: { id, auditRecord, reason: reasonLabel },
     });
     syncEntityToTimeWebCloud('specialists', 'delete', id, { id, auditRecord }).catch(() => {});
     res.json({
       success: true,
       id,
       auditRecord,
-      message: 'Мастер навсегда удален из активного каталога. В базе данных сохранена информация о мастере: когда зарегистрировался и когда был удален.',
+      reason: reasonLabel,
+      message: `Данные мастера удалены (${reasonLabel}). Все данные мастера удалены с сервера TimWeb.`,
     });
   } catch (error) {
     console.error('Error deleting specialist:', error);
@@ -4443,12 +4523,28 @@ app.put('/api/user/profile', async (req, res) => {
   }
 });
 
-// DELETE User Account completely from Cloud SQL
+// DELETE User Account completely from TimWeb server
+// When a master deletes their account, ALL their master data, works, and account data are deleted
 app.delete('/api/user/account', async (req, res) => {
   try {
     const { uid } = req.body;
     if (!uid || typeof uid !== 'string') {
       return res.status(400).json({ error: 'Не указан идентификатор пользователя (uid)' });
+    }
+
+    const targetUser = await getUserByUid(uid).catch(() => null);
+    const targetEmail = targetUser?.email?.toLowerCase().trim();
+
+    // If the user has an associated specialist/master profile, permanently delete all their master data too!
+    const linkedSpecs = specialistsStore.filter(s => 
+      s.userUid === uid || 
+      (targetEmail && s.email && s.email.toLowerCase().trim() === targetEmail)
+    );
+    for (const spec of linkedSpecs) {
+      specialistsStore = specialistsStore.filter(s => s.id !== spec.id);
+      saveCachedSpecialists(specialistsStore, true);
+      await deleteDbSpecialist(spec.id, 'Удаление аккаунта пользователем');
+      await deleteDbMasterWorksBySpecialistId(spec.id);
     }
 
     const deleted = await deleteDbUser(uid);
@@ -4458,7 +4554,7 @@ app.delete('/api/user/account', async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Аккаунт и все связанные данные успешно удалены из базы данных Cloud SQL',
+      message: 'Аккаунт и все связанные данные мастера успешно удалены с сервера TimWeb',
       deletedUid: uid,
     });
   } catch (error) {
@@ -5140,6 +5236,7 @@ app.post('/api/questions', (req, res) => {
   };
 
   questionsStore.unshift(newQ);
+  saveCachedQuestions(questionsStore);
   res.status(201).json(newQ);
 });
 
@@ -5147,6 +5244,7 @@ app.post('/api/questions', (req, res) => {
 app.delete('/api/questions/:id', (req, res) => {
   const { id } = req.params;
   questionsStore = questionsStore.filter(q => q.id !== id);
+  saveCachedQuestions(questionsStore);
   res.json({ success: true, id });
 });
 
@@ -5178,6 +5276,7 @@ app.post('/api/questions/:id/answers', (req, res) => {
     };
   }
 
+  saveCachedQuestions(questionsStore);
   res.status(201).json(q);
 });
 
@@ -5193,6 +5292,7 @@ app.delete('/api/questions/:id/answers/:answerId', (req, res) => {
     q.answers = q.answers.filter(a => a.id !== answerId);
     q.answersCount = q.answers.length;
   }
+  saveCachedQuestions(questionsStore);
   res.json(q);
 });
 

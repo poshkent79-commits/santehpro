@@ -1,0 +1,50 @@
+[
+  {
+    "id": 1,
+    "uid": "usr-admin-poshkent",
+    "email": "poshkent79@gmail.com",
+    "name": "Главный Администратор",
+    "phone": "+7 (999) 000-79-79",
+    "city": "Москва",
+    "passwordHash": "4b5872636841bd5172cc219f731652cc:8e8d3551772c1a9b57a60d684f7b57f774b245c503529ff1d59640068f30f061e469b251f76c84ddb7ef7f2292a40d0e9ce8fd79813c3337fb9e2884e400d315",
+    "role": "admin",
+    "dataConsent": true,
+    "consentTimestamp": "2026-10-08T05:56:23.023Z",
+    "legalConsent": true,
+    "legalConsentTimestamp": "2026-10-08T05:56:23.023Z",
+    "legalChecklistJson": null,
+    "createdAt": "2026-10-08T05:56:23.023Z"
+  },
+  {
+    "id": 2,
+    "uid": "usr-admin-master",
+    "email": "admin@santehpro.ru",
+    "name": "Администратор СантехПро",
+    "phone": "+7 (999) 000-00-00",
+    "city": "Москва",
+    "passwordHash": "44bd2fc93f51534b8a0867a8edbe5101:f6aa056ea44066e11a69dbdc4d0aea90c6835a03e3b49f512fb5623eac286c5fa14514c24097ef307d6db5f00ef37c0ef1e098ec9ad39d290ba509fc70ada25f",
+    "role": "admin",
+    "dataConsent": true,
+    "consentTimestamp": "2026-10-08T05:56:23.023Z",
+    "legalConsent": true,
+    "legalConsentTimestamp": "2026-10-08T05:56:23.023Z",
+    "legalChecklistJson": null,
+    "createdAt": "2026-10-08T05:56:23.023Z"
+  },
+  {
+    "id": 3,
+    "uid": "usr-demo-master",
+    "email": "user@santehpro.ru",
+    "name": "Мастер-Пользователь",
+    "phone": "+7 (999) 111-22-33",
+    "city": "Москва",
+    "passwordHash": "cab50996ac62d561f6b30d4df9bf540f:fb5c717354de47432388839bd67cd0fd715952701280f2c843548d5b3c3d7ee2ebd5f16498b6c567ff9dc50914243c919e017f6b00d78e82bc4822488b901e31",
+    "role": "user",
+    "dataConsent": true,
+    "consentTimestamp": "2026-10-08T05:56:23.024Z",
+    "legalConsent": true,
+    "legalConsentTimestamp": "2026-10-08T05:56:23.024Z",
+    "legalChecklistJson": null,
+    "createdAt": "2026-10-08T05:56:23.024Z"
+  }
+]

@@ -25,7 +25,9 @@ export const getInstructionImage = (art: { id?: string; title: string; category?
   return '';
 };
 
-export const HANDBOOK_IMAGE_TITLES: Record<string, string> = {};
+export const HANDBOOK_IMAGE_TITLES: Record<string, string> = {
+  'top-9-installation-frame': 'Монтаж силовой инсталляции',
+};
 
 /**
  * Generates calibrated title

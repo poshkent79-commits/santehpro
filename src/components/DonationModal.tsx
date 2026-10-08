@@ -372,20 +372,23 @@ export const DonationModal: React.FC<DonationModalProps> = ({
             </div>
           )}
 
-          {/* LEGAL COMPLIANCE NOTICE FOR ROBOKASSA & PAYMENT PROVIDERS */}
-          <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 text-[11px] text-slate-400 text-center leading-relaxed space-y-1">
+          {/* Уведомление о добровольном пожертвовании (нейтральное для любых стран) */}
+          <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 text-[11px] text-slate-400 text-center leading-relaxed">
             <p>
-              Совершая добровольный перевод, вы принимаете условия{' '}
-              <button
-                type="button"
-                onClick={() => {
-                  onClose();
-                  onOpenOffer?.();
-                }}
-                className="text-cyan-400 hover:text-cyan-300 font-semibold underline cursor-pointer"
-              >
-                Публичной оферты о добровольном пожертвовании
-              </button>{' '}
+              Совершая добровольный перевод, вы принимаете{' '}
+              <span className="whitespace-nowrap">
+                условия{' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenOffer?.();
+                  }}
+                  className="text-cyan-400 hover:text-cyan-300 font-semibold underline cursor-pointer inline"
+                >
+                  Публичной оферты
+                </button>
+              </span>{' '}
               и соглашаетесь с{' '}
               <button
                 type="button"
@@ -393,21 +396,17 @@ export const DonationModal: React.FC<DonationModalProps> = ({
                   onClose();
                   onOpenPrivacy?.();
                 }}
-                className="text-cyan-400 hover:text-cyan-300 font-semibold underline cursor-pointer"
+                className="text-cyan-400 hover:text-cyan-300 font-semibold underline cursor-pointer inline whitespace-nowrap"
               >
                 Политикой конфиденциальности
               </button>
-              .
-            </p>
-            <p className="text-[10px] text-slate-500">
-              Пожертвование осуществляется в общеполезных целях на развитие открытого некоммерческого сервиса и серверов в соответствии со ст. 582 ГК РФ.
+              . Платёж является добровольным безвозмездным пожертвованием (дарением) на развитие проекта и покрытие серверных расходов и не является оплатой товаров, работ или услуг.
             </p>
           </div>
 
-          {/* Footnote reassurance without phone */}
-          <div className="flex flex-wrap items-center justify-between text-[10px] text-slate-500 border-t border-slate-800/80 pt-2 gap-y-1">
-            <span>СантехПро • Самозанятый Туйчиев Д. Н. (ИНН 250900981804)</span>
-            <span>E-mail: santehpro.info@yandex.ru</span>
+          {/* Подвал (реквизиты разработчика) */}
+          <div className="flex items-center justify-center text-center text-[10px] text-slate-500 border-t border-slate-800/80 pt-2">
+            <span>СантехПро • Туйчиев Д. Н. (ИНН 250900981804)</span>
           </div>
         </div>
       </div>

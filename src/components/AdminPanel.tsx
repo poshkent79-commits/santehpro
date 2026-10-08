@@ -788,11 +788,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         ? Math.max(0, Math.round((1 - compressed.compressedSize / compressed.originalSize) * 100))
         : 0;
 
+      // Always prioritize self-contained compressed WebP data URL so the image survives any server restarts/updates
       let finalUrl = compressed.base64;
 
-      // Stream to server cloud uploads directory
       try {
-        const uploadRes = await fetch('/api/upload', {
+        await fetch('/api/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -802,12 +802,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             category: newCategory,
           }),
         });
-        if (uploadRes.ok) {
-          const uploadData = await uploadRes.json();
-          if (uploadData.fileUrl) {
-            finalUrl = uploadData.fileUrl;
-          }
-        }
       } catch (uploadErr) {
         console.warn('Cloud upload fallback to compressed base64:', uploadErr);
       }
@@ -851,10 +845,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         ? Math.max(0, Math.round((1 - compressed.compressedSize / compressed.originalSize) * 100))
         : 0;
 
+      // Always prioritize self-contained compressed WebP data URL so the cover survives any server restarts/updates
       let finalUrl = compressed.base64;
 
       try {
-        const uploadRes = await fetch('/api/upload', {
+        await fetch('/api/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -864,12 +859,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             category: newCategory,
           }),
         });
-        if (uploadRes.ok) {
-          const uploadData = await uploadRes.json();
-          if (uploadData.fileUrl) {
-            finalUrl = uploadData.fileUrl;
-          }
-        }
       } catch (uploadErr) {
         console.warn('Cloud upload fallback for cover:', uploadErr);
       }

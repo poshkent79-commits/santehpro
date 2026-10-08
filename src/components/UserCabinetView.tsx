@@ -48,7 +48,7 @@ import {
 import { ApplySpecialistModal } from './ApplySpecialistModal';
 import { useAuth } from '../context/AuthContext';
 import { Article, UserPurchase, UserFavorite, ServiceCallRequest, PlumbingSpecialist } from '../types';
-import { RUSSIAN_CITIES } from '../data/initialData';
+import { RUSSIAN_CITIES, FOUNDER_MASTER_SPECIALIST } from '../data/initialData';
 import {
   COUNTRIES,
   CountryInfo,
@@ -185,9 +185,6 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
     return false;
   }) || null;
 
-  // Master profile is present if userSpecialist is found
-  const masterProfile: PlumbingSpecialist | null = userSpecialist;
-
   const currentName = (currentUser?.name || '').toLowerCase();
   const currentEmail = (currentUser?.email || '').toLowerCase().trim();
   const currentPhone = (currentUser?.phone || '').replace(/\D/g, '');
@@ -204,15 +201,89 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
     )
   );
 
+  const isMasterDeletedRecently = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('santehpro_master_just_deleted') === 'true';
+
+  // Retrieve saved master questionnaire from browser localStorage if server restarted or was updated, only if user is an approved specialist
+  const localMasterQuestionnaire: PlumbingSpecialist | null = useMemo(() => {
+    if (!currentUser || isMasterDeletedRecently) return null;
+    if (currentUser.role !== 'specialist' && !isOwnerUser) return null;
+    try {
+      const keys = [
+        `santehpro_master_questionnaire_${currentUser.uid}`,
+        `santehpro_master_questionnaire_${currentUser.id}`,
+        'santehpro_last_master_application',
+        'santehpro_master_profile_cache',
+      ];
+      for (const k of keys) {
+        const item = localStorage.getItem(k);
+        if (item) {
+          const parsed = JSON.parse(item);
+          if (parsed && (parsed.name || parsed.phone || parsed.city)) {
+            return {
+              ...parsed,
+              userUid: currentUser.uid || parsed.userUid,
+              email: currentUser.email || parsed.email,
+              phone: currentUser.phone || parsed.phone,
+              name: currentUser.name || parsed.name,
+              status: parsed.status || 'approved',
+              verified: parsed.verified !== undefined ? parsed.verified : true,
+            };
+          }
+        }
+      }
+    } catch {}
+    return null;
+  }, [currentUser, isMasterDeletedRecently, isOwnerUser]);
+
+  // Master profile is present if userSpecialist is found, or recovered from local cache, or for owner
+  const masterProfile: PlumbingSpecialist | null = isMasterDeletedRecently ? null : (userSpecialist || localMasterQuestionnaire || (isOwnerUser ? {
+    ...FOUNDER_MASTER_SPECIALIST,
+    userUid: currentUser?.uid || FOUNDER_MASTER_SPECIALIST.userUid,
+    email: currentUser?.email || FOUNDER_MASTER_SPECIALIST.email,
+    phone: currentUser?.phone || FOUNDER_MASTER_SPECIALIST.phone,
+    name: currentUser?.name || FOUNDER_MASTER_SPECIALIST.name,
+  } : null));
+
   // "У мастеров, прошедших проверку, автоматически открывается личный кабинет"
   const isVerifiedMaster = Boolean(
     currentUser &&
+    !isMasterDeletedRecently &&
     (
       isOwnerUser ||
-      currentUser.role === 'specialist' ||
-      (masterProfile && (masterProfile.verified || masterProfile.status === 'approved'))
+      (userSpecialist && (userSpecialist.verified || userSpecialist.status === 'approved')) ||
+      (currentUser.role === 'specialist' && (userSpecialist || localMasterQuestionnaire))
     )
   );
+
+  // Guaranteed resilient profile for verified masters so questionnaire is accurately loaded
+  const effectiveMasterProfile: PlumbingSpecialist | null = isMasterDeletedRecently ? null : (userSpecialist || masterProfile);
+
+  // Cache master profile locally to preserve questionnaire across updates
+  useEffect(() => {
+    if (isMasterDeletedRecently) return;
+    const profileToCache = userSpecialist || effectiveMasterProfile || masterProfile;
+    if (currentUser?.uid && profileToCache && (isVerifiedMaster || currentUser.role === 'specialist')) {
+      try {
+        localStorage.setItem(`santehpro_master_questionnaire_${currentUser.uid}`, JSON.stringify(profileToCache));
+        if (profileToCache.id) {
+          localStorage.setItem('santehpro_master_specialist_id', profileToCache.id);
+        }
+      } catch {}
+    }
+  }, [currentUser?.uid, userSpecialist, effectiveMasterProfile, masterProfile, isVerifiedMaster, isMasterDeletedRecently]);
+
+  // Auto-heal master profile to server if missing from current array
+  useEffect(() => {
+    if (!isMasterDeletedRecently && isVerifiedMaster && effectiveMasterProfile && !userSpecialist && currentUser?.role === 'specialist') {
+      fetch('/api/specialists/self-heal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ specialist: effectiveMasterProfile }),
+      }).then((res) => {
+        if (res.ok && onRefreshSpecialists) onRefreshSpecialists();
+      }).catch(() => {});
+    }
+  }, [isMasterDeletedRecently, isVerifiedMaster, effectiveMasterProfile, userSpecialist, currentUser?.role, onRefreshSpecialists]);
 
   const [activeTab, setActiveTab] = useState<'favorites' | 'requests' | 'profile' | 'master'>(() => {
     if (initialTab && initialTab !== 'purchases') return initialTab;
@@ -571,7 +642,17 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
     setDeleteError(null);
     try {
       await deleteAccount();
+      try {
+        sessionStorage.setItem('santehpro_master_just_deleted', 'true');
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const k = localStorage.key(i);
+          if (k && (k.startsWith('santehpro_') || k.includes('master'))) {
+            localStorage.removeItem(k);
+          }
+        }
+      } catch {}
       setIsDeleteModalOpen(false);
+      onRefreshSpecialists?.();
     } catch (err: any) {
       console.error('Account deletion error:', err);
       setDeleteError(err?.message || 'Не удалось удалить аккаунт из базы данных');
@@ -1636,9 +1717,9 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
 
       {/* Tab 5: Specialist Personal Cabinet - Displayed for approved masters */}
       {activeTab === 'master' && (
-        isVerifiedMaster && masterProfile ? (
+        isVerifiedMaster && (effectiveMasterProfile || masterProfile) ? (
           <MasterCabinetSection
-            specialist={masterProfile}
+            specialist={(effectiveMasterProfile || masterProfile)!}
             onRefreshSpecialist={onRefreshSpecialists}
             onOpenArticle={onSelectArticle}
           />

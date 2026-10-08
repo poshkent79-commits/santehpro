@@ -91,17 +91,19 @@ interface CachedUser {
 
 const DATA_DIR = path.resolve(process.cwd(), '.data');
 const USERS_STORE_FILE = path.join(DATA_DIR, 'users_store.json');
+const PERSISTED_DIR = path.resolve(process.cwd(), 'src/data/persisted');
+const PERSISTED_USERS_FILE = path.join(PERSISTED_DIR, 'users.json');
 
 function loadInitialUsers(): CachedUser[] {
+  let diskUsers: CachedUser[] = [];
+  let persistedUsers: CachedUser[] = [];
+
   try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
     if (fs.existsSync(USERS_STORE_FILE)) {
       const content = fs.readFileSync(USERS_STORE_FILE, 'utf-8');
       const parsed = JSON.parse(content);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.map((u: any) => ({
+        diskUsers = parsed.map((u: any) => ({
           ...u,
           consentTimestamp: new Date(u.consentTimestamp || Date.now()),
           legalConsentTimestamp: new Date(u.legalConsentTimestamp || Date.now()),
@@ -110,7 +112,24 @@ function loadInitialUsers(): CachedUser[] {
       }
     }
   } catch (err) {
-    console.warn('Could not read users_store.json, initializing defaults:', err);
+    console.warn('Could not read users_store.json:', err);
+  }
+
+  try {
+    if (fs.existsSync(PERSISTED_USERS_FILE)) {
+      const pContent = fs.readFileSync(PERSISTED_USERS_FILE, 'utf-8');
+      const pParsed = JSON.parse(pContent);
+      if (Array.isArray(pParsed) && pParsed.length > 0) {
+        persistedUsers = pParsed.map((u: any) => ({
+          ...u,
+          consentTimestamp: new Date(u.consentTimestamp || Date.now()),
+          legalConsentTimestamp: new Date(u.legalConsentTimestamp || Date.now()),
+          createdAt: new Date(u.createdAt || Date.now()),
+        }));
+      }
+    }
+  } catch (err) {
+    console.warn('Could not read persisted users file:', err);
   }
 
   // Pre-seed default accounts
@@ -165,16 +184,32 @@ function loadInitialUsers(): CachedUser[] {
     },
   ];
 
+  const map = new Map<string, CachedUser>();
+  for (const u of defaults) {
+    map.set(u.uid || u.email, u);
+  }
+  for (const u of persistedUsers) {
+    map.set(u.uid || u.email, u);
+  }
+  for (const u of diskUsers) {
+    map.set(u.uid || u.email, u);
+  }
+
+  const merged = Array.from(map.values());
+
   try {
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
     }
-    fs.writeFileSync(USERS_STORE_FILE, JSON.stringify(defaults, null, 2), 'utf-8');
-  } catch (e) {
-    // ignore
-  }
+    if (!fs.existsSync(PERSISTED_DIR)) {
+      fs.mkdirSync(PERSISTED_DIR, { recursive: true });
+    }
+    const jsonStr = JSON.stringify(merged, null, 2);
+    fs.writeFileSync(USERS_STORE_FILE, jsonStr, 'utf-8');
+    fs.writeFileSync(PERSISTED_USERS_FILE, jsonStr, 'utf-8');
+  } catch (e) {}
 
-  return defaults;
+  return merged;
 }
 
 const inMemoryUsers: CachedUser[] = loadInitialUsers();
@@ -184,7 +219,12 @@ function persistUsersToDisk() {
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
     }
-    fs.writeFileSync(USERS_STORE_FILE, JSON.stringify(inMemoryUsers, null, 2), 'utf-8');
+    if (!fs.existsSync(PERSISTED_DIR)) {
+      fs.mkdirSync(PERSISTED_DIR, { recursive: true });
+    }
+    const jsonStr = JSON.stringify(inMemoryUsers, null, 2);
+    fs.writeFileSync(USERS_STORE_FILE, jsonStr, 'utf-8');
+    fs.writeFileSync(PERSISTED_USERS_FILE, jsonStr, 'utf-8');
   } catch (err) {
     console.warn('Failed to write users to disk:', err);
   }

@@ -9,53 +9,101 @@ import path from 'path';
 
 const DATA_DIR = path.resolve(process.cwd(), '.data');
 const ARTICLES_STORE_FILE = path.join(DATA_DIR, 'articles_store.json');
+const PERSISTED_DIR = path.resolve(process.cwd(), 'src/data/persisted');
+const PERSISTED_ARTICLES_FILE = path.join(PERSISTED_DIR, 'articles.json');
 
 /**
- * Read cached articles from disk storage (.data/articles_store.json).
+ * Read cached articles from disk storage (.data/articles_store.json & src/data/persisted/articles.json).
  * Guarantees that any articles, step-by-step guides, or courses added or edited
  * by the administrator persist across server restarts, app updates, and deployments.
  */
 export function getCachedArticles(): Article[] {
+  let diskArts: Article[] = [];
+  let persistedArts: Article[] = [];
+
   try {
     if (fs.existsSync(ARTICLES_STORE_FILE)) {
       const data = JSON.parse(fs.readFileSync(ARTICLES_STORE_FILE, 'utf-8'));
       if (Array.isArray(data) && data.length > 0) {
-        return data.map((a: Article) => ({
-          ...a,
-          coverImage: (a.coverImage && !a.coverImage.includes('images.unsplash.com')) ? a.coverImage : undefined,
-          videoUrl: (a.videoUrl && !a.videoUrl.includes('dQw4w9WgXcQ') && !a.videoUrl.includes('732a3ea9c98cf85b244793f18e11a3ec')) ? a.videoUrl : undefined,
-          videoEmbed: (a.videoEmbed && !a.videoEmbed.includes('dQw4w9WgXcQ') && !a.videoEmbed.includes('732a3ea9c98cf85b244793f18e11a3ec')) ? a.videoEmbed : undefined,
-          rutubeUrl: (a.rutubeUrl && !a.rutubeUrl.includes('732a3ea9c98cf85b244793f18e11a3ec')) ? a.rutubeUrl : undefined,
-          youtubeUrl: (a.youtubeUrl && !a.youtubeUrl.includes('dQw4w9WgXcQ')) ? a.youtubeUrl : undefined,
-          audioUrl: (a.audioUrl && !a.audioUrl.includes('soundhelix.com')) ? a.audioUrl : undefined,
-          audioTitle: (a.audioUrl && !a.audioUrl.includes('soundhelix.com')) ? a.audioTitle : undefined,
-          galleryImages: (a.galleryImages && a.galleryImages.some((g: string) => typeof g === 'string' && g.includes('images.unsplash.com'))) ? undefined : a.galleryImages,
-          steps: Array.isArray(a.steps) ? a.steps.map((s: any) => ({
-            ...s,
-            imageUrl: (s.imageUrl && !s.imageUrl.includes('images.unsplash.com')) ? s.imageUrl : undefined,
-            videoUrl: (s.videoUrl && !s.videoUrl.includes('dQw4w9WgXcQ')) ? s.videoUrl : undefined,
-            audioUrl: (s.audioUrl && !s.audioUrl.includes('soundhelix.com')) ? s.audioUrl : undefined,
-          })) : a.steps,
-        }));
+        diskArts = data;
       }
     }
   } catch (err) {
-    console.warn('[Articles] Failed to read cached articles from disk:', err);
+    console.warn('[Articles] Failed to read cached articles from .data:', err);
   }
+
+  try {
+    if (fs.existsSync(PERSISTED_ARTICLES_FILE)) {
+      const pData = JSON.parse(fs.readFileSync(PERSISTED_ARTICLES_FILE, 'utf-8'));
+      if (Array.isArray(pData) && pData.length > 0) {
+        persistedArts = pData;
+      }
+    }
+  } catch (err) {
+    console.warn('[Articles] Failed to read persisted articles from src/data/persisted:', err);
+  }
+
+  // Merge list: take all base articles, then override with custom/persisted/disk edits
+  const map = new Map<string, Article>();
+  for (const a of INITIAL_ARTICLES) {
+    if (a && a.id) map.set(a.id, a);
+  }
+  for (const a of persistedArts) {
+    if (a && a.id) map.set(a.id, a);
+  }
+  for (const a of diskArts) {
+    if (a && a.id) map.set(a.id, a);
+  }
+
+  if (map.size > 0) {
+    const merged = Array.from(map.values()).map((a: Article) => ({
+      ...a,
+      coverImage: a.coverImage || undefined,
+      videoUrl: (a.videoUrl && !a.videoUrl.includes('dQw4w9WgXcQ') && !a.videoUrl.includes('732a3ea9c98cf85b244793f18e11a3ec')) ? a.videoUrl : undefined,
+      videoEmbed: (a.videoEmbed && !a.videoEmbed.includes('dQw4w9WgXcQ') && !a.videoEmbed.includes('732a3ea9c98cf85b244793f18e11a3ec')) ? a.videoEmbed : undefined,
+      rutubeUrl: (a.rutubeUrl && !a.rutubeUrl.includes('732a3ea9c98cf85b244793f18e11a3ec')) ? a.rutubeUrl : undefined,
+      youtubeUrl: (a.youtubeUrl && !a.youtubeUrl.includes('dQw4w9WgXcQ')) ? a.youtubeUrl : undefined,
+      steps: Array.isArray(a.steps) ? a.steps.map((s: any) => ({
+        ...s,
+        imageUrl: s.imageUrl || undefined,
+        videoUrl: (s.videoUrl && !s.videoUrl.includes('dQw4w9WgXcQ')) ? s.videoUrl : undefined,
+      })) : a.steps,
+    }));
+
+    // Auto-sync stores if needed
+    try {
+      if (!fs.existsSync(ARTICLES_STORE_FILE) || diskArts.length < merged.length) {
+        saveCachedArticles(merged);
+      }
+    } catch {}
+
+    return merged;
+  }
+
   return [...INITIAL_ARTICLES];
 }
 
 /**
- * Safely persist articles list to disk (.data/articles_store.json)
+ * Safely persist articles list to disk (.data/articles_store.json & src/data/persisted/articles.json)
  */
 export function saveCachedArticles(list: Article[]): void {
   try {
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
     }
+    if (!fs.existsSync(PERSISTED_DIR)) {
+      fs.mkdirSync(PERSISTED_DIR, { recursive: true });
+    }
+
+    const jsonContent = JSON.stringify(list, null, 2);
+
+    // Save to .data/articles_store.json
     const tempFile = `${ARTICLES_STORE_FILE}.tmp`;
-    fs.writeFileSync(tempFile, JSON.stringify(list, null, 2), 'utf-8');
+    fs.writeFileSync(tempFile, jsonContent, 'utf-8');
     fs.renameSync(tempFile, ARTICLES_STORE_FILE);
+
+    // Save to tracked persistent store (src/data/persisted/articles.json)
+    fs.writeFileSync(PERSISTED_ARTICLES_FILE, jsonContent, 'utf-8');
   } catch (err) {
     console.error('[Articles] Failed to save cached articles to disk:', err);
   }

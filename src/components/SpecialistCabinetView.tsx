@@ -32,8 +32,6 @@ import {
   ArrowRight,
   Image as ImageIcon
 } from 'lucide-react';
-import { collection, doc, setDoc, getDocs, query, where, deleteDoc } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { PlumbingSpecialist, MasterWork, Article, CategoryId } from '../types';
 import { CATEGORIES } from '../data/initialData';
 import { compressImageFile } from '../utils/imageCompressor';
@@ -250,7 +248,7 @@ export const SpecialistCabinetView: React.FC<SpecialistCabinetViewProps> = ({
     setWorkFormError('');
   };
 
-  // Submit Work (Saved to Firestore & API)
+  // Submit Work (Saved to TimeWeb Cloud Server)
   const handleSubmitWork = async (e: React.FormEvent) => {
     e.preventDefault();
     setWorkFormError('');
@@ -286,14 +284,7 @@ export const SpecialistCabinetView: React.FC<SpecialistCabinetViewProps> = ({
     };
 
     try {
-      // 1. Save to Firestore
-      try {
-        await setDoc(doc(db, 'masterWorks', workId), newWorkData);
-      } catch (fsErr) {
-        handleFirestoreError(fsErr, OperationType.WRITE, `masterWorks/${workId}`);
-      }
-
-      // 2. Save via Server API for sync
+      // Save via Server API (synced to TimeWeb Cloud)
       const res = await fetch(editingWork ? `/api/master-works/${workId}` : '/api/master-works', {
         method: editingWork ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -301,7 +292,7 @@ export const SpecialistCabinetView: React.FC<SpecialistCabinetViewProps> = ({
       });
 
       if (res.ok) {
-        setWorkFormSuccess('✓ Работа успешно сохранена в Firestore и отправлена на модерацию администратору!');
+        setWorkFormSuccess('✓ Работа успешно сохранена на сервере TimeWeb Cloud и отправлена на модерацию администратору!');
         setTimeout(() => {
           setIsAddingWork(false);
           setEditingWork(null);
@@ -327,14 +318,7 @@ export const SpecialistCabinetView: React.FC<SpecialistCabinetViewProps> = ({
   const handleDeleteWork = async (id: string) => {
     if (!window.confirm('Удалить эту работу из портфолио?')) return;
     try {
-      // Delete from Firestore
-      try {
-        await deleteDoc(doc(db, 'masterWorks', id));
-      } catch (fsErr) {
-        console.warn('Firestore delete error:', fsErr);
-      }
-
-      // Delete from API
+      // Delete via API from TimeWeb server
       await fetch(`/api/master-works/${id}`, { method: 'DELETE' });
       setWorks((prev) => prev.filter((w) => w.id !== id));
     } catch (err) {
@@ -343,7 +327,7 @@ export const SpecialistCabinetView: React.FC<SpecialistCabinetViewProps> = ({
   };
 
   // ----------------------------------------------------
-  // ARTICLE CREATION (SAVED TO FIRESTORE & LABELED 'НА МОДЕРАЦИИ')
+  // ARTICLE CREATION (SAVED TO TIMEWEB CLOUD SERVER & LABELED 'НА МОДЕРАЦИИ')
   // ----------------------------------------------------
   const handleArticleCoverSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -429,14 +413,7 @@ export const SpecialistCabinetView: React.FC<SpecialistCabinetViewProps> = ({
     };
 
     try {
-      // 1. Save to Firestore
-      try {
-        await setDoc(doc(db, 'articles', artId), newArticleData);
-      } catch (fsErr) {
-        handleFirestoreError(fsErr, OperationType.WRITE, `articles/${artId}`);
-      }
-
-      // 2. Save via Server API for sync
+      // Save via Server API (synced to TimeWeb Cloud)
       const res = await fetch('/api/articles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -444,7 +421,7 @@ export const SpecialistCabinetView: React.FC<SpecialistCabinetViewProps> = ({
       });
 
       if (res.ok) {
-        setArtFormSuccess('✓ Статья успешно создана, сохранена в Firestore и направлена на модерацию администратору! После одобрения она появится в общем Справочнике.');
+        setArtFormSuccess('✓ Статья успешно создана, сохранена на сервере TimeWeb Cloud и направлена на модерацию администратору! После одобрения она появится в общем Справочнике.');
         setTimeout(() => {
           setIsAddingArticle(false);
           setArtTitle('');
@@ -696,7 +673,7 @@ export const SpecialistCabinetView: React.FC<SpecialistCabinetViewProps> = ({
                       {editingWork ? 'Редактирование работы' : 'Новая выполненная работа'}
                     </h3>
                     <p className="text-xs text-cyan-400">
-                      Лимит изображений: до 3 файлов • Сохранение в Firestore • Проверка администратором
+                      Лимит изображений: до 3 файлов • Сохранение на сервере TimWeb • Проверка администратором
                     </p>
                   </div>
                 </div>
@@ -904,7 +881,7 @@ export const SpecialistCabinetView: React.FC<SpecialistCabinetViewProps> = ({
                   {isSubmittingWork ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Сохранение в Firestore...</span>
+                      <span>Сохранение на сервере...</span>
                     </>
                   ) : (
                     <>
@@ -921,7 +898,7 @@ export const SpecialistCabinetView: React.FC<SpecialistCabinetViewProps> = ({
           {loadingWorks ? (
             <div className="p-12 text-center text-xs text-slate-400">
               <Loader2 className="w-6 h-6 animate-spin mx-auto text-cyan-400 mb-2" />
-              <span>Загрузка работ мастера из Firestore...</span>
+              <span>Загрузка работ мастера с сервера TimWeb...</span>
             </div>
           ) : works.length === 0 ? (
             <div className="p-12 text-center bg-slate-900 border border-slate-800 rounded-3xl space-y-3">
@@ -1049,7 +1026,7 @@ export const SpecialistCabinetView: React.FC<SpecialistCabinetViewProps> = ({
                 <span>Авторские статьи по сантехнике</span>
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                Напишите статью с названием, категорией и контентом. Статья сохраняется в Firestore с пометкой <strong>«на модерации»</strong> и после проверки администратором публикуется в общем Справочнике сервиса.
+                Напишите статью с названием, категорией и контентом. Статья сохраняется на сервере TimWeb с пометкой <strong>«на модерации»</strong> и после проверки администратором публикуется в общем Справочнике сервиса.
               </p>
             </div>
 
@@ -1296,7 +1273,7 @@ export const SpecialistCabinetView: React.FC<SpecialistCabinetViewProps> = ({
                   {isSubmittingArticle ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Сохранение в Firestore...</span>
+                      <span>Сохранение на сервере...</span>
                     </>
                   ) : (
                     <>
@@ -1313,7 +1290,7 @@ export const SpecialistCabinetView: React.FC<SpecialistCabinetViewProps> = ({
           {loadingArticles ? (
             <div className="p-12 text-center text-xs text-slate-400">
               <Loader2 className="w-6 h-6 animate-spin mx-auto text-amber-400 mb-2" />
-              <span>Загрузка статей мастера из Firestore...</span>
+              <span>Загрузка статей мастера с сервера TimWeb...</span>
             </div>
           ) : articles.length === 0 ? (
             <div className="p-12 text-center bg-slate-900 border border-slate-800 rounded-3xl space-y-3">

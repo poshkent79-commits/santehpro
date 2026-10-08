@@ -126,6 +126,7 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
 
   // Profile Suspension & Annulment states
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [showPauseVacationModal, setShowPauseVacationModal] = useState(false);
   const [showAnnulConfirmModal, setShowAnnulConfirmModal] = useState(false);
   const [isAnnuling, setIsAnnuling] = useState(false);
 
@@ -197,6 +198,27 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
         setMasterStatus('pending');
         setServicesSuccessMsg('Изменения успешно сохранены! Согласно правилам сервиса, обновленная анкета направлена на повторную модерацию администратору. До проверки профиль будет на подтверждении.');
         setTimeout(() => setServicesSuccessMsg(''), 7000);
+        try {
+          const updatedObj = {
+            ...specialist,
+            name: masterName.trim() || specialist.name,
+            city: masterCity.trim() || specialist.city,
+            experienceYears: Number(masterExperienceYears) || specialist.experienceYears,
+            services: servicesList,
+            minPrice: Number(masterMinPrice) || 1500,
+            emergency247: masterEmergency,
+            bio: masterBio,
+            phone: masterPhone,
+            telegram: masterTelegram,
+            whatsapp: masterWhatsapp,
+            photo: masterPhoto,
+          };
+          if (specialist.userUid) {
+            localStorage.setItem(`santehpro_master_questionnaire_${specialist.userUid}`, JSON.stringify(updatedObj));
+          }
+          localStorage.setItem('santehpro_last_master_application', JSON.stringify(updatedObj));
+          localStorage.setItem('santehpro_master_profile_cache', JSON.stringify(updatedObj));
+        } catch {}
         onRefreshSpecialist?.();
       } else {
         const data = await res.json();
@@ -209,8 +231,67 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
     }
   };
 
-  // Toggle profile status: suspend (hide from catalog) or resume (show in catalog)
+  const [pauseOrVacationMode, setPauseOrVacationMode] = useState<'pause' | 'vacation'>('pause');
+
+  const wipeAllMasterStorage = () => {
+    try {
+      const keys = [
+        'santehpro_master_specialist_id',
+        'santehpro_last_master_application',
+        'santehpro_master_profile_cache',
+        'santehpro_master_questionnaire_backup',
+        `santehpro_master_questionnaire_${specialist.userUid}`,
+        `santehpro_master_questionnaire_${specialist.id}`,
+      ];
+      for (const k of keys) localStorage.removeItem(k);
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (k && (k.startsWith('santehpro_master_') || k.startsWith('santehpro_last_master'))) {
+          localStorage.removeItem(k);
+        }
+      }
+      const savedUser = localStorage.getItem('santehpro_auth_user');
+      if (savedUser) {
+        const p = JSON.parse(savedUser);
+        if (p && p.role === 'specialist') {
+          p.role = 'user';
+          localStorage.setItem('santehpro_auth_user', JSON.stringify(p));
+        }
+      }
+      sessionStorage.setItem('santehpro_master_just_deleted', 'true');
+    } catch {}
+  };
+
+  // Pause / Vacation profile removal confirmation handler: deletes all master data from TimWeb server
+  const handlePauseVacationConfirm = async () => {
+    setIsUpdatingStatus(true);
+    try {
+      const res = await fetch(`/api/specialists/${specialist.id}?reason=${pauseOrVacationMode}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        wipeAllMasterStorage();
+        const actionLabel = pauseOrVacationMode === 'pause' ? 'поставлена на паузу' : 'переведена в отпуск';
+        alert(`Анкета мастера успешно ${actionLabel}. Все данные мастера удалены из системы сервера TimWeb.`);
+        window.location.reload();
+      } else {
+        alert('Не удалось удалить анкету мастера.');
+      }
+    } catch (e) {
+      console.error('Error on pause/vacation delete:', e);
+      alert('Ошибка при соединении с сервером.');
+    } finally {
+      setIsUpdatingStatus(false);
+      setShowPauseVacationModal(false);
+    }
+  };
+
+  // Toggle profile status: suspend or resume
   const handleToggleSuspendProfile = async (targetStatus: 'approved' | 'suspended') => {
+    if (targetStatus === 'suspended') {
+      setShowPauseVacationModal(true);
+      return;
+    }
     setIsUpdatingStatus(true);
     try {
       const res = await fetch(`/api/specialists/${specialist.id}/status`, {
@@ -220,11 +301,7 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
       });
       if (res.ok) {
         setMasterStatus(targetStatus);
-        setServicesSuccessMsg(
-          targetStatus === 'suspended'
-            ? 'Показ анкеты в каталоге временно приостановлен. Вы скрыты из поисковой выдачи.'
-            : 'Показ анкеты в каталоге успешно возобновлен! Клиенты снова видят ваш профиль.'
-        );
+        setServicesSuccessMsg('Показ анкеты в каталоге возобновлен!');
         setTimeout(() => setServicesSuccessMsg(''), 5000);
         onRefreshSpecialist?.();
       } else {
@@ -261,14 +338,12 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
   const handleAnnulProfile = async () => {
     setIsAnnuling(true);
     try {
-      const res = await fetch(`/api/specialists/${specialist.id}`, {
+      const res = await fetch(`/api/specialists/${specialist.id}?reason=delete`, {
         method: 'DELETE',
       });
       if (res.ok) {
-        try {
-          localStorage.removeItem('santehpro_master_specialist_id');
-        } catch (e) {}
-        alert('Ваша анкета мастера успешно аннулирована и удалена из активного каталога.');
+        wipeAllMasterStorage();
+        alert('Ваша анкета мастера успешно аннулирована и все данные удалены из системы сервера TimWeb.');
         window.location.reload();
       } else {
         alert('Не удалось аннулировать анкету. Попробуйте снова.');
@@ -1017,12 +1092,12 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
                 <button
                   type="button"
                   disabled={isUpdatingStatus}
-                  onClick={() => handleToggleSuspendProfile('suspended')}
+                  onClick={() => setShowPauseVacationModal(true)}
                   className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-medium transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                  title="Временно скрыть профиль из каталога (отпуск / занят)"
+                  title="Поставить на паузу или уйти в отпуск (удалить данные анкеты)"
                 >
                   <PauseCircle className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Приостановить показ (отпуск)</span>
+                  <span>Пауза / Уйти в отпуск</span>
                 </button>
               )}
             </div>
@@ -3528,6 +3603,98 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
           specialist={specialist}
           onClose={() => setPreviewWork(null)}
         />
+      )}
+
+      {/* Pause / Vacation Confirmation Modal */}
+      {showPauseVacationModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-slate-900 border border-amber-500/30 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto border border-amber-500/30">
+              <PauseCircle className="w-6 h-6" />
+            </div>
+
+            <div className="text-center space-y-2">
+              <h3 className="text-lg font-bold text-white">
+                Пауза или уход в отпуск мастера
+              </h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Согласно правилам сервиса, когда мастер нажимает на паузу, уходит в отпуск или удаляет свой аккаунт, все его данные мастера удаляются из системы сервера TimWeb.
+              </p>
+            </div>
+
+            {/* Selection between Pause or Vacation */}
+            <div className="grid grid-cols-2 gap-2 p-1.5 bg-slate-950 rounded-2xl border border-slate-800">
+              <button
+                type="button"
+                onClick={() => setPauseOrVacationMode('pause')}
+                className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                  pauseOrVacationMode === 'pause'
+                    ? 'bg-amber-500 text-slate-950 shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <PauseCircle className="w-4 h-4" />
+                <span>На паузу</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPauseOrVacationMode('vacation')}
+                className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                  pauseOrVacationMode === 'vacation'
+                    ? 'bg-amber-500 text-slate-950 shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <EyeOff className="w-4 h-4" />
+                <span>В отпуск</span>
+              </button>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-slate-800/80 border border-slate-700/80 text-xs text-slate-400 space-y-1">
+              <div>• Мастер: <strong className="text-white">{specialist.name}</strong> ({specialist.city})</div>
+              <div>
+                • Действие:{' '}
+                <span className="text-amber-400 font-semibold">
+                  {pauseOrVacationMode === 'pause' ? 'Поставить на паузу (удаление данных)' : 'Уход в отпуск (удаление данных)'}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isUpdatingStatus}
+                onClick={() => setShowPauseVacationModal(false)}
+                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+              >
+                Отмена
+              </button>
+
+              <button
+                type="button"
+                disabled={isUpdatingStatus}
+                onClick={handlePauseVacationConfirm}
+                className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black transition flex items-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer disabled:opacity-50"
+              >
+                {isUpdatingStatus ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Удаление данных...</span>
+                  </>
+                ) : (
+                  <>
+                    <PauseCircle className="w-4 h-4" />
+                    <span>
+                      {pauseOrVacationMode === 'pause'
+                        ? 'Да, поставить на паузу (удалить данные)'
+                        : 'Да, уйти в отпуск (удалить данные)'}
+                    </span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Annul Questionnaire Confirmation Modal */}

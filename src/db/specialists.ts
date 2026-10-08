@@ -10,44 +10,81 @@ const DATA_DIR = path.resolve(process.cwd(), '.data');
 const BACKUPS_DIR = path.join(DATA_DIR, 'backups');
 const SPECIALISTS_STORE_FILE = path.join(DATA_DIR, 'specialists_store.json');
 const SPECIALISTS_BACKUP_FILE = path.join(DATA_DIR, 'specialists_store.backup.json');
+const PERSISTED_DIR = path.resolve(process.cwd(), 'src/data/persisted');
+const PERSISTED_STORE_FILE = path.join(PERSISTED_DIR, 'specialists.json');
+const DELETED_SPECIALISTS_FILE = path.join(DATA_DIR, 'deleted_specialists.json');
+const PERSISTED_DELETED_FILE = path.join(PERSISTED_DIR, 'deleted_specialists.json');
+
+function loadDeletedSpecialistsSync(): DeletedSpecialistRecord[] {
+  try {
+    if (fs.existsSync(DELETED_SPECIALISTS_FILE)) {
+      const data = JSON.parse(fs.readFileSync(DELETED_SPECIALISTS_FILE, 'utf-8'));
+      if (Array.isArray(data)) return data;
+    }
+    if (fs.existsSync(PERSISTED_DELETED_FILE)) {
+      const data = JSON.parse(fs.readFileSync(PERSISTED_DELETED_FILE, 'utf-8'));
+      if (Array.isArray(data)) return data;
+    }
+  } catch {}
+  return [];
+}
+
+function persistDeletedSpecialistsSync(records: DeletedSpecialistRecord[]): void {
+  try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    if (!fs.existsSync(PERSISTED_DIR)) fs.mkdirSync(PERSISTED_DIR, { recursive: true });
+    const jsonStr = JSON.stringify(records, null, 2);
+    fs.writeFileSync(DELETED_SPECIALISTS_FILE, jsonStr, 'utf-8');
+    fs.writeFileSync(PERSISTED_DELETED_FILE, jsonStr, 'utf-8');
+  } catch {}
+}
 
 export function getCachedSpecialists(): PlumbingSpecialist[] {
+  let diskList: PlumbingSpecialist[] = [];
+  let persistedList: PlumbingSpecialist[] = [];
+  const deletedRecords = loadDeletedSpecialistsSync();
+  const deletedIds = new Set(deletedRecords.map((r) => r.masterId));
+
   try {
-    // 1. Try main store file
+    // 1. Try main .data store file
     if (fs.existsSync(SPECIALISTS_STORE_FILE)) {
       const data = fs.readFileSync(SPECIALISTS_STORE_FILE, 'utf-8');
       const parsed = JSON.parse(data);
       if (Array.isArray(parsed)) {
-        return parsed;
-      }
-    }
-    // 2. Try safety backup file if main was empty or missing
-    if (fs.existsSync(SPECIALISTS_BACKUP_FILE)) {
-      const data = fs.readFileSync(SPECIALISTS_BACKUP_FILE, 'utf-8');
-      const parsed = JSON.parse(data);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        console.log(`[Specialists] Recovered ${parsed.length} specialists from safety backup file.`);
-        return parsed;
-      }
-    }
-    // 3. Try latest rotating backup
-    if (fs.existsSync(BACKUPS_DIR)) {
-      const files = fs.readdirSync(BACKUPS_DIR).filter(f => f.startsWith('specialists_')).sort().reverse();
-      for (const f of files) {
-        try {
-          const content = fs.readFileSync(path.join(BACKUPS_DIR, f), 'utf-8');
-          const p = JSON.parse(content);
-          if (Array.isArray(p) && p.length > 0) {
-            console.log(`[Specialists] Recovered ${p.length} specialists from rotating backup: ${f}`);
-            return p;
-          }
-        } catch {}
+        diskList = parsed;
       }
     }
   } catch (err) {
-    console.warn('Failed to read cached specialists from disk:', err);
+    console.warn('Failed to read .data cached specialists:', err);
   }
-  return INITIAL_SPECIALISTS;
+
+  try {
+    // 2. Try committed persistent store (src/data/persisted/specialists.json)
+    if (fs.existsSync(PERSISTED_STORE_FILE)) {
+      const pData = fs.readFileSync(PERSISTED_STORE_FILE, 'utf-8');
+      const pParsed = JSON.parse(pData);
+      if (Array.isArray(pParsed)) {
+        persistedList = pParsed;
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to read persisted specialists store:', err);
+  }
+
+  // Merge lists to ensure valid specialists are kept, excluding any deleted ones
+  const map = new Map<string, PlumbingSpecialist>();
+  for (const s of INITIAL_SPECIALISTS) {
+    if (s && s.id && !deletedIds.has(s.id)) map.set(s.id, s);
+  }
+  for (const s of persistedList) {
+    if (s && s.id && !deletedIds.has(s.id)) map.set(s.id, s);
+  }
+  for (const s of diskList) {
+    if (s && s.id && !deletedIds.has(s.id)) map.set(s.id, s);
+  }
+
+  const merged = Array.from(map.values()).filter((s) => !deletedIds.has(s.id));
+  return merged;
 }
 
 export function saveCachedSpecialists(list: PlumbingSpecialist[], allowWipe = false): void {
@@ -57,6 +94,9 @@ export function saveCachedSpecialists(list: PlumbingSpecialist[], allowWipe = fa
     }
     if (!fs.existsSync(BACKUPS_DIR)) {
       fs.mkdirSync(BACKUPS_DIR, { recursive: true });
+    }
+    if (!fs.existsSync(PERSISTED_DIR)) {
+      fs.mkdirSync(PERSISTED_DIR, { recursive: true });
     }
 
     // Safety guard: NEVER overwrite non-empty store with empty array unless explicitly requested!
@@ -70,11 +110,14 @@ export function saveCachedSpecialists(list: PlumbingSpecialist[], allowWipe = fa
 
     const jsonStr = JSON.stringify(list, null, 2);
 
-    // Save main file
+    // Save main .data file
     fs.writeFileSync(SPECIALISTS_STORE_FILE, jsonStr, 'utf-8');
 
     // Save safety mirror backup
     fs.writeFileSync(SPECIALISTS_BACKUP_FILE, jsonStr, 'utf-8');
+
+    // Save tracked persisted store file (survives all app updates and restarts)
+    fs.writeFileSync(PERSISTED_STORE_FILE, jsonStr, 'utf-8');
   } catch (err) {
     console.error('Failed to save cached specialists to disk:', err);
   }
@@ -418,7 +461,7 @@ export async function updateDbSpecialist(id: string, updates: Partial<PlumbingSp
   return updated;
 }
 
-export async function deleteDbSpecialist(id: string): Promise<DeletedSpecialistRecord | null> {
+export async function deleteDbSpecialist(id: string, reason = 'Пользователь'): Promise<DeletedSpecialistRecord | null> {
   const now = new Date();
   const deletedAtIso = now.toISOString();
 
@@ -467,19 +510,19 @@ export async function deleteDbSpecialist(id: string): Promise<DeletedSpecialistR
     registeredAt: registeredAtDate.toISOString(),
     appliedAt: appliedAtStr,
     deletedAt: deletedAtIso,
-    deletedBy: 'Администратор',
+    deletedBy: reason,
   };
 
   // 2. Permanently remove from active catalog
   inMemorySpecialists = inMemorySpecialists.filter((s) => s.id !== id);
 
-  // 3. Add to deleted archive store
+  // 3. Add to deleted archive store and persist to local TimWeb server
   inMemoryDeletedSpecialists = inMemoryDeletedSpecialists.filter((d) => d.masterId !== id);
   inMemoryDeletedSpecialists.unshift(auditRecord);
-  saveCachedSpecialists(inMemorySpecialists);
+  persistDeletedSpecialistsSync(inMemoryDeletedSpecialists);
+  saveCachedSpecialists(inMemorySpecialists, true);
 
-  // 4. Persist to Cloud SQL:
-  // In the database, the specialist is deleted permanently, and ONLY audit info (when registered and when deleted) remains
+  // 4. Persist to Cloud SQL / local DB:
   try {
     await withDbRetry(async () => {
       // Insert audit record into deleted_specialists
@@ -491,7 +534,7 @@ export async function deleteDbSpecialist(id: string): Promise<DeletedSpecialistR
         registeredAt: registeredAtDate,
         appliedAt: auditRecord.appliedAt || null,
         deletedAt: now,
-        deletedBy: auditRecord.deletedBy || 'Администратор',
+        deletedBy: auditRecord.deletedBy || reason,
       }).onConflictDoNothing();
 
       // Delete permanently from specialists table so profile is gone forever

@@ -70,10 +70,6 @@
     "/articles/{articleId}": {
       "schema": { "$ref": "#/entities/Article" },
       "description": "Коллекция статей базы знаний, включая материалы от мастеров на модерации"
-    },
-    "/specialists/{specialistId}": {
-      "schema": { "$ref": "#/entities/Specialist" },
-      "description": "Коллекция специалистов и мастеров платформы"
     }
   }
 }

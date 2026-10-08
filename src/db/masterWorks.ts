@@ -7,25 +7,33 @@ import path from 'path';
 
 const DATA_DIR = path.resolve(process.cwd(), '.data');
 const MASTER_WORKS_STORE_FILE = path.join(DATA_DIR, 'master_works_store.json');
+const PERSISTED_DIR = path.resolve(process.cwd(), 'src/data/persisted');
+const PERSISTED_MASTER_WORKS_FILE = path.join(PERSISTED_DIR, 'master_works.json');
 
 function getCachedMasterWorks(): MasterWork[] {
+  let diskList: MasterWork[] = [];
   try {
     if (fs.existsSync(MASTER_WORKS_STORE_FILE)) {
       const data = JSON.parse(fs.readFileSync(MASTER_WORKS_STORE_FILE, 'utf-8'));
-      if (Array.isArray(data)) return data;
+      if (Array.isArray(data)) diskList = data;
     }
-  } catch {
-    // ignore
-  }
-  return [];
+  } catch {}
+  try {
+    if (diskList.length === 0 && fs.existsSync(PERSISTED_MASTER_WORKS_FILE)) {
+      const pData = JSON.parse(fs.readFileSync(PERSISTED_MASTER_WORKS_FILE, 'utf-8'));
+      if (Array.isArray(pData)) diskList = pData;
+    }
+  } catch {}
+  return diskList;
 }
 
 function saveCachedMasterWorks(works: MasterWork[]): void {
   try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-    fs.writeFileSync(MASTER_WORKS_STORE_FILE, JSON.stringify(works, null, 2), 'utf-8');
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    if (!fs.existsSync(PERSISTED_DIR)) fs.mkdirSync(PERSISTED_DIR, { recursive: true });
+    const jsonStr = JSON.stringify(works, null, 2);
+    fs.writeFileSync(MASTER_WORKS_STORE_FILE, jsonStr, 'utf-8');
+    fs.writeFileSync(PERSISTED_MASTER_WORKS_FILE, jsonStr, 'utf-8');
   } catch {
     // ignore
   }
@@ -192,4 +200,22 @@ export async function deleteDbMasterWork(id: string): Promise<boolean> {
   }
 
   return true;
+}
+
+export async function deleteDbMasterWorksBySpecialistId(specialistId: string): Promise<number> {
+  const initialLen = inMemoryMasterWorks.length;
+  inMemoryMasterWorks = inMemoryMasterWorks.filter((w) => w.specialistId !== specialistId);
+  saveCachedMasterWorks(inMemoryMasterWorks);
+
+  if (isSqlConfigured()) {
+    try {
+      await withDbRetry(async () => {
+        await db.delete(masterWorks).where(eq(masterWorks.specialistId, specialistId));
+      });
+    } catch (_err) {
+      // ignore
+    }
+  }
+
+  return initialLen - inMemoryMasterWorks.length;
 }
