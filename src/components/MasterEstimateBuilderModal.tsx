@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   Plus,
@@ -19,9 +19,12 @@ import {
   AlertCircle,
   Save,
   Send,
-  HelpCircle
+  HelpCircle,
+  Zap,
+  BookOpen
 } from 'lucide-react';
 import { MasterPlumbingEstimate, MasterEstimateItem, PlumbingSpecialist, ServiceCallRequest } from '../types';
+import { PRESET_PACKAGES, PresetPackage } from '../data/contractWorksData';
 
 interface MasterEstimateBuilderModalProps {
   isOpen: boolean;
@@ -124,6 +127,32 @@ export const MasterEstimateBuilderModal: React.FC<MasterEstimateBuilderModalProp
 
   const [isSaving, setIsSaving] = useState(false);
   const [activeTemplateTab, setActiveTemplateTab] = useState<'works' | 'materials'>('works');
+
+  // Apply complete package (unified with contracts)
+  const handleApplyPresetPackage = (pkg: PresetPackage) => {
+    const lines = pkg.works
+      .split('\n')
+      .map((l) => l.replace(/^[\d\s.)\-*•]+/, '').trim())
+      .filter((l) => l.length > 0);
+
+    const pricePerLine = Math.round(pkg.price / Math.max(1, lines.length));
+
+    const packageItems: MasterEstimateItem[] = lines.map((line, idx) => ({
+      id: `pkg-${Date.now()}-${idx}`,
+      type: 'work',
+      name: line,
+      category: pkg.name,
+      unit: 'услуга',
+      quantity: 1,
+      price: pricePerLine,
+      total: pricePerLine,
+    }));
+
+    setItems((prev) => [...prev, ...packageItems]);
+    if (!title) {
+      setTitle(pkg.title);
+    }
+  };
 
   // Load initial data or prepopulate from linked request
   useEffect(() => {
@@ -508,6 +537,33 @@ export const MasterEstimateBuilderModal: React.FC<MasterEstimateBuilderModalProp
                       </div>
                     </button>
                   ))}
+            </div>
+          </div>
+
+          {/* Complete Turnkey Work Packages (Unified with Contracts) */}
+          <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-bold text-slate-200 flex items-center gap-1.5 text-[11px]">
+                <Zap className="w-4 h-4 text-amber-400" />
+                <span>Готовые пакеты работ (в 1 клик, как в договорах):</span>
+              </span>
+              <span className="text-[10px] text-slate-400">Автоматически заполнит смету</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {PRESET_PACKAGES.map((pkg, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleApplyPresetPackage(pkg)}
+                  className="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-700 hover:border-emerald-500 text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
+                >
+                  <span>{pkg.icon}</span>
+                  <span>{pkg.name}</span>
+                  <span className="text-[10px] text-emerald-400 font-mono">
+                    {pkg.price.toLocaleString('ru-RU')} ₽
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
 

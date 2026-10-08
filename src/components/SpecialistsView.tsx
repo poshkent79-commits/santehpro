@@ -182,12 +182,39 @@ export const SpecialistsView: React.FC<SpecialistsViewProps> = ({
   };
 
   useEffect(() => {
-    fetch('/api/master-works')
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data)) setMasterWorks(data);
-      })
-      .catch((err) => console.error('Failed to load master works for directory:', err));
+    let isMounted = true;
+    let retryTimeout: any = null;
+
+    const loadMasterWorks = async (attemptsLeft = 2) => {
+      try {
+        const r = await fetch('/api/master-works');
+        if (!r.ok) {
+          throw new Error(`Server returned status ${r.status}`);
+        }
+        const data = await r.json();
+        if (isMounted && Array.isArray(data)) {
+          setMasterWorks(data);
+        }
+      } catch (err) {
+        if (attemptsLeft > 0 && isMounted) {
+          retryTimeout = setTimeout(() => {
+            if (isMounted) loadMasterWorks(attemptsLeft - 1);
+          }, 1500);
+        } else {
+          // Graceful fallback: avoid unhandled console.error
+          if (isMounted) {
+            setMasterWorks([]);
+          }
+        }
+      }
+    };
+
+    loadMasterWorks();
+
+    return () => {
+      isMounted = false;
+      if (retryTimeout) clearTimeout(retryTimeout);
+    };
   }, []);
 
   // Handle direct navigation to a specialist profile via URL query (?master=... or ?specialist=...)

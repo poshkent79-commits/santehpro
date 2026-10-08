@@ -27,7 +27,8 @@ import {
   Flame,
   FileText,
   Download,
-  Eye
+  Eye,
+  ShoppingCart,
 } from 'lucide-react';
 import {
   BuildingType,
@@ -42,13 +43,14 @@ import { SavedEstimate } from '../types';
 import { useFavoriteMaterials } from '../hooks/useFavoriteMaterials';
 import { MaterialsSelectionModal } from './MaterialsSelectionModal';
 import { SantehProEstimateModal, SantehProExportItem } from './SantehProEstimateModal';
+import { FastProcurementListModal } from './FastProcurementListModal';
 import {
   downloadTxtSpecification,
   printPdfSpecification,
   getFormattedTxtSpecification
 } from '../utils/santehProExport';
 
-interface CustomMaterialItem {
+export interface CustomMaterialItem {
   id: string;
   name: string;
   category: string;
@@ -69,8 +71,8 @@ export const FullPlumbingKitsView: React.FC<FullPlumbingKitsViewProps> = ({
   onSwitchToMeterCalculator,
   onSaveEstimate,
 }) => {
-  // 1. Смайлики «дом» и «квартира» (Выбор объекта)
-  const [selectedBuildingType, setSelectedBuildingType] = useState<BuildingType>('house');
+  // 1. Смайлики «квартира» и «дом» (Выбор объекта: по умолчанию «квартира»)
+  const [selectedBuildingType, setSelectedBuildingType] = useState<BuildingType>('apartment');
 
   // 2. Материал монтажа (из чего специалист будет проводить монтаж)
   const [selectedMaterial, setSelectedMaterial] = useState<InstallationMaterial>('ppr');
@@ -119,6 +121,7 @@ export const FullPlumbingKitsView: React.FC<FullPlumbingKitsViewProps> = ({
 
   // Modals & UI States
   const [isAddCustomModalOpen, setIsAddCustomModalOpen] = useState<boolean>(false);
+  const [isProcurementModalOpen, setIsProcurementModalOpen] = useState<boolean>(false);
   const [isCatalogModalOpen, setIsCatalogModalOpen] = useState<boolean>(false);
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -147,6 +150,24 @@ export const FullPlumbingKitsView: React.FC<FullPlumbingKitsViewProps> = ({
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  // Автоматическое переключение и перерасчет объекта (Квартира / Частный дом)
+  const handleSelectBuildingType = (type: BuildingType) => {
+    if (type === selectedBuildingType) return;
+    setSelectedBuildingType(type);
+    // Автоматически очищаем переопределения количеств, чтобы мгновенно применились нормы для выбранного объекта
+    setItemsState({});
+    showToast(
+      type === 'apartment'
+        ? 'Расчёт автоматически обновлён: Квартира 🏢'
+        : 'Расчёт автоматически обновлён: Частный дом 🏠'
+    );
+  };
+
+  // Добавление позиций из голосового ввода в спецификацию
+  const handleAddVoiceItemsToKit = (newVoiceItems: CustomMaterialItem[]) => {
+    setCustomPositions((prev) => [...prev, ...newVoiceItems]);
   };
 
   // Быстрое добавление опционального элемента из альтернативного материала в смету теплого пола
@@ -198,9 +219,11 @@ export const FullPlumbingKitsView: React.FC<FullPlumbingKitsViewProps> = ({
   // Toggle item inclusion
   const toggleItemInclusion = (id: string) => {
     setItemsState((prev) => {
+      const defaultQty = selectedBuildingType === 'house'
+        ? (activeBaseItems.find((it) => it.id === id)?.defaultQtyHouse ?? 1)
+        : (activeBaseItems.find((it) => it.id === id)?.defaultQtyApartment ?? 1);
       const current = prev[id] || {
-        quantity:
-          activeBaseItems.find((it) => it.id === id)?.defaultQtyHouse ?? 1,
+        quantity: defaultQty,
         included: true,
       };
       return {
@@ -596,56 +619,68 @@ export const FullPlumbingKitsView: React.FC<FullPlumbingKitsViewProps> = ({
 
       {/* Modern Compact Control Header */}
       <div className="rounded-3xl bg-slate-900 border border-slate-800 p-5 sm:p-6 shadow-2xl space-y-5">
-        {/* Row 1: Смайлики «дом» и «квартира» + Quick Action Buttons */}
+        {/* Row 1: Селектор объекта (Квартира / Дом) слева + Голосовой ввод фитингов (в выделенной зоне) + Быстрые действия */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-5">
-          <div>
-            <span className="text-[11px] font-extrabold uppercase tracking-wider text-amber-400 block mb-1">
-              Объект монтажа
-            </span>
-            <div className="flex items-center gap-2 sm:gap-3">
-              {/* Смайлик «дом» */}
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedBuildingType('house');
-                  showToast('Выбран объект: Дом 🏠');
-                }}
-                className={`flex items-center space-x-2.5 px-5 py-2.5 rounded-2xl font-black text-sm transition-all cursor-pointer border ${
-                  selectedBuildingType === 'house'
-                    ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-lg shadow-amber-500/25 scale-[1.02]'
-                    : 'bg-slate-950/80 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-800'
-                }`}
-              >
-                <span className="text-xl">🏠</span>
-                <span>Дом</span>
-                {selectedBuildingType === 'house' && (
-                  <span className="w-2 h-2 rounded-full bg-slate-950 ml-1"></span>
-                )}
-              </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <div>
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-amber-400 block mb-1">
+                Объект монтажа
+              </span>
+              <div className="flex items-center gap-2 sm:gap-2.5">
+                {/* Смайлик «квартира» (слева по умолчанию) */}
+                <button
+                  type="button"
+                  onClick={() => handleSelectBuildingType('apartment')}
+                  className={`flex items-center space-x-2 px-4 sm:px-5 py-2.5 rounded-2xl font-black text-sm transition-all cursor-pointer border ${
+                    selectedBuildingType === 'apartment'
+                      ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-lg shadow-cyan-500/25 scale-[1.02]'
+                      : 'bg-slate-950/80 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-800'
+                  }`}
+                >
+                  <span className="text-xl">🏢</span>
+                  <span>Квартира</span>
+                  {selectedBuildingType === 'apartment' && (
+                    <span className="w-2 h-2 rounded-full bg-slate-950 ml-1"></span>
+                  )}
+                </button>
 
-              {/* Смайлик «квартира» */}
+                {/* Смайлик «дом» (Частный дом) */}
+                <button
+                  type="button"
+                  onClick={() => handleSelectBuildingType('house')}
+                  className={`flex items-center space-x-2 px-4 sm:px-5 py-2.5 rounded-2xl font-black text-sm transition-all cursor-pointer border ${
+                    selectedBuildingType === 'house'
+                      ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-lg shadow-amber-500/25 scale-[1.02]'
+                      : 'bg-slate-950/80 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-800'
+                  }`}
+                >
+                  <span className="text-xl">🏠</span>
+                  <span>Частный дом</span>
+                  {selectedBuildingType === 'house' && (
+                    <span className="w-2 h-2 rounded-full bg-slate-950 ml-1"></span>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Быстрый экспресс-лист закупок */}
+            <div className="pt-4 sm:pt-4">
               <button
                 type="button"
-                onClick={() => {
-                  setSelectedBuildingType('apartment');
-                  showToast('Выбран объект: Квартира 🏢');
-                }}
-                className={`flex items-center space-x-2.5 px-5 py-2.5 rounded-2xl font-black text-sm transition-all cursor-pointer border ${
-                  selectedBuildingType === 'apartment'
-                    ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-lg shadow-cyan-500/25 scale-[1.02]'
-                    : 'bg-slate-950/80 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-800'
-                }`}
+                onClick={() => setIsProcurementModalOpen(true)}
+                className="px-4 sm:px-5 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black text-xs sm:text-sm transition-all flex items-center gap-2.5 shadow-xl shadow-emerald-500/25 hover:shadow-emerald-500/40 border border-emerald-400/60 cursor-pointer active:scale-95 group hover:scale-[1.02]"
+                title="Быстрый экспресс-лист закупок: готовые комплекты и подбор фитингов в 1 тап"
               >
-                <span className="text-xl">🏢</span>
-                <span>Квартира</span>
-                {selectedBuildingType === 'apartment' && (
-                  <span className="w-2 h-2 rounded-full bg-slate-950 ml-1"></span>
-                )}
+                <ShoppingCart className="w-4 h-4 text-slate-950 group-hover:scale-110 transition-transform stroke-[2.5]" />
+                <span className="tracking-tight">Список закупок</span>
+                <span className="hidden sm:inline-block px-1.5 py-0.5 rounded-md bg-slate-950/20 text-slate-950 text-[10px] font-extrabold uppercase">
+                  Экспресс
+                </span>
               </button>
             </div>
           </div>
 
-          {/* Top Actions */}
+          {/* Top Actions: + Своя позиция, Сбросить */}
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -1279,7 +1314,7 @@ export const FullPlumbingKitsView: React.FC<FullPlumbingKitsViewProps> = ({
 
                       <div className="space-y-1 flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`text-xs sm:text-sm font-bold ${isInc ? 'text-white' : 'text-slate-400 line-through'}`}>
+                          <span className={`text-xs sm:text-sm font-bold ${isInc ? 'text-white' : 'text-slate-400'}`}>
                             {item.name}
                           </span>
                           <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
@@ -1421,7 +1456,7 @@ export const FullPlumbingKitsView: React.FC<FullPlumbingKitsViewProps> = ({
                         <div className="flex items-center gap-2 flex-wrap">
                           <span
                             className={`text-xs sm:text-sm font-bold ${
-                              isInc ? 'text-white' : 'text-slate-400 line-through'
+                              isInc ? 'text-white' : 'text-slate-400'
                             }`}
                           >
                             {item.name}
@@ -1840,6 +1875,16 @@ export const FullPlumbingKitsView: React.FC<FullPlumbingKitsViewProps> = ({
         selectedDiameters={selectedDiameters}
         summary={summary}
         items={exportItems}
+      />
+
+      {/* Fast Procurement List Modal */}
+      <FastProcurementListModal
+        isOpen={isProcurementModalOpen}
+        onClose={() => setIsProcurementModalOpen(false)}
+        buildingType={selectedBuildingType}
+        materialName={activeMaterialConfig.name}
+        onAddItemsToKit={handleAddVoiceItemsToKit}
+        onSaveEstimateDirectly={onSaveEstimate}
       />
     </div>
   );

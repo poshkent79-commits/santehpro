@@ -133,7 +133,8 @@ export const SpecialistCabinetView: React.FC<SpecialistCabinetViewProps> = ({
         }
       }
     } catch (e) {
-      console.error('Failed to load master works:', e);
+      console.warn('Failed to load master works:', e);
+      setWorks([]);
     } finally {
       setLoadingWorks(false);
     }

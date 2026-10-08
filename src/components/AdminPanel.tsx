@@ -82,6 +82,8 @@ import { SpecialistRejectionModal } from './admin/SpecialistRejectionModal';
 import { SpecialistApprovalModal } from './admin/SpecialistApprovalModal';
 import { BackupRecoveryTab } from './admin/BackupRecoveryTab';
 import { RobokassaSettingsTab } from './admin/RobokassaSettingsTab';
+import { YooKassaSettingsTab } from './admin/YooKassaSettingsTab';
+import { YooKassaSymbol } from './common/PaymentLogos';
 import { SocialPostGeneratorModal } from './admin/SocialPostGeneratorModal';
 import { compressImageFile } from '../utils/imageCompressor';
 import { useTimeWebSync } from '../services/timewebSyncClient';
@@ -128,7 +130,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   onSelectArticle,
   onOpenLoginModal,
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'requests' | 'articles' | 'files' | 'specialists' | 'questions' | 'users' | 'moderation' | 'smtp' | 'yandex' | 'timeweb' | 'backups' | 'robokassa'>('requests');
+  const [activeTab, setActiveTab] = useState<'overview' | 'requests' | 'articles' | 'files' | 'specialists' | 'questions' | 'users' | 'moderation' | 'smtp' | 'yandex' | 'timeweb' | 'backups' | 'robokassa' | 'yookassa'>('requests');
   
   // TimeWeb Cloud Live Sync
   const {
@@ -1466,6 +1468,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400" />
                 <span>Robokassa</span>
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+              </button>
+
+              <button
+                onClick={() => setActiveTab('yookassa')}
+                className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shrink-0 whitespace-nowrap cursor-pointer ${
+                  activeTab === 'yookassa'
+                    ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-black shadow-md shadow-blue-600/25'
+                    : 'text-blue-400 hover:text-white'
+                }`}
+              >
+                <YooKassaSymbol className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-300" color="currentColor" />
+                <span>ЮKassa (1486303)</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
               </button>
             </div>
           </div>
@@ -3253,6 +3268,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
       {/* TAB: ROBOKASSA SETTINGS */}
       {activeTab === 'robokassa' && <RobokassaSettingsTab />}
+
+      {/* TAB: YOOKASSA SETTINGS */}
+      {activeTab === 'yookassa' && <YooKassaSettingsTab />}
 
       {/* MODAL 1: ADD / EDIT SERVICE REQUEST */}
       {isRequestModalOpen && (

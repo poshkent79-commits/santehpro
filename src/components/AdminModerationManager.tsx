@@ -85,7 +85,8 @@ export const AdminModerationManager: React.FC<AdminModerationManagerProps> = ({
         setWorks(Array.isArray(data) ? data : []);
       }
     } catch (e) {
-      console.error('Failed to load master works for moderation:', e);
+      console.warn('Failed to load master works for moderation:', e);
+      setWorks([]);
     } finally {
       setLoadingWorks(false);
     }

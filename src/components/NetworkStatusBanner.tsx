@@ -56,7 +56,7 @@ export const NetworkStatusBanner: React.FC<NetworkStatusBannerProps> = ({ onReco
       {!isOnline ? (
         // OFFLINE BANNER
         <div className="bg-rose-950/95 border-b border-rose-500/40 backdrop-blur-md px-4 py-2 text-rose-200 shadow-lg">
-          <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 text-xs">
+          <div className="w-full px-3 sm:px-6 lg:px-8 2xl:px-12 flex items-center justify-between gap-3 text-xs">
             <div className="flex items-center space-x-2.5">
               <div className="w-6 h-6 rounded-full bg-rose-500/20 border border-rose-500/40 flex items-center justify-center shrink-0 animate-pulse">
                 <WifiOff className="w-3.5 h-3.5 text-rose-400" />
@@ -97,7 +97,7 @@ export const NetworkStatusBanner: React.FC<NetworkStatusBannerProps> = ({ onReco
       ) : (
         // RESTORED BANNER
         <div className="bg-emerald-950/95 border-b border-emerald-500/40 backdrop-blur-md px-4 py-2 text-emerald-200 shadow-lg animate-in fade-in duration-200">
-          <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 text-xs">
+          <div className="w-full px-3 sm:px-6 lg:px-8 2xl:px-12 flex items-center justify-between gap-3 text-xs">
             <div className="flex items-center space-x-2.5">
               <div className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center shrink-0">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />

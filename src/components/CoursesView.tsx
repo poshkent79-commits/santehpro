@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  GraduationCap,
+  Lightbulb,
   PlayCircle,
   Volume2,
   Image as ImageIcon,
@@ -76,14 +76,14 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
 
   const handleDeleteCourse = async (art: Article, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    if (!confirm(`Вы действительно хотите удалить курс "${art.title}"?`)) return;
+    if (!confirm(`Вы действительно хотите удалить совет "${art.title}"?`)) return;
 
     try {
       const res = await fetch(`/api/articles/${art.id}`, { method: 'DELETE' });
       if (res.ok) {
         onRefreshArticles();
       } else {
-        alert('Не удалось удалить курс');
+        alert('Не удалось удалить совет');
       }
     } catch (err) {
       console.error(err);
@@ -126,7 +126,8 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
       <div className="p-4 sm:p-5 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
         <div>
           <h1 className="text-lg sm:text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
-            <span>Курсы и видеоуроки по сантехнике</span>
+            <Lightbulb className="w-5 h-5 text-amber-400" />
+            <span>Советы и опыт мастеров</span>
             {isVerifiedMaster && (
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 hidden md:inline-flex items-center gap-1">
                 <ShieldCheck className="w-3 h-3 text-amber-400" />
@@ -135,7 +136,7 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
             )}
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            Обучающие видеокурсы, практические видеоуроки, аудиолекции и программы обучения от экспертов
+            Практические советы, профессиональные хитрости, лайфхаки и реальный опыт сантехников
           </p>
         </div>
 
@@ -147,7 +148,7 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
               className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs transition flex items-center justify-center space-x-1.5 shadow-md"
             >
               <Plus className="w-4 h-4 text-slate-950" />
-              <span>Добавить курс (Админ)</span>
+              <span>Добавить совет (Админ)</span>
             </button>
           )}
 
@@ -155,10 +156,10 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
             <button
               type="button"
               onClick={handleOpenCreateCourse}
-              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-400 hover:to-amber-400 text-white font-extrabold text-xs transition flex items-center justify-center space-x-1.5 shadow-md shadow-rose-500/20"
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 text-slate-950 font-black text-xs transition flex items-center justify-center space-x-1.5 shadow-md shadow-amber-500/20"
             >
-              <ShieldCheck className="w-4 h-4 text-white" />
-              <span>Опубликовать курс / видеоурок</span>
+              <Lightbulb className="w-4 h-4 text-slate-950" />
+              <span>Опубликовать совет / лайфхак</span>
             </button>
           )}
 
@@ -180,7 +181,7 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
               className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-semibold transition flex items-center space-x-1.5"
             >
               <Award className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden sm:inline">Для мастеров: стать автором курсов</span>
+              <span className="hidden sm:inline">Для мастеров: делиться советами и опытом</span>
             </button>
           )}
         </div>
@@ -189,20 +190,20 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
       {/* Information Banner for verified masters and audience */}
       <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900/90 to-slate-850 border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs shadow-sm">
         <div className="flex items-start sm:items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-center justify-center shrink-0">
-            <GraduationCap className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shrink-0">
+            <Lightbulb className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-extrabold text-white text-xs sm:text-sm">
-                Публикация контента для проверенных мастеров
+                Публикация советов и лайфхаков для проверенных мастеров
               </span>
               <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-bold text-[10px] border border-emerald-500/30">
-                ✓ VK Видео • RuTube • YouTube
+                ✓ VK Видео • RuTube • YouTube • Статьи
               </span>
             </div>
             <p className="text-slate-400 text-[11px] sm:text-xs mt-0.5">
-              Специалисты после верификации могут транслировать объемные обучающие видео, аудиолекции и пошаговые инструкции. Материалы публикуются после предварительного одобрения администратором.
+              Специалисты после верификации могут делиться профессиональными хитростями, пошаговыми инструкциями, лайфхаками и видеосоветами. Материалы публикуются после предварительного одобрения администратором.
             </p>
           </div>
         </div>
@@ -214,7 +215,7 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
             className="shrink-0 px-3.5 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 font-bold text-xs flex items-center gap-1.5 transition whitespace-nowrap"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Предложить видеоурок</span>
+            <span>Предложить совет / лайфхак</span>
           </button>
         )}
       </div>
@@ -228,11 +229,11 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
           onClick={() => setFilterType('all')}
           className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${
             filterType === 'all'
-              ? 'bg-rose-500 text-white shadow-md shadow-rose-500/20'
+              ? 'bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20'
               : 'bg-slate-950 text-slate-300 hover:bg-slate-800 border border-slate-800'
           }`}
         >
-          Все материалы ({articles.filter((a) => a.adminSection === 'courses' || a.type === 'video' || Boolean(a.audioUrl)).length})
+          Все советы ({articles.filter((a) => a.adminSection === 'courses' || a.type === 'video' || Boolean(a.audioUrl)).length})
         </button>
 
         <button
@@ -240,12 +241,12 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
           onClick={() => setFilterType('video')}
           className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
             filterType === 'video'
-              ? 'bg-rose-500 text-white shadow-md shadow-rose-500/20'
+              ? 'bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20'
               : 'bg-slate-950 text-slate-300 hover:bg-slate-800 border border-slate-800'
           }`}
         >
           <PlayCircle className="w-3.5 h-3.5 text-rose-400" />
-          <span>Видеоуроки</span>
+          <span>Видеосоветы</span>
         </button>
 
         <button
@@ -253,12 +254,12 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
           onClick={() => setFilterType('audio')}
           className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
             filterType === 'audio'
-              ? 'bg-rose-500 text-white shadow-md shadow-rose-500/20'
+              ? 'bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20'
               : 'bg-slate-950 text-slate-300 hover:bg-slate-800 border border-slate-800'
           }`}
         >
           <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Аудиокурсы</span>
+          <span>Аудиосоветы</span>
         </button>
 
         <button
@@ -266,12 +267,12 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
           onClick={() => setFilterType('certificate')}
           className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
             filterType === 'certificate'
-              ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+              ? 'bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20'
               : 'bg-slate-950 text-slate-300 hover:bg-slate-800 border border-slate-800'
           }`}
         >
-          <Award className="w-3.5 h-3.5 text-amber-400" />
-          <span>С сертификатом</span>
+          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+          <span>Лайфхаки и опыт</span>
         </button>
 
         {currentMaster && myCoursesCount > 0 && (
@@ -280,12 +281,12 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
             onClick={() => setFilterType('my')}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
               filterType === 'my'
-                ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
+                ? 'bg-cyan-500 text-slate-950 font-black shadow-md shadow-cyan-500/20'
                 : 'bg-slate-950 text-cyan-300 hover:bg-slate-800 border border-cyan-500/30'
             }`}
           >
             <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Мои курсы ({myCoursesCount})</span>
+            <span>Мои советы ({myCoursesCount})</span>
           </button>
         )}
       </div>
@@ -293,17 +294,17 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
       {/* Courses Cards Grid */}
       {coursesList.length === 0 ? (
         <div className="p-8 text-center bg-slate-900 border border-slate-800 rounded-3xl space-y-3">
-          <GraduationCap className="w-12 h-12 text-slate-600 mx-auto" />
-          <h3 className="text-lg font-bold text-white">Курсы по выбранному фильтру не найдены</h3>
+          <Lightbulb className="w-12 h-12 text-amber-500/50 mx-auto" />
+          <h3 className="text-lg font-bold text-white">Советы по выбранному фильтру не найдены</h3>
           <p className="text-xs text-slate-400 max-w-md mx-auto">
-            Нажмите "Все курсы" или переключите фильтр выше.
+            Нажмите "Все советы" или переключите фильтр выше.
           </p>
           <button
             type="button"
             onClick={() => setFilterType('all')}
-            className="px-4 py-2 rounded-xl bg-slate-800 text-xs font-bold text-slate-200 hover:bg-slate-700"
+            className="px-4 py-2 rounded-xl bg-slate-800 text-xs font-bold text-slate-200 hover:bg-slate-700 cursor-pointer"
           >
-            Показать все курсы
+            Показать все советы
           </button>
         </div>
       ) : (
@@ -328,23 +329,23 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
                     </>
                   ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center space-y-2.5 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-800/50 via-slate-900 to-slate-950">
-                      <div className="w-16 h-16 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-center justify-center shadow-inner group-hover:scale-110 transition duration-300">
-                        {course.videoUrl ? <PlayCircle className="w-8 h-8" /> : <GraduationCap className="w-8 h-8" />}
+                      <div className="w-16 h-16 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shadow-inner group-hover:scale-110 transition duration-300">
+                        {course.videoUrl ? <PlayCircle className="w-8 h-8" /> : <Lightbulb className="w-8 h-8" />}
                       </div>
-                      <span className="text-xs font-bold text-slate-300 group-hover:text-rose-300 transition">
-                        {course.category === 'water' ? 'Водоснабжение и трубы' : course.category === 'heating' ? 'Отопление и котлы' : 'Сантехнический курс'}
+                      <span className="text-xs font-bold text-slate-300 group-hover:text-amber-300 transition">
+                        {course.category === 'water' ? 'Водоснабжение и трубы' : course.category === 'heating' ? 'Отопление и котлы' : 'Сантехнический совет'}
                       </span>
                       <span className="text-[11px] text-slate-500 font-medium">
-                        Материалы курса в подготовке автором
+                        Полезные советы и реальный опыт мастера
                       </span>
                     </div>
                   )}
 
                   {/* Top Badges */}
                   <div className="absolute top-3 left-3 flex items-center space-x-2 flex-wrap gap-y-1 z-10">
-                    <span className="px-3 py-1 rounded-lg text-xs font-bold bg-rose-600 text-white shadow-lg flex items-center space-x-1">
-                      <GraduationCap className="w-3.5 h-3.5" />
-                      <span>КУРС</span>
+                    <span className="px-3 py-1 rounded-lg text-xs font-bold bg-amber-500 text-slate-950 shadow-lg flex items-center space-x-1">
+                      <Lightbulb className="w-3.5 h-3.5" />
+                      <span>СОВЕТ</span>
                     </span>
 
                     {course.moderationStatus === 'pending' ? (

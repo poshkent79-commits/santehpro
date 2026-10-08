@@ -41,6 +41,7 @@ import { MaterialsSelectionModal, PlumbingItem } from './MaterialsSelectionModal
 import { FullPlumbingKitsView } from './FullPlumbingKitsView';
 import { CollectorUnitBuilder } from './CollectorUnitBuilder';
 import { UnderfloorHeatingCalculator } from './UnderfloorHeatingCalculator';
+import { ServiceAndPartsToolkit } from './ServiceAndPartsToolkit';
 import { useFavoriteMaterials } from '../hooks/useFavoriteMaterials';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -145,7 +146,7 @@ export const MaterialsCalculator: React.FC<MaterialsCalculatorProps> = ({
   const [estimateNameInput, setEstimateNameInput] = useState<string>('');
   const [savedSearchQuery, setSavedSearchQuery] = useState<string>('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [materialsMode, setMaterialsMode] = useState<'kits' | 'collector_unit' | 'underfloor_heating' | 'calculator'>('kits');
+  const [materialsMode, setMaterialsMode] = useState<'kits' | 'collector_unit' | 'underfloor_heating' | 'calculator' | 'service_parts'>('kits');
   
   // Favorites hook
   const { isFavorite, toggleFavorite } = useFavoriteMaterials();
@@ -980,6 +981,22 @@ export const MaterialsCalculator: React.FC<MaterialsCalculatorProps> = ({
               <span>По метражу и точкам</span>
             </button>
 
+            <button
+              type="button"
+              onClick={() => setMaterialsMode('service_parts')}
+              className={`px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl font-black text-xs transition flex items-center space-x-1.5 cursor-pointer shrink-0 ${
+                materialsMode === 'service_parts'
+                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-lg shadow-amber-500/20'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
+              }`}
+            >
+              <Wrench className="w-4 h-4 text-amber-400" />
+              <span>Ремонт и запчасти</span>
+              <span className="px-1.5 py-0.5 rounded-md text-[9px] bg-slate-900/40 text-amber-300 font-extrabold">
+                🔥 Бойлеры
+              </span>
+            </button>
+
             <div className="w-px h-6 bg-slate-800 shrink-0 my-auto mx-0.5" />
 
             <button
@@ -1035,6 +1052,8 @@ export const MaterialsCalculator: React.FC<MaterialsCalculatorProps> = ({
             setSavedEstimates((prev) => [newEst, ...prev]);
           }}
         />
+      ) : !embedded && materialsMode === 'service_parts' ? (
+        <ServiceAndPartsToolkit />
       ) : (
       /* Main Calculator Card */
       <div

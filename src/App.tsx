@@ -1016,8 +1016,8 @@ function AppContent() {
         onOpenProSubscription={() => setIsProModalOpen(true)}
       />
 
-      {/* Main App Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8">
+      {/* Main App Container (Full Width for optimal interface experience) */}
+      <main className="flex-1 w-full px-3 sm:px-6 lg:px-8 2xl:px-12 pt-4 sm:pt-6">
         {/* Short Development / Beta Status Banner */}
         <BetaDevelopmentBanner />
 

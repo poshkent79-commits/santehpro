@@ -33,6 +33,7 @@ import {
   ExternalLink,
   Download,
   ChevronRight,
+  Compass,
 } from 'lucide-react';
 import { Article, ArticleStep } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -612,7 +613,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                           onChange={() => toggleTool(tool)}
                           className="rounded border-slate-700 bg-slate-900 text-cyan-500 focus:ring-cyan-500 w-4 h-4"
                         />
-                        <span className={checkedTools[tool] ? 'line-through text-slate-500' : ''}>
+                        <span className={checkedTools[tool] ? 'text-cyan-400 font-medium' : ''}>
                           {tool}
                         </span>
                       </label>
@@ -639,7 +640,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                           onChange={() => toggleTool(mat)}
                           className="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500 w-4 h-4"
                         />
-                        <span className={checkedTools[mat] ? 'line-through text-slate-500' : ''}>
+                        <span className={checkedTools[mat] ? 'text-emerald-400 font-medium' : ''}>
                           {mat}
                         </span>
                       </label>
@@ -992,7 +993,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                         <div>
                           <h3
                             className={`font-semibold text-base ${
-                              isDone ? 'line-through text-slate-400' : 'text-white'
+                              isDone ? 'text-emerald-300' : 'text-white'
                             }`}
                           >
                             {step.title}
@@ -1023,25 +1024,26 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                       </div>
                     )}
 
-                    {/* Step Thematic Image */}
+                    {/* Step Thematic Image or Engineering Blueprint */}
                     {stepImg && (
                       <div className="mt-3 group/img relative inline-block">
-                        <div className="w-full max-w-xs sm:max-w-sm h-36 sm:h-44 rounded-xl overflow-hidden border border-slate-800 bg-slate-950 shadow-md relative">
+                        <div className="w-full max-w-sm sm:max-w-md h-40 sm:h-52 rounded-2xl overflow-hidden border border-slate-700/80 bg-slate-950 shadow-lg relative">
                           <img
                             src={stepImg}
                             alt={step.title}
+                            referrerPolicy="no-referrer"
                             className="w-full h-full object-cover group-hover/img:scale-105 transition duration-300 cursor-pointer"
                             onClick={() => window.open(stepImg, '_blank')}
-                            title="Нажмите для увеличения изображения"
+                            title="Нажмите для открытия инженерного чертежа / схемы в полном размере"
                           />
-                          <div className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-slate-950/80 backdrop-blur-md border border-slate-700/80 text-[10px] text-cyan-300 font-semibold flex items-center space-x-1">
-                            <ImageIcon className="w-3 h-3 text-cyan-400" />
-                            <span>Шаг #{step.number}</span>
+                          <div className="absolute top-2 right-2 px-2.5 py-1 rounded-lg bg-slate-950/90 backdrop-blur-md border border-cyan-500/40 text-[10px] text-cyan-300 font-bold flex items-center space-x-1.5 shadow-sm">
+                            <Compass className="w-3.5 h-3.5 text-cyan-400" />
+                            <span>Чертеж • Шаг #{step.number}</span>
                           </div>
                         </div>
                         <div className="mt-1.5 flex items-center space-x-1 text-[11px] text-slate-400">
-                          <ImageIcon className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                          <span>Наглядная иллюстрация: {step.title} (нажмите для увеличения)</span>
+                          <Compass className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                          <span>Инженерный чертеж: {step.title} (нажмите для открытия в полном размере)</span>
                         </div>
                       </div>
                     )}

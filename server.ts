@@ -99,6 +99,14 @@ import {
   getPaymentsHistory,
   savePaymentRecord,
 } from './src/services/robokassaService.ts';
+import {
+  getYooKassaConfig,
+  saveYooKassaConfig,
+  createYooKassaPayment,
+  getPaymentStatusFromYooKassa,
+  saveYooKassaPaymentRecord,
+  getYooKassaPaymentsHistory,
+} from './src/services/yookassaService.ts';
 
 const currentDirname = typeof __dirname !== 'undefined' ? __dirname : process.cwd();
 
@@ -4619,6 +4627,295 @@ app.post('/api/payment/robokassa/config', async (req, res) => {
   try {
     const updated = saveRobokassaConfig(req.body);
     res.json({ success: true, config: { enabled: updated.enabled, merchantLogin: updated.merchantLogin, isTest: updated.isTest } });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ----------------- SMART PAYMENT ROUTER & FAILOVER ENDPOINT -----------------
+
+// POST: Smart Multi-Gateway Payment Session with Geolocation Routing & Automatic Failover
+app.post('/api/payment/smart-create', async (req, res) => {
+  try {
+    const {
+      amount,
+      description,
+      type = 'donation',
+      targetId,
+      email,
+      phone,
+      userUid,
+      userName,
+      countryCode: requestedCountry,
+      paymentMethodId,
+      returnUrl,
+    } = req.body;
+
+    const numAmount = parseFloat(amount);
+    if (!numAmount || numAmount <= 0) {
+      return res.status(400).json({ error: 'Неверная сумма платежа' });
+    }
+
+    // 1. Определение региона и страны
+    const cfCountry = (req.headers['cf-ipcountry'] as string | undefined)?.toUpperCase();
+    const effectiveCountry = (requestedCountry || cfCountry || 'RU').toUpperCase();
+
+    // Логика выбора шлюза:
+    // RU методы (СБП, SberPay, T-Pay, карта РФ) -> YooKassa
+    // Международные/СНГ методы (зарубежная карта, кошельки) -> Robokassa
+    const isRuMethod = ['sbp', 'sberpay', 'tpay', 'card_ru'].includes(paymentMethodId);
+    const isIntlMethod = ['card_intl', 'wallets'].includes(paymentMethodId);
+
+    let primaryGateway: 'yookassa' | 'robokassa';
+    if (isRuMethod) {
+      primaryGateway = 'yookassa';
+    } else if (isIntlMethod) {
+      primaryGateway = 'robokassa';
+    } else {
+      primaryGateway = effectiveCountry === 'RU' ? 'yookassa' : 'robokassa';
+    }
+
+    const backupGateway = primaryGateway === 'yookassa' ? 'robokassa' : 'yookassa';
+
+    console.log(
+      `[Smart Payment Router] Country: ${effectiveCountry}, Method: ${paymentMethodId}, Primary: ${primaryGateway}, Backup: ${backupGateway}`
+    );
+
+    // Функция генерации YooKassa
+    const tryYooKassa = async () => {
+      const result = await createYooKassaPayment({
+        amount: numAmount,
+        description: description || 'Добровольное пожертвование на развитие сервиса СантехПро',
+        type,
+        targetId,
+        email: email?.trim() || undefined,
+        phone: phone?.trim() || undefined,
+        userUid,
+        userName,
+        returnUrl: returnUrl || 'https://santehpro.info/?payment=success',
+      });
+      return {
+        success: true,
+        paymentUrl: result.paymentUrl,
+        paymentId: result.paymentId,
+        gatewayUsed: 'yookassa' as const,
+      };
+    };
+
+    // Функция генерации Robokassa
+    const tryRobokassa = async () => {
+      let incCurrLabel: string | undefined = undefined;
+      if (paymentMethodId === 'wallets') {
+        incCurrLabel = 'QiwiWallet';
+      }
+      const result = generateRobokassaPaymentUrl({
+        outSum: numAmount,
+        description: description || 'Добровольное пожертвование на развитие сервиса СантехПро',
+        email: email?.trim() || undefined,
+        phone: phone?.trim() || undefined,
+        type,
+        targetId,
+        userUid,
+        userName,
+        incCurrLabel,
+      });
+      return {
+        success: true,
+        paymentUrl: result.paymentUrl,
+        paymentId: String(result.invId),
+        gatewayUsed: 'robokassa' as const,
+      };
+    };
+
+    // Попытка через основной шлюз
+    try {
+      if (primaryGateway === 'yookassa') {
+        const resPrimary = await tryYooKassa();
+        return res.json({ ...resPrimary, isFailover: false });
+      } else {
+        const resPrimary = await tryRobokassa();
+        return res.json({ ...resPrimary, isFailover: false });
+      }
+    } catch (primaryErr: any) {
+      console.warn(
+        `[Smart Payment Router] Primary gateway (${primaryGateway}) failed:`,
+        primaryErr?.message || primaryErr
+      );
+      console.log(
+        `[Smart Payment Router] Initiating automatic failover to backup gateway (${backupGateway})...`
+      );
+
+      // Запасной сценарий (Fallback)
+      try {
+        if (backupGateway === 'yookassa') {
+          const resBackup = await tryYooKassa();
+          return res.json({ ...resBackup, isFailover: true });
+        } else {
+          const resBackup = await tryRobokassa();
+          return res.json({ ...resBackup, isFailover: true });
+        }
+      } catch (backupErr: any) {
+        console.error(
+          `[Smart Payment Router] Both gateways failed. Backup error:`,
+          backupErr?.message || backupErr
+        );
+        return res.status(502).json({
+          error:
+            'Временная ошибка платёжного шлюза. Пожалуйста, попробуйте повторить платёж через несколько секунд.',
+        });
+      }
+    }
+  } catch (globalErr: any) {
+    console.error('[Smart Payment Router Global Error]', globalErr);
+    res.status(500).json({ error: globalErr.message || 'Ошибка обработки платежа' });
+  }
+});
+
+// ----------------- YOOKASSA (ЮKASSA) PAYMENT ENDPOINTS -----------------
+
+// POST: Create YooKassa payment session (Банковские карты МИР, СБП, SberPay, T-Pay)
+app.post('/api/payment/yookassa/create', async (req, res) => {
+  try {
+    const { amount, description, type, targetId, email, phone, userUid, userName, returnUrl } = req.body;
+    const numAmount = parseFloat(amount);
+    if (!numAmount || numAmount <= 0) {
+      return res.status(400).json({ error: 'Неверная сумма платежа' });
+    }
+
+    const { paymentUrl, paymentId, record } = await createYooKassaPayment({
+      amount: numAmount,
+      description: description || 'Оплата в сервисе СантехПро',
+      type: type || 'donation',
+      targetId,
+      email,
+      phone,
+      userUid,
+      userName,
+      returnUrl: returnUrl || 'https://santehpro.info/?payment=success',
+    });
+
+    res.json({
+      success: true,
+      paymentUrl,
+      paymentId,
+      record,
+    });
+  } catch (err: any) {
+    console.error('[YooKassa Create Error]', err);
+    res.status(500).json({ error: err.message || 'Ошибка генерации платежа через ЮKassa' });
+  }
+});
+
+// POST & ALL: YooKassa Webhook (HTTP-уведомления от ЮKassa)
+const handleYooKassaWebhookRequest = async (req: express.Request, res: express.Response) => {
+  try {
+    const event = req.body;
+    console.log('[YooKassa Webhook Received]', event?.event, event?.object?.id);
+
+    if (event?.event === 'payment.succeeded' && event?.object) {
+      const paymentObj = event.object;
+      const paymentId = paymentObj.id;
+      const amountVal = parseFloat(paymentObj.amount?.value || '0');
+      const metadata = paymentObj.metadata || {};
+
+      const history = getYooKassaPaymentsHistory();
+      let record = history.find((p) => p.paymentId === paymentId);
+
+      if (record) {
+        record.status = 'succeeded';
+        record.paymentDate = new Date().toISOString();
+        record.rawPayload = paymentObj;
+        saveYooKassaPaymentRecord(record);
+      } else {
+        record = {
+          id: `yoo_${paymentId}`,
+          paymentId,
+          amount: amountVal,
+          description: paymentObj.description || 'Оплата через ЮKassa',
+          type: metadata.type || 'donation',
+          targetId: metadata.targetId,
+          userUid: metadata.userUid,
+          userEmail: metadata.userEmail || paymentObj.receipt?.customer?.email,
+          userName: metadata.userName,
+          status: 'succeeded',
+          paymentDate: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          rawPayload: paymentObj,
+        };
+        saveYooKassaPaymentRecord(record);
+      }
+
+      // Если это покупка курса или доступ к контенту, сохраняем в БД
+      if (metadata.type === 'course' && metadata.targetId && metadata.userUid) {
+        try {
+          await createDbPurchase({
+            userUid: metadata.userUid,
+            userEmail: metadata.userEmail || '',
+            courseId: metadata.targetId,
+            courseTitle: record.description,
+            price: `${amountVal} ₽`,
+            paymentMethod: 'ЮKassa (СБП / МИР / SberPay)',
+          });
+        } catch (e) {
+          console.error('[YooKassa Course Unlock Error]', e);
+        }
+      }
+    } else if (event?.event === 'payment.canceled' && event?.object) {
+      const paymentId = event.object.id;
+      const history = getYooKassaPaymentsHistory();
+      const record = history.find((p) => p.paymentId === paymentId);
+      if (record) {
+        record.status = 'canceled';
+        record.rawPayload = event.object;
+        saveYooKassaPaymentRecord(record);
+      }
+    }
+
+    // ЮKassa ожидает HTTP 200 на любое уведомление
+    return res.status(200).json({ status: 'ok' });
+  } catch (err: any) {
+    console.error('[YooKassa Webhook Error]', err);
+    // Все равно отвечаем 200, чтобы шлюз не засыпал ретраями при внутренних ошибках логирования
+    return res.status(200).json({ status: 'error_handled' });
+  }
+};
+
+app.post('/api/payment/yookassa/webhook', handleYooKassaWebhookRequest);
+app.post('/api/yookassa/webhook', handleYooKassaWebhookRequest);
+
+// GET: Проверка статуса платежа по ID в ЮKassa
+app.get('/api/payment/yookassa/check/:paymentId', async (req, res) => {
+  try {
+    const { paymentId } = req.params;
+    const data = await getPaymentStatusFromYooKassa(paymentId);
+    res.json({ success: true, payment: data });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET: Статус конфигурации ЮKassa для фронтенда
+app.get('/api/payment/yookassa/status', (_req, res) => {
+  const config = getYooKassaConfig();
+  res.json({
+    enabled: config.enabled,
+    shopId: config.shopId,
+    configured: Boolean(config.shopId && config.secretKey),
+  });
+});
+
+// POST: Обновление конфигурации ЮKassa (только для админа)
+app.post('/api/payment/yookassa/config', async (req, res) => {
+  try {
+    const updated = saveYooKassaConfig(req.body);
+    res.json({
+      success: true,
+      config: {
+        enabled: updated.enabled,
+        shopId: updated.shopId,
+        returnUrl: updated.returnUrl,
+      },
+    });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

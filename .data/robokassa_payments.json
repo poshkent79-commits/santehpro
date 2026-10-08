@@ -1,5 +1,14 @@
 [
   {
+    "id": "pay-1791421710",
+    "invId": 1791421710,
+    "outSum": 150,
+    "description": "Тестовый донат CIS",
+    "type": "donation",
+    "status": "pending",
+    "createdAt": "2026-10-08T01:08:30.262Z"
+  },
+  {
     "id": "pay-1790990956",
     "invId": 1790990956,
     "outSum": 150,

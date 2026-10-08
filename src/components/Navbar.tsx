@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Users, Stethoscope, ShieldCheck, Wrench, GraduationCap, Calculator, User, MapPin, Heart, Mail, Crown, Sparkles } from 'lucide-react';
+import { BookOpen, Users, Stethoscope, ShieldCheck, Wrench, Lightbulb, Calculator, User, MapPin, Heart, Mail, Crown, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 interface NavbarProps {
@@ -41,7 +41,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header className="sticky top-0 z-40 bg-slate-900 text-white border-b border-slate-800 shadow-lg">
       {/* Top Brand Bar: Logo + Subtitles at Upper Left */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 sm:py-3 border-b border-slate-800/80 flex items-center justify-between gap-4">
+      <div className="w-full px-3 sm:px-6 lg:px-8 2xl:px-12 py-2.5 sm:py-3 border-b border-slate-800/80 flex items-center justify-between gap-4">
         {/* Upper Left: Main Logo & Subtitles */}
         <div
           onClick={() => setActiveTab('handbook')}
@@ -98,7 +98,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       {/* Sub-Bar: Navigation Menu */}
-      <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-1.5 sm:py-2">
+      <div className="w-full px-3 sm:px-6 lg:px-8 2xl:px-12 py-1.5 sm:py-2">
         <div className="flex items-center justify-between">
           {/* Desktop Nav Items */}
           <nav className="hidden md:flex items-center space-x-2 overflow-x-auto w-full">
@@ -115,30 +115,33 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>Справочник</span>
             </button>
 
-            {/* 2. Курсы и видеоуроки */}
+            {/* 2. Советы и опыт мастеров */}
             <button
               onClick={() => handleTabClick('courses')}
               className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition ${
                 activeTab === 'courses'
-                  ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-sm'
-                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <GraduationCap className={`w-4 h-4 ${activeTab === 'courses' ? 'text-rose-400' : 'text-slate-400'}`} />
-              <span>Курсы и видео</span>
-            </button>
-
-            {/* 3. Калькулятор закупки & Раздел материалы */}
-            <button
-              onClick={() => handleTabClick('calculator')}
-              className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition ${
-                activeTab === 'calculator'
                   ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
                   : 'text-slate-300 hover:bg-slate-800 hover:text-white'
               }`}
             >
-              <Calculator className={`w-4 h-4 ${activeTab === 'calculator' ? 'text-amber-400' : 'text-slate-400'}`} />
+              <Lightbulb className={`w-4 h-4 ${activeTab === 'courses' ? 'text-amber-400' : 'text-slate-400'}`} />
+              <span>Советы</span>
+            </button>
+
+            {/* 3. Калькулятор закупки & Экспресс-лист */}
+            <button
+              onClick={() => handleTabClick('calculator')}
+              className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition ${
+                activeTab === 'calculator'
+                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <Calculator className={`w-4 h-4 ${activeTab === 'calculator' ? 'text-emerald-400' : 'text-slate-400'}`} />
               <span>Материалы</span>
+              <span className="px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-emerald-500/25 text-emerald-300 border border-emerald-500/40">
+                🛒 Закупки
+              </span>
             </button>
 
             {/* 4. Вызов мастера */}
@@ -154,7 +157,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>Вызов мастера</span>
             </button>
 
-            {/* 5. Диагностика */}
+            {/* 5. Диагностика & Подбор запчастей */}
             <button
               onClick={() => handleTabClick('diagnostic')}
               className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition ${
@@ -164,7 +167,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               }`}
             >
               <Stethoscope className="w-4 h-4 text-cyan-400" />
-              <span>Диагностика</span>
+              <span>Ремонт & Запчасти</span>
+              <span className="px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-amber-500/25 text-amber-300 border border-amber-500/40">
+                🔥 Бойлеры
+              </span>
             </button>
 
             {/* 6. Панель пользователя (с человечком) */}
@@ -244,19 +250,19 @@ export const Navbar: React.FC<NavbarProps> = ({
           onClick={() => handleTabClick('courses')}
           className={`flex-1 flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-[11px] font-medium transition ${
             activeTab === 'courses'
-              ? 'text-rose-400 bg-slate-900 border border-slate-800 font-bold shadow-sm'
+              ? 'text-amber-400 bg-slate-900 border border-slate-800 font-bold shadow-sm'
               : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          <GraduationCap className="w-4 h-4 mb-0.5" />
-          <span className="leading-tight">Курсы</span>
+          <Lightbulb className="w-4 h-4 mb-0.5" />
+          <span className="leading-tight">Советы</span>
         </button>
 
         <button
           onClick={() => handleTabClick('calculator')}
           className={`flex-1 flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-[11px] font-medium transition ${
             activeTab === 'calculator'
-              ? 'text-amber-400 bg-slate-900 border border-slate-800 font-bold shadow-sm'
+              ? 'text-emerald-400 bg-slate-900 border border-slate-800 font-bold shadow-sm'
               : 'text-slate-400 hover:text-slate-200'
           }`}
         >
