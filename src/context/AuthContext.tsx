@@ -827,6 +827,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       localStorage.removeItem(AUTH_STORAGE_KEY);
       localStorage.removeItem('santehpro_current_user');
+      localStorage.removeItem('santehpro_master_specialist_id');
+      localStorage.removeItem('santehpro_cached_master_profile');
+      localStorage.removeItem('santehpro_last_master_application');
+      localStorage.removeItem('santehpro_master_profile_cache');
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (k && (k.startsWith('santehpro_master_') || k.startsWith('santehpro_cached_master_'))) {
+          localStorage.removeItem(k);
+        }
+      }
       if (typeof BroadcastChannel !== 'undefined') {
         const ch = new BroadcastChannel('santehpro_auth_channel');
         ch.postMessage({ type: 'AUTH_LOGOUT' });

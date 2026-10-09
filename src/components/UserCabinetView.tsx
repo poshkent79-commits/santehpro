@@ -118,156 +118,127 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
     loginWithYandex,
   } = useAuth();
 
-  // Find linked specialist profile with robust multi-factor matching
-  const userSpecialist = specialists.find((s) => {
-    if (!currentUser) return false;
-    
-    // 0. Manual link from localStorage if user picked it
-    const storedSpecialistId = typeof window !== 'undefined' ? localStorage.getItem('santehpro_master_specialist_id') : null;
-    if (storedSpecialistId && s.id === storedSpecialistId) return true;
+  // Clean up legacy and un-scoped master keys from localStorage on mount
+  useEffect(() => {
+    try {
+      localStorage.removeItem('santehpro_master_specialist_id');
+      localStorage.removeItem('santehpro_last_master_application');
+      localStorage.removeItem('santehpro_master_profile_cache');
+      localStorage.removeItem('santehpro_cached_master_profile');
+    } catch {}
+  }, []);
 
-    // 1. Direct match by userUid (highest priority)
-    if (s.userUid && currentUser.uid && s.userUid === currentUser.uid) return true;
-
-    // 2. Direct match by email (regardless of user role)
-    if (s.email && currentUser.email && s.email.toLowerCase().trim() === currentUser.email.toLowerCase().trim()) {
-      return true;
-    }
-
-    // 3. Direct match by phone number (clean 10 digits)
-    if (s.phone && currentUser.phone) {
-      const cleanS = s.phone.replace(/\D/g, '');
-      const cleanU = currentUser.phone.replace(/\D/g, '');
-      if (cleanS.length >= 10 && cleanU.length >= 10) {
-        if (cleanS === cleanU || cleanS.slice(-10) === cleanU.slice(-10)) {
-          return true;
-        }
-      }
-    }
-
-    // 4. Owner & founder auto-match (Достонджон Туйчиев, Находка, +79247889900, poshkent79@gmail.com, sommoni@bk.ru, etc.)
-    const currentName = (currentUser.name || '').toLowerCase();
-    const currentEmail = (currentUser.email || '').toLowerCase().trim();
-    const currentPhone = (currentUser.phone || '').replace(/\D/g, '');
-    const isOwnerUser =
-      currentName.includes('достонджон') ||
-      currentName.includes('туйчиев') ||
-      currentEmail.includes('poshkent') ||
-      currentEmail.includes('dostonjon') ||
-      currentEmail.includes('sommoni') ||
-      currentEmail.includes('santehpro.info') ||
-      currentPhone.endsWith('9247889900') ||
-      currentUser.role === 'admin';
-
-    if (isOwnerUser) {
-      const specName = (s.name || '').toLowerCase();
-      if (
-        specName.includes('достонджон') ||
-        specName.includes('туйчиев') ||
-        s.id === 'spec-1790212144464' ||
-        s.id === 'spec-dostonjon' ||
-        (s.phone && s.phone.replace(/\D/g, '').endsWith('9247889900'))
-      ) {
-        return true;
-      }
-    }
-
-    // 5. Fallback match if user role is explicitly specialist
-    if (currentUser.role === 'specialist') {
-      if (s.email && currentUser.email && s.email.toLowerCase() === currentUser.email.toLowerCase()) return true;
-      if (s.phone && currentUser.phone) {
-        const cleanS = s.phone.replace(/\D/g, '');
-        const cleanU = currentUser.phone.replace(/\D/g, '');
-        if (cleanS.length >= 10 && cleanS === cleanU) return true;
-      }
-    }
-
-    return false;
-  }) || null;
-
-  const currentName = (currentUser?.name || '').toLowerCase();
-  const currentEmail = (currentUser?.email || '').toLowerCase().trim();
-  const currentPhone = (currentUser?.phone || '').replace(/\D/g, '');
+  // Strict check if current user is the platform owner/founder (Достонджон Туйчиев)
   const isOwnerUser = Boolean(
     currentUser && (
-      currentName.includes('достонджон') ||
-      currentName.includes('туйчиев') ||
-      currentEmail.includes('poshkent') ||
-      currentEmail.includes('dostonjon') ||
-      currentEmail.includes('sommoni') ||
-      currentEmail.includes('santehpro.info') ||
-      currentPhone.endsWith('9247889900') ||
-      currentUser.role === 'admin'
+      (currentUser.email && (
+        currentUser.email.toLowerCase().trim() === 'poshkent79@gmail.com' ||
+        currentUser.email.toLowerCase().trim() === 'admin@santehpro.ru' ||
+        currentUser.email.toLowerCase().trim() === 'admin@santehpro.info' ||
+        currentUser.email.toLowerCase().trim() === 'sommoni@bk.ru'
+      )) ||
+      (currentUser.phone && currentUser.phone.replace(/\D/g, '').length >= 10 && currentUser.phone.replace(/\D/g, '').endsWith('9247889900')) ||
+      (
+        currentUser.name &&
+        currentUser.name.toLowerCase().includes('достонджон') &&
+        currentUser.name.toLowerCase().includes('туйчиев')
+      )
     )
   );
 
+  // Find linked specialist profile with strict ownership matching (NEVER through arbitrary localStorage keys)
+  const userSpecialist = useMemo(() => {
+    if (!currentUser) return null;
+
+    return specialists.find((s) => {
+      // 1. Direct match by userUid (highest priority, definitive proof of ownership)
+      if (s.userUid && currentUser.uid && s.userUid === currentUser.uid) return true;
+
+      // 2. Direct match by exact verified email
+      if (s.email && currentUser.email && s.email.toLowerCase().trim() === currentUser.email.toLowerCase().trim()) {
+        return true;
+      }
+
+      // 3. Direct match by exact phone number (clean 10+ digits)
+      if (s.phone && currentUser.phone) {
+        const cleanS = s.phone.replace(/\D/g, '');
+        const cleanU = currentUser.phone.replace(/\D/g, '');
+        if (cleanS.length >= 10 && cleanU.length >= 10) {
+          if (cleanS === cleanU || cleanS.slice(-10) === cleanU.slice(-10)) {
+            return true;
+          }
+        }
+      }
+
+      // 4. Founder specialist auto-match ONLY for the verified founder account
+      if (isOwnerUser) {
+        if (
+          s.id === 'spec-1790212144464' ||
+          s.id === 'spec-dostonjon' ||
+          (s.phone && s.phone.replace(/\D/g, '').endsWith('9247889900'))
+        ) {
+          return true;
+        }
+      }
+
+      return false;
+    }) || null;
+  }, [currentUser, specialists, isOwnerUser]);
+
   const isMasterDeletedRecently = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('santehpro_master_just_deleted') === 'true';
 
-  // Retrieve saved master questionnaire from browser localStorage if server restarted or was updated, only if user is an approved specialist
+  // Retrieve saved master questionnaire from browser localStorage strictly scoped to current user's UID
   const localMasterQuestionnaire: PlumbingSpecialist | null = useMemo(() => {
-    if (!currentUser || isMasterDeletedRecently) return null;
-    if (currentUser.role !== 'specialist' && !isOwnerUser) return null;
+    if (!currentUser || !currentUser.uid || isMasterDeletedRecently) return null;
     try {
-      const keys = [
-        `santehpro_master_questionnaire_${currentUser.uid}`,
-        `santehpro_master_questionnaire_${currentUser.id}`,
-        'santehpro_last_master_application',
-        'santehpro_master_profile_cache',
-      ];
-      for (const k of keys) {
-        const item = localStorage.getItem(k);
-        if (item) {
-          const parsed = JSON.parse(item);
-          if (parsed && (parsed.name || parsed.phone || parsed.city)) {
-            return {
-              ...parsed,
-              userUid: currentUser.uid || parsed.userUid,
-              email: currentUser.email || parsed.email,
-              phone: currentUser.phone || parsed.phone,
-              name: currentUser.name || parsed.name,
-              status: parsed.status || 'approved',
-              verified: parsed.verified !== undefined ? parsed.verified : true,
-            };
-          }
+      const userKey = `santehpro_master_questionnaire_${currentUser.uid}`;
+      const item = localStorage.getItem(userKey);
+      if (item) {
+        const parsed = JSON.parse(item);
+        if (parsed && (parsed.userUid === currentUser.uid || (parsed.phone && currentUser.phone && parsed.phone.replace(/\D/g, '') === currentUser.phone.replace(/\D/g, '')))) {
+          return {
+            ...parsed,
+            userUid: currentUser.uid,
+            status: parsed.status || 'pending',
+            verified: Boolean(parsed.verified),
+          };
         }
       }
     } catch {}
     return null;
-  }, [currentUser, isMasterDeletedRecently, isOwnerUser]);
+  }, [currentUser, isMasterDeletedRecently]);
 
-  // Master profile is present if userSpecialist is found, or recovered from local cache, or for owner
-  const masterProfile: PlumbingSpecialist | null = isMasterDeletedRecently ? null : (userSpecialist || localMasterQuestionnaire || (isOwnerUser ? {
-    ...FOUNDER_MASTER_SPECIALIST,
-    userUid: currentUser?.uid || FOUNDER_MASTER_SPECIALIST.userUid,
-    email: currentUser?.email || FOUNDER_MASTER_SPECIALIST.email,
-    phone: currentUser?.phone || FOUNDER_MASTER_SPECIALIST.phone,
-    name: currentUser?.name || FOUNDER_MASTER_SPECIALIST.name,
-  } : null));
+  // Master profile is present if userSpecialist is found, or recovered from user-scoped cache, or for owner
+  const masterProfile: PlumbingSpecialist | null = isMasterDeletedRecently
+    ? null
+    : (userSpecialist || localMasterQuestionnaire || (isOwnerUser ? {
+        ...FOUNDER_MASTER_SPECIALIST,
+        userUid: currentUser?.uid || FOUNDER_MASTER_SPECIALIST.userUid,
+        email: currentUser?.email || FOUNDER_MASTER_SPECIALIST.email,
+        phone: currentUser?.phone || FOUNDER_MASTER_SPECIALIST.phone,
+        name: currentUser?.name || FOUNDER_MASTER_SPECIALIST.name,
+      } : null));
 
-  // "У мастеров, прошедших проверку, автоматически открывается личный кабинет"
+  // A user is a verified master ONLY if their own card was approved/verified by moderation, or they are the founder
   const isVerifiedMaster = Boolean(
     currentUser &&
     !isMasterDeletedRecently &&
     (
-      isOwnerUser ||
-      (userSpecialist && (userSpecialist.verified || userSpecialist.status === 'approved')) ||
-      (currentUser.role === 'specialist' && (userSpecialist || localMasterQuestionnaire))
+      (isOwnerUser && (userSpecialist || masterProfile)) ||
+      (userSpecialist && (userSpecialist.status === 'approved' || userSpecialist.verified === true))
     )
   );
 
-  // Guaranteed resilient profile for verified masters so questionnaire is accurately loaded
+  // Guaranteed resilient profile for verified masters
   const effectiveMasterProfile: PlumbingSpecialist | null = isMasterDeletedRecently ? null : (userSpecialist || masterProfile);
 
-  // Cache master profile locally to preserve questionnaire across updates
+  // Cache master profile strictly per user UID (never save unscoped global keys)
   useEffect(() => {
     if (isMasterDeletedRecently) return;
     const profileToCache = userSpecialist || effectiveMasterProfile || masterProfile;
     if (currentUser?.uid && profileToCache && (isVerifiedMaster || currentUser.role === 'specialist')) {
       try {
         localStorage.setItem(`santehpro_master_questionnaire_${currentUser.uid}`, JSON.stringify(profileToCache));
-        if (profileToCache.id) {
-          localStorage.setItem('santehpro_master_specialist_id', profileToCache.id);
-        }
       } catch {}
     }
   }, [currentUser?.uid, userSpecialist, effectiveMasterProfile, masterProfile, isVerifiedMaster, isMasterDeletedRecently]);
@@ -287,7 +258,8 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
 
   const [activeTab, setActiveTab] = useState<'favorites' | 'requests' | 'profile' | 'master'>(() => {
     if (initialTab && initialTab !== 'purchases') return initialTab;
-    if (isOwnerUser || isVerifiedMaster || currentUser?.role === 'specialist') return 'master';
+    if (isOwnerUser || isVerifiedMaster) return 'master';
+    if (userSpecialist && userSpecialist.status === 'pending') return 'master';
     return 'favorites';
   });
 
@@ -1108,8 +1080,8 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
 
       {/* Tabs Navigation */}
       <div className="flex items-center space-x-2 border-b border-slate-800 pb-2 overflow-x-auto">
-        {/* Master's Cabinet Tab: moved to the very BEGINNING (position 1) for verified masters, specialists, or pending applicants */}
-        {(isVerifiedMaster || userSpecialist || currentUser?.role === 'specialist' || currentUser?.role === 'admin' || isOwnerUser) && (
+        {/* Master's Cabinet Tab: displayed ONLY for verified masters, applicants with submitted cards, or founder */}
+        {(isVerifiedMaster || userSpecialist || isOwnerUser) && (
           <button
             type="button"
             id="cabinet-master-tab-btn"
@@ -1681,7 +1653,83 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
             </div>
           </div>
 
-          {/* Card 3: Danger Zone - Delete Account */}
+          {/* Card 3: Specialist Status / Become a Master */}
+          <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-4">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div className="flex items-start space-x-3.5">
+                <div className="w-10 h-10 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
+                  <Wrench className="w-5 h-5" />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center space-x-2 flex-wrap">
+                    <h3 className="text-sm font-bold text-white">Статус специалиста СантехПро</h3>
+                    {isVerifiedMaster ? (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                        ✓ Проверенный мастер
+                      </span>
+                    ) : userSpecialist?.status === 'pending' ? (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        ⏳ На модерации
+                      </span>
+                    ) : userSpecialist?.status === 'rejected' ? (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                        ✕ Отклонена
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700">
+                        Обычный пользователь
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
+                    {isVerifiedMaster ? (
+                      'Ваша анкета мастера проверена и опубликована в каталоге. Вам доступен полный функционал личного кабинета мастера, прямые заявки и конструктор смет.'
+                    ) : userSpecialist?.status === 'pending' ? (
+                      'Ваша анкета находится на рассмотрении администратором. После проверки данных доступ к кабинету мастера откроется автоматически.'
+                    ) : userSpecialist?.status === 'rejected' ? (
+                      'Ваша заявка мастера была отклонена. Вы можете ознакомиться с замечаниями модератора и подать анкету повторно.'
+                    ) : (
+                      'Вы сантехник, монтажник или сервисный инженер? Подайте заявку на размещение карточки мастера в каталоге вашего города и получайте прямые вызовы от клиентов.'
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              {isVerifiedMaster ? (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('master')}
+                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition shadow-lg shadow-blue-600/20 flex items-center space-x-2 shrink-0 self-start sm:self-center cursor-pointer"
+                >
+                  <Wrench className="w-4 h-4" />
+                  <span>В кабинет мастера</span>
+                </button>
+              ) : userSpecialist?.status === 'pending' ? (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('master')}
+                  className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition shadow-lg shadow-amber-500/20 flex items-center space-x-2 shrink-0 self-start sm:self-center cursor-pointer"
+                >
+                  <Clock className="w-4 h-4" />
+                  <span>Статус модерации</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsReapplying(false);
+                    setIsApplyModalOpen(true);
+                  }}
+                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition shadow-lg shadow-blue-600/20 flex items-center space-x-2 shrink-0 self-start sm:self-center cursor-pointer"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  <span>Подать анкету мастера</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Card 4: Danger Zone - Delete Account */}
           <div className="p-6 rounded-3xl bg-rose-950/20 border border-rose-500/30 space-y-4">
             <div className="flex items-start justify-between gap-4 flex-wrap">
               <div className="flex items-start space-x-3.5">
@@ -1982,35 +2030,6 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
                 <div>✓ Протокол согласия 152-ФЗ / 63-ФЗ в сертифицированной базе Timeweb Cloud</div>
               </div>
             </div>
-
-            {/* Quick profile linker if user already has an approved specialist in database */}
-            {specialists.length > 0 && (
-              <div className="p-3 bg-slate-950/70 border border-slate-800 rounded-2xl text-left space-y-2">
-                <span className="text-[11px] font-bold text-slate-300 block">
-                  Ваша анкета уже есть в базе? Привяжите её к аккаунту:
-                </span>
-                <div className="flex items-center space-x-2">
-                  <select
-                    id="select-link-specialist"
-                    className="flex-1 px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white outline-none cursor-pointer"
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        localStorage.setItem('santehpro_master_specialist_id', e.target.value);
-                        window.location.reload();
-                      }
-                    }}
-                    defaultValue=""
-                  >
-                    <option value="" disabled>-- Выберите вашу анкету из списка --</option>
-                    {specialists.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name} ({s.city}) {s.verified || s.status === 'approved' ? '✓ Одобрен' : s.status === 'rejected' ? '✕ Отклонен' : '⏳ На проверке'}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            )}
 
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2">
               <button
