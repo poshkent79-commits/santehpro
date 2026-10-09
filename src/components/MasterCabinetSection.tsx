@@ -216,6 +216,8 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
           if (specialist.userUid) {
             localStorage.setItem(`santehpro_master_questionnaire_${specialist.userUid}`, JSON.stringify(updatedObj));
           }
+          localStorage.setItem('santehpro_last_master_application', JSON.stringify(updatedObj));
+          localStorage.setItem('santehpro_master_profile_cache', JSON.stringify(updatedObj));
         } catch {}
         onRefreshSpecialist?.();
       } else {

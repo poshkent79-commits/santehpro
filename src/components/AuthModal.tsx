@@ -5,6 +5,9 @@ import {
   Loader2,
   AlertCircle,
   ExternalLink,
+  KeyRound,
+  Lock,
+  UserCheck,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { LegalTermsModal } from './LegalTermsModal';
@@ -20,6 +23,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
     closeAuthModal,
     loginWithYandex,
     loginWithVk,
+    login,
   } = useAuth();
 
   const [dataConsentAccepted, setDataConsentAccepted] = useState(true);
@@ -28,6 +32,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
   const [isVkLoading, setIsVkLoading] = useState(false);
   const [popupBlockedUrl, setPopupBlockedUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Login by credentials state
+  const [showPasswordLogin, setShowPasswordLogin] = useState(false);
+  const [emailInput, setEmailInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [isPasswordLoading, setIsPasswordLoading] = useState(false);
 
   // Legal modal state
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
@@ -40,8 +50,32 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
       setPopupBlockedUrl(null);
       setIsYandexLoading(false);
       setIsVkLoading(false);
+      setIsPasswordLoading(false);
     }
   }, [isAuthModalOpen]);
+
+  const handlePasswordLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!dataConsentAccepted || !termsAccepted) {
+      setError('Для продолжения необходимо подтвердить согласие с Политикой конфиденциальности и Пользовательским соглашением');
+      return;
+    }
+    if (!emailInput.trim() || !passwordInput.trim()) {
+      setError('Введите логин или email и пароль');
+      return;
+    }
+
+    setIsPasswordLoading(true);
+    setError(null);
+    try {
+      await login({ email: emailInput.trim(), password: passwordInput });
+      if (onNavigateTab) onNavigateTab('cabinet');
+    } catch (err: any) {
+      setError(formatErrorMessage(err));
+    } finally {
+      setIsPasswordLoading(false);
+    }
+  };
 
   // Listen to postMessage from VK OAuth callback popup
   useEffect(() => {
@@ -176,30 +210,30 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200">
       <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-sm sm:max-w-md overflow-hidden shadow-2xl relative flex flex-col">
         {/* ================= 1. ШАПКА ================= */}
-        <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
+        <div className="px-5 py-3.5 border-b border-slate-800/80 flex items-center justify-between bg-slate-950/60">
           <div className="flex items-center space-x-2.5">
-            {/* Синий логотип с гаечным ключом */}
-            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shadow-md shadow-blue-600/30 text-white shrink-0">
-              <Wrench className="w-5 h-5 text-white" />
+            {/* Аккуратный синий логотип с гаечным ключом */}
+            <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center shadow-md shadow-blue-600/30 text-white shrink-0">
+              <Wrench className="w-4 h-4 text-white" />
             </div>
             {/* Текст «Сантех» (красный), «Про» (синий) · Вход */}
-            <div className="text-base sm:text-lg font-black tracking-tight">
+            <div className="text-sm sm:text-base font-black tracking-tight">
               <span className="text-red-500">Сантех</span>
               <span className="text-blue-500">Про</span>
               <span className="text-slate-400 font-normal text-xs sm:text-sm"> · Вход</span>
             </div>
           </div>
 
-          {/* Иконка закрытия крестик «✕» */}
+          {/* Маленькая иконка закрытия крестик «✕» */}
           <button
             type="button"
             id="auth-modal-close-btn"
             onClick={closeAuthModal}
             aria-label="Закрыть окно"
-            className="p-1.5 sm:p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/80 transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -207,34 +241,34 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
 
         {/* ================= 2. ЦЕНТРАЛЬНЫЙ БЛОК АВТОРИЗАЦИИ ================= */}
         <div className="p-5 sm:p-6 space-y-5">
-          {/* По центру брендовые иконки VK ID и Яндекс ID (исходный крупный вид) */}
-          <div className="text-center space-y-2 pt-1">
+          {/* По центру брендовые иконки VK ID и Яндекс ID */}
+          <div className="text-center space-y-2.5 pt-1">
             <div className="flex items-center justify-center space-x-3 mx-auto">
               {/* Синяя иконка VK */}
-              <div className="w-14 h-14 rounded-2xl bg-[#0077ff] text-white flex items-center justify-center shadow-lg shadow-blue-600/30 font-black text-xl select-none">
+              <div className="w-14 h-14 rounded-2xl bg-[#0077ff] text-white flex items-center justify-center shadow-xl shadow-blue-600/30 font-black text-2xl transform hover:scale-105 transition-transform duration-200 select-none">
                 <span>VK</span>
               </div>
-              <span className="text-slate-600 font-bold text-sm">•</span>
+              <span className="text-slate-500 font-bold text-lg">•</span>
               {/* Красная иконка Яндекс «Я» */}
-              <div className="w-14 h-14 rounded-2xl bg-red-600 text-white flex items-center justify-center shadow-lg shadow-red-600/30 font-black text-xl select-none">
+              <div className="w-14 h-14 rounded-2xl bg-red-600 text-white flex items-center justify-center shadow-xl shadow-red-600/30 font-black text-2xl transform hover:scale-105 transition-transform duration-200 select-none">
                 <span>Я</span>
               </div>
             </div>
 
-            {/* Заголовок: «Вход в СантехПро» */}
+            {/* Четкий белый заголовок: «Вход в СантехПро» */}
             <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
               Вход в СантехПро
             </h2>
 
             {/* Подзаголовок: «Единый личный кабинет для клиентов и мастеров» */}
             <p className="text-xs sm:text-sm text-slate-400 leading-snug">
-              Единый личный кабинет для клиентов и мастеров
+              Быстрый вход через ВКонтакте или Яндекс ID
             </p>
           </div>
 
           {/* Сообщение об ошибке (если есть) */}
           {error && (
-            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs sm:text-sm flex items-start space-x-2 animate-in fade-in duration-200">
+            <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-start space-x-2 animate-in fade-in duration-200">
               <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
               <div className="flex-1 leading-relaxed">{error}</div>
             </div>
@@ -242,7 +276,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
 
           {/* Предупреждение о блокировке popup (при необходимости) */}
           {popupBlockedUrl && (
-            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs sm:text-sm space-y-2 animate-in fade-in duration-200">
+            <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs space-y-2 animate-in fade-in duration-200">
               <div className="flex items-start space-x-2">
                 <ExternalLink className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                 <div className="leading-relaxed">
@@ -253,14 +287,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
                 href={popupBlockedUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs sm:text-sm flex items-center justify-center space-x-2 transition shadow-sm"
+                className="w-full py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center justify-center space-x-2 transition shadow-md"
               >
                 <span>Перейти на страницу авторизации ↗</span>
               </a>
             </div>
           )}
 
-          {/* ================= 3. КНОПКИ АВТОРИЗАЦИИ (ИСХОДНЫЙ ПОЛНЫЙ РАЗМЕР) ================= */}
+          {/* ================= 3. КНОПКИ АВТОРИЗАЦИИ ================= */}
           <div className="space-y-3 pt-1">
             {/* Кнопка 1: Официальный вход через VK ID */}
             <button
@@ -268,20 +302,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
               id="auth-vk-primary-btn"
               disabled={isVkLoading || isYandexLoading}
               onClick={handleVkAuth}
-              className="w-full py-3.5 px-4 rounded-2xl bg-[#0077ff] hover:bg-[#0066ee] text-white font-bold text-sm sm:text-base flex items-center justify-center space-x-3 transition-all duration-200 shadow-lg shadow-blue-600/25 hover:shadow-blue-600/35 cursor-pointer active:scale-[0.99] disabled:opacity-60"
+              className="w-full py-3.5 px-4 rounded-2xl bg-[#0077ff] hover:bg-[#0066ee] text-white font-bold text-sm sm:text-base flex items-center justify-center space-x-3 transition-all duration-200 shadow-xl shadow-blue-600/25 hover:shadow-blue-600/35 cursor-pointer active:scale-[0.99] disabled:opacity-60"
             >
-              <div className="w-7 h-7 rounded-lg bg-white/20 text-white flex items-center justify-center font-black text-xs shrink-0">
-                {isVkLoading ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <span>VK</span>}
+              <div className="w-6 h-6 rounded-lg bg-white/20 text-white flex items-center justify-center font-black text-xs shrink-0">
+                {isVkLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin text-white" /> : <span>VK</span>}
               </div>
-              <span className="font-bold tracking-tight">
+              <span className="font-extrabold tracking-tight">
                 {isVkLoading ? 'Подключение к VK ID...' : 'Войти через VK ID'}
               </span>
             </button>
 
             {/* Разделитель ИЛИ */}
-            <div className="flex items-center space-x-3 py-1">
+            <div className="flex items-center space-x-3 py-0.5">
               <div className="flex-1 h-px bg-slate-800" />
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">или</span>
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">или</span>
               <div className="flex-1 h-px bg-slate-800" />
             </div>
 
@@ -291,27 +325,85 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
               id="auth-yandex-primary-btn"
               disabled={isYandexLoading || isVkLoading}
               onClick={handleYandexAuth}
-              className="w-full py-3.5 px-4 rounded-2xl bg-white hover:bg-slate-100 text-slate-950 font-bold text-sm sm:text-base flex items-center justify-center space-x-3 transition-all duration-200 shadow-sm shadow-black/20 cursor-pointer border border-white active:scale-[0.99] disabled:opacity-60"
+              className="w-full py-3 px-4 rounded-2xl bg-white hover:bg-slate-100 text-slate-950 font-bold text-sm sm:text-base flex items-center justify-center space-x-3 transition-all duration-200 shadow-lg shadow-black/20 cursor-pointer border border-white active:scale-[0.99] disabled:opacity-60"
             >
-              <div className="w-7 h-7 rounded-full bg-red-600 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
-                {isYandexLoading ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <span>Я</span>}
+              <div className="w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+                {isYandexLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin text-white" /> : <span>Я</span>}
               </div>
-              <span className="text-slate-950 font-bold tracking-tight">
+              <span className="text-slate-950 font-extrabold tracking-tight">
                 {isYandexLoading ? 'Подключение к Яндекс ID...' : 'Войти с Яндекс ID'}
               </span>
             </button>
 
-            {/* ================= 4. БЛОК СОГЛАСИЙ (ВНИЗУ, АККУРАТНЫЙ УМЕНЬШЕННЫЙ РАЗМЕР) ================= */}
-            <div className="space-y-1.5 pt-2 text-[11px] text-slate-400">
-              {/* Чекбокс: согласие на обработку персональных данных */}
-              <label className="flex items-start space-x-2 cursor-pointer select-none">
+            {/* Кнопка 3: Переключатель для входа по логину и паролю */}
+            <div className="pt-1 text-center">
+              <button
+                type="button"
+                id="toggle-password-auth-btn"
+                onClick={() => setShowPasswordLogin(!showPasswordLogin)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-xs font-semibold text-slate-300 hover:text-white border border-slate-700/60 transition cursor-pointer select-none"
+              >
+                <KeyRound className="w-3.5 h-3.5 text-blue-400" />
+                <span>{showPasswordLogin ? 'Скрыть форму входа' : 'Вход по логину и паролю'}</span>
+              </button>
+            </div>
+
+            {/* Выпадающая форма ввода логина и пароля */}
+            {showPasswordLogin && (
+              <form onSubmit={handlePasswordLogin} className="space-y-2.5 p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 animate-in fade-in duration-200">
+                <div className="flex items-center justify-between pb-0.5">
+                  <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-blue-400" />
+                    Вход по логину и паролю
+                  </span>
+                </div>
+
+                <div>
+                  <input
+                    type="text"
+                    value={emailInput}
+                    onChange={(e) => setEmailInput(e.target.value)}
+                    placeholder="Email или телефон"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-blue-500 transition"
+                  />
+                </div>
+
+                <div>
+                  <input
+                    type="password"
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    placeholder="Пароль"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-blue-500 transition"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isPasswordLoading}
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition cursor-pointer disabled:opacity-60"
+                >
+                  {isPasswordLoading ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <UserCheck className="w-3.5 h-3.5" />
+                  )}
+                  <span>Войти</span>
+                </button>
+              </form>
+            )}
+
+            {/* ================= 4. БЛОК СОГЛАСИЙ (ВНИЗУ) ================= */}
+            <div className="space-y-2 pt-1 text-xs text-slate-200">
+              {/* Отмеченный чекбокс: белый текст «Согласен на обработку персональных данных (152-ФЗ)», фраза выделена как синяя кликабельная ссылка */}
+              <label className="flex items-start space-x-2.5 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={dataConsentAccepted}
                   onChange={(e) => setDataConsentAccepted(e.target.checked)}
-                  className="mt-0.5 w-3.5 h-3.5 rounded border-slate-700 bg-slate-950 text-blue-500 accent-blue-600 cursor-pointer shrink-0"
+                  className="mt-0.5 w-4 h-4 rounded border-slate-700 bg-slate-950 text-blue-500 accent-blue-600 cursor-pointer shrink-0"
                 />
-                <span className="leading-snug text-slate-400">
+                <span className="leading-snug text-slate-300">
                   Согласен на{' '}
                   <button
                     type="button"
@@ -321,22 +413,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
                       setLegalDocType('privacy');
                       setIsLegalModalOpen(true);
                     }}
-                    className="text-blue-400 hover:text-blue-300 underline decoration-blue-400/50 hover:decoration-blue-300 underline-offset-2 transition-colors cursor-pointer inline p-0 bg-transparent border-0 font-medium text-[11px]"
+                    className="text-blue-400 hover:text-blue-300 underline decoration-blue-400/50 hover:decoration-blue-300 underline-offset-2 transition-colors cursor-pointer inline p-0 bg-transparent border-0 font-medium text-xs"
                   >
                     обработку персональных данных (152-ФЗ)
                   </button>
                 </span>
               </label>
 
-              {/* Чекбокс: пользовательское соглашение */}
-              <label className="flex items-start space-x-2 cursor-pointer select-none">
+              {/* Отмеченный чекбокс: белый текст «Принимаю условия Пользовательского соглашения», фраза выделена как синяя кликабельная ссылка */}
+              <label className="flex items-start space-x-2.5 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={termsAccepted}
                   onChange={(e) => setTermsAccepted(e.target.checked)}
-                  className="mt-0.5 w-3.5 h-3.5 rounded border-slate-700 bg-slate-950 text-blue-500 accent-blue-600 cursor-pointer shrink-0"
+                  className="mt-0.5 w-4 h-4 rounded border-slate-700 bg-slate-950 text-blue-500 accent-blue-600 cursor-pointer shrink-0"
                 />
-                <span className="leading-snug text-slate-400">
+                <span className="leading-snug text-slate-300">
                   Принимаю условия{' '}
                   <button
                     type="button"
@@ -346,7 +438,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
                       setLegalDocType('terms');
                       setIsLegalModalOpen(true);
                     }}
-                    className="text-blue-400 hover:text-blue-300 underline decoration-blue-400/50 hover:decoration-blue-300 underline-offset-2 transition-colors cursor-pointer inline p-0 bg-transparent border-0 font-medium text-[11px]"
+                    className="text-blue-400 hover:text-blue-300 underline decoration-blue-400/50 hover:decoration-blue-300 underline-offset-2 transition-colors cursor-pointer inline p-0 bg-transparent border-0 font-medium text-xs"
                   >
                     Пользовательского соглашения
                   </button>
@@ -359,7 +451,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
           <div className="pt-2 border-t border-slate-800/60 text-center">
             <a
               href="mailto:support@santehpro.info?subject=Вопрос%20по%20входу%20в%20СантехПро"
-              className="text-[11px] text-slate-500 hover:text-slate-300 transition-colors inline-block py-0.5"
+              className="text-[11px] text-slate-500 hover:text-slate-300 transition-colors inline-block py-1"
             >
               Возникли сложности? Написать в поддержку
             </a>

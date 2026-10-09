@@ -282,9 +282,14 @@ export const ApplySpecialistModal: React.FC<ApplySpecialistModalProps> = ({
       if (res.ok) {
         const savedSpec = data.specialist || payload;
         try {
+          if (savedSpec.id) {
+            localStorage.setItem('santehpro_master_specialist_id', savedSpec.id);
+          }
           if (currentUser?.uid) {
             localStorage.setItem(`santehpro_master_questionnaire_${currentUser.uid}`, JSON.stringify(savedSpec));
           }
+          localStorage.setItem('santehpro_last_master_application', JSON.stringify(savedSpec));
+          localStorage.setItem('santehpro_master_profile_cache', JSON.stringify(savedSpec));
         } catch {}
         setSubmitted(true);
       } else {

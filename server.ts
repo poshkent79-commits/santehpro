@@ -72,8 +72,6 @@ import {
   sendAdminLoginOtpEmail,
   sendSpecialistModerationNotification,
   sendSpecialistModerationDecisionNotification,
-  sendArticleModerationNotification,
-  sendArticleModerationDecisionNotification,
   isSmtpConfigured,
   getSmtpStatus,
   saveSmtpSettings,
@@ -533,21 +531,6 @@ app.post('/api/articles', async (req, res) => {
     });
     syncEntityToTimeWebCloud('articles', 'create', newArt.id, newArt).catch(() => {});
 
-    // Automatically send notification email to administrator if submitted by master for moderation
-    if (isMasterArticle) {
-      try {
-        await sendArticleModerationNotification({
-          id: newArt.id,
-          title: newArt.title,
-          category: newArt.category,
-          author: newArt.author,
-          description: newArt.description,
-        });
-      } catch (emailErr) {
-        console.warn('Failed to dispatch article moderation email:', emailErr);
-      }
-    }
-
     res.status(201).json({
       ...newArt,
       message: isMasterArticle
@@ -695,29 +678,6 @@ app.put('/api/articles/:id/status', async (req, res) => {
       payload: updatedArt,
     });
     syncEntityToTimeWebCloud('articles', 'status', id, updatedArt).catch(() => {});
-
-    // Automatically send notification to article author if moderation decision made
-    if (moderationStatus === 'approved' || moderationStatus === 'rejected') {
-      try {
-        let authorEmail: string | undefined;
-        // Check if author matches any specialist or user
-        const matchingSpecialist = specialistsStore.find(s => s.name === updatedArt.author || s.id === updatedArt.author);
-        if (matchingSpecialist?.email) {
-          authorEmail = matchingSpecialist.email;
-        } else if (matchingSpecialist?.userUid) {
-          const u = await getUserByUid(matchingSpecialist.userUid);
-          authorEmail = u?.email;
-        }
-        await sendArticleModerationDecisionNotification({
-          article: updatedArt,
-          status: moderationStatus,
-          comment: moderationComment,
-          authorEmail,
-        });
-      } catch (emailErr) {
-        console.warn('Failed to dispatch article decision notification:', emailErr);
-      }
-    }
 
     res.json({
       success: true,
@@ -2107,16 +2067,6 @@ app.post('/api/specialists/apply', async (req, res) => {
     }
   }
 
-  let masterEmail = req.body.email ? req.body.email.trim().toLowerCase() : undefined;
-  if (!masterEmail && req.body.userUid) {
-    try {
-      const u = await getUserByUid(req.body.userUid);
-      if (u?.email) {
-        masterEmail = u.email.trim().toLowerCase();
-      }
-    } catch {}
-  }
-
   const newSpec: PlumbingSpecialist = {
     id: targetId || `spec-${Date.now()}`,
     name: req.body.name.trim(),
@@ -2126,7 +2076,7 @@ app.post('/api/specialists/apply', async (req, res) => {
     rating: 5.0,
     reviewsCount: 0,
     phone: req.body.phone.trim(),
-    email: masterEmail,
+    email: req.body.email ? req.body.email.trim().toLowerCase() : undefined,
     userUid: req.body.userUid || undefined,
     telegram: req.body.telegram ? req.body.telegram.trim() : undefined,
     whatsapp: req.body.whatsapp ? req.body.whatsapp.trim() : undefined,
@@ -2347,17 +2297,8 @@ app.put('/api/specialists/:id/status', async (req, res) => {
     // Automatically send decision email notification to applicant
     if (notifyUser !== false) {
       try {
-        let recipientSpec = { ...updated };
-        if (!recipientSpec.email && updated.userUid) {
-          try {
-            const u = await getUserByUid(updated.userUid);
-            if (u?.email) {
-              recipientSpec.email = u.email;
-            }
-          } catch {}
-        }
         await sendSpecialistModerationDecisionNotification({
-          specialist: recipientSpec,
+          specialist: updated,
           status,
           reason: rejectionReason,
           adminComment: moderationComment,

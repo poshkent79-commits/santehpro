@@ -613,7 +613,7 @@ export const SmtpSettingsTab: React.FC = () => {
         <div className="flex flex-col sm:flex-row gap-3">
           <input
             type="email"
-            placeholder="Адрес для тестового письма (например, santehpro.info@yandex.ru)"
+            placeholder="Адрес для тестового письма (например, poshkent79@gmail.com)"
             value={testEmail}
             onChange={(e) => setTestEmail(e.target.value)}
             className="flex-1 px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition"

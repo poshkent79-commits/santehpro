@@ -11,57 +11,6 @@ const DATA_DIR = path.resolve(process.cwd(), '.data');
 const ARTICLES_STORE_FILE = path.join(DATA_DIR, 'articles_store.json');
 const PERSISTED_DIR = path.resolve(process.cwd(), 'src/data/persisted');
 const PERSISTED_ARTICLES_FILE = path.join(PERSISTED_DIR, 'articles.json');
-const DELETED_ARTICLES_FILE = path.join(DATA_DIR, 'deleted_articles.json');
-const PERSISTED_DELETED_FILE = path.join(PERSISTED_DIR, 'deleted_articles.json');
-
-/**
- * Returns the set of IDs of articles that have been explicitly deleted.
- * Prevents deleted default/initial articles from resurrecting after restart or deployment.
- */
-export function getDeletedArticleIds(): Set<string> {
-  const ids = new Set<string>();
-  try {
-    if (fs.existsSync(DELETED_ARTICLES_FILE)) {
-      const data = JSON.parse(fs.readFileSync(DELETED_ARTICLES_FILE, 'utf-8'));
-      if (Array.isArray(data)) data.forEach((id: string) => ids.add(id));
-    }
-  } catch {}
-  try {
-    if (fs.existsSync(PERSISTED_DELETED_FILE)) {
-      const data = JSON.parse(fs.readFileSync(PERSISTED_DELETED_FILE, 'utf-8'));
-      if (Array.isArray(data)) data.forEach((id: string) => ids.add(id));
-    }
-  } catch {}
-  return ids;
-}
-
-export function saveDeletedArticleId(id: string): void {
-  try {
-    const ids = getDeletedArticleIds();
-    ids.add(id);
-    const arr = Array.from(ids);
-    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-    if (!fs.existsSync(PERSISTED_DIR)) fs.mkdirSync(PERSISTED_DIR, { recursive: true });
-    fs.writeFileSync(DELETED_ARTICLES_FILE, JSON.stringify(arr, null, 2), 'utf-8');
-    fs.writeFileSync(PERSISTED_DELETED_FILE, JSON.stringify(arr, null, 2), 'utf-8');
-  } catch (err) {
-    console.warn('[Articles] Failed to save deleted article id tombstone:', err);
-  }
-}
-
-export function removeDeletedArticleId(id: string): void {
-  try {
-    const ids = getDeletedArticleIds();
-    if (ids.has(id)) {
-      ids.delete(id);
-      const arr = Array.from(ids);
-      if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-      if (!fs.existsSync(PERSISTED_DIR)) fs.mkdirSync(PERSISTED_DIR, { recursive: true });
-      fs.writeFileSync(DELETED_ARTICLES_FILE, JSON.stringify(arr, null, 2), 'utf-8');
-      fs.writeFileSync(PERSISTED_DELETED_FILE, JSON.stringify(arr, null, 2), 'utf-8');
-    }
-  } catch {}
-}
 
 /**
  * Read cached articles from disk storage (.data/articles_store.json & src/data/persisted/articles.json).
@@ -71,13 +20,12 @@ export function removeDeletedArticleId(id: string): void {
 export function getCachedArticles(): Article[] {
   let diskArts: Article[] = [];
   let persistedArts: Article[] = [];
-  const deletedIds = getDeletedArticleIds();
 
   try {
     if (fs.existsSync(ARTICLES_STORE_FILE)) {
       const data = JSON.parse(fs.readFileSync(ARTICLES_STORE_FILE, 'utf-8'));
       if (Array.isArray(data) && data.length > 0) {
-        diskArts = data.filter((a: Article) => a && a.id && !deletedIds.has(a.id));
+        diskArts = data;
       }
     }
   } catch (err) {
@@ -88,7 +36,7 @@ export function getCachedArticles(): Article[] {
     if (fs.existsSync(PERSISTED_ARTICLES_FILE)) {
       const pData = JSON.parse(fs.readFileSync(PERSISTED_ARTICLES_FILE, 'utf-8'));
       if (Array.isArray(pData) && pData.length > 0) {
-        persistedArts = pData.filter((a: Article) => a && a.id && !deletedIds.has(a.id));
+        persistedArts = pData;
       }
     }
   } catch (err) {
@@ -96,16 +44,15 @@ export function getCachedArticles(): Article[] {
   }
 
   // Merge list: take all base articles, then override with custom/persisted/disk edits
-  // Strictly ignore any articles present in deletedIds tombstone
   const map = new Map<string, Article>();
   for (const a of INITIAL_ARTICLES) {
-    if (a && a.id && !deletedIds.has(a.id)) map.set(a.id, a);
+    if (a && a.id) map.set(a.id, a);
   }
   for (const a of persistedArts) {
-    if (a && a.id && !deletedIds.has(a.id)) map.set(a.id, a);
+    if (a && a.id) map.set(a.id, a);
   }
   for (const a of diskArts) {
-    if (a && a.id && !deletedIds.has(a.id)) map.set(a.id, a);
+    if (a && a.id) map.set(a.id, a);
   }
 
   if (map.size > 0) {
@@ -226,9 +173,8 @@ export async function getDbArticles(): Promise<Article[]> {
 
       // Merge with disk store: if any admin-added article exists in disk store but not in DB yet, preserve it
       const cached = getCachedArticles();
-      const deletedIds = getDeletedArticleIds();
       const dbIds = new Set(mapped.map((a) => a.id));
-      const missingFromDb = cached.filter((c) => !dbIds.has(c.id) && !deletedIds.has(c.id));
+      const missingFromDb = cached.filter((c) => !dbIds.has(c.id));
       if (missingFromDb.length > 0) {
         for (const missingArt of missingFromDb) {
           try {
@@ -320,9 +266,6 @@ function mapRowsToArticles(rows: any[]): Article[] {
 }
 
 export async function createDbArticle(art: Article): Promise<Article> {
-  // Remove from deleted tombstones if it was previously deleted
-  removeDeletedArticleId(art.id);
-
   // Always update disk cache immediately to guarantee persistence across redeployments and restarts
   try {
     const cached = getCachedArticles();
@@ -442,9 +385,6 @@ export async function updateDbArticle(id: string, updates: Partial<Article>): Pr
 }
 
 export async function deleteDbArticle(id: string): Promise<void> {
-  // Permanently record deletion tombstone so default articles never resurrect
-  saveDeletedArticleId(id);
-
   // Always update disk cache immediately
   try {
     const cached = getCachedArticles();
