@@ -563,24 +563,32 @@ export async function sendSpecialistModerationNotification(
     verificationDocs?: Array<{ name: string; type?: string; size?: string }>;
     consentTimestamp?: string;
     legalConsentTimestamp?: string;
+  },
+  options?: {
+    isUpdate?: boolean;
+    updatedFields?: string[];
   }
 ): Promise<{ success: boolean; simulated: boolean; error?: string }> {
   const config = getEffectiveSmtpConfig();
+  const isUpdate = Boolean(options?.isUpdate);
 
-  // Aggregate all admin notification recipients so owner receives notice everywhere
+  // Designated primary admin recipient: santehpro.info@yandex.ru
+  const targetEmail = 'santehpro.info@yandex.ru';
+
   const recipientSet = new Set<string>();
+  recipientSet.add(targetEmail);
   if (process.env.ADMIN_EMAIL?.trim()) {
     recipientSet.add(process.env.ADMIN_EMAIL.trim().toLowerCase());
   }
   recipientSet.add('poshkent79@gmail.com');
-  recipientSet.add('santehpro.info@yandex.ru');
   if (config?.user?.trim() && config.user.includes('@')) {
     recipientSet.add(config.user.trim().toLowerCase());
   }
   if (config?.fromEmail?.trim() && config.fromEmail.includes('@')) {
     recipientSet.add(config.fromEmail.trim().toLowerCase());
   }
-  const adminEmail = Array.from(recipientSet).join(', ');
+  const toList = Array.from(recipientSet);
+  const adminEmail = toList.join(', ');
 
   const docs = Array.isArray(specialist.verificationDocs) ? specialist.verificationDocs : [];
   const servicesList = Array.isArray(specialist.services)
@@ -590,7 +598,15 @@ export async function sendSpecialistModerationNotification(
     ? new Date(specialist.consentTimestamp).toLocaleString('ru-RU')
     : new Date().toLocaleString('ru-RU');
 
-  const subject = `🔧 Новая заявка на модерацию мастера: ${specialist.name} (г. ${specialist.city})`;
+  const subject = isUpdate
+    ? `✏️ Изменение данных профиля мастера: ${specialist.name} (г. ${specialist.city}) — требуется повторная модерация`
+    : `🔧 Новая заявка на модерацию мастера: ${specialist.name} (г. ${specialist.city})`;
+
+  const badgeText = isUpdate ? 'Изменение данных профиля • Повторная модерация' : 'Новая анкета на модерацию';
+  const headerGradient = isUpdate
+    ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #b45309 100%)'
+    : 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)';
+  const iconEmoji = isUpdate ? '✏️' : '🔧';
 
   const htmlContent = `
 <!DOCTYPE html>
@@ -606,15 +622,15 @@ export async function sendSpecialistModerationNotification(
         <table role="presentation" width="100%" style="max-width:600px; background-color:#1e293b; border-radius:20px; border:1px solid #334155; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
           <!-- Header -->
           <tr>
-            <td style="padding:28px 28px 20px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); text-align:left;">
-              <span style="display:inline-block; font-size:11px; text-transform:uppercase; letter-spacing:1px; background-color:rgba(255,255,255,0.2); color:#ffffff; font-weight:800; padding:4px 10px; border-radius:9999px; margin-bottom:8px;">
-                Новая анкета на модерацию
+            <td style="padding:28px 28px 20px; background: ${headerGradient}; text-align:left;">
+              <span style="display:inline-block; font-size:11px; text-transform:uppercase; letter-spacing:1px; background-color:rgba(0,0,0,0.25); color:#ffffff; font-weight:800; padding:4px 10px; border-radius:9999px; margin-bottom:8px;">
+                ${badgeText}
               </span>
               <h1 style="margin:0; font-size:22px; font-weight:800; color:#ffffff;">
-                🔧 Заявка специалиста: ${specialist.name}
+                ${iconEmoji} ${isUpdate ? 'Обновление анкеты мастера' : 'Заявка мастера'}: ${specialist.name}
               </h1>
-              <p style="margin:4px 0 0; font-size:13px; color:#e0f2fe;">
-                Город: <strong>г. ${specialist.city}</strong> • ID: ${specialist.id}
+              <p style="margin:4px 0 0; font-size:13px; color:#f1f5f9;">
+                Город: <strong>г. ${specialist.city}</strong> • ID: ${specialist.id} ${isUpdate ? '• Статус: На повторной проверке' : ''}
               </p>
             </td>
           </tr>
@@ -622,8 +638,16 @@ export async function sendSpecialistModerationNotification(
           <!-- Content -->
           <tr>
             <td style="padding:28px;">
-              <h2 style="margin:0 0 16px; font-size:16px; font-weight:700; color:#38bdf8; border-bottom:1px solid #334155; pb-2;">
-                📋 Основные сведения о мастере
+              ${isUpdate ? `
+              <div style="background-color:#451a03; border:1px solid #f59e0b; border-radius:12px; padding:14px 16px; margin-bottom:20px; color:#fef3c7; font-size:13px; line-height:1.5;">
+                ⚠️ <strong>Внимание:</strong> Мастер отредактировал данные своего профиля. В соответствии с регламентом безопасности СантехПро профиль переведён в статус <strong>«Ожидает проверки» (pending)</strong> до подтверждения администратором.
+              </div>` : `
+              <div style="background-color:#0c4a6e; border:1px solid #38bdf8; border-radius:12px; padding:14px 16px; margin-bottom:20px; color:#e0f2fe; font-size:13px; line-height:1.5;">
+                ℹ️ Поступила новая анкета специалиста. Пожалуйста, проверьте квалификацию и контактные данные.
+              </div>`}
+
+              <h2 style="margin:0 0 16px; font-size:16px; font-weight:700; color:#38bdf8; border-bottom:1px solid #334155; padding-bottom:8px;">
+                📋 Актуальные сведения о мастере
               </h2>
 
               <table width="100%" style="font-size:13px; color:#cbd5e1; border-collapse:collapse; margin-bottom:20px;">
@@ -678,7 +702,7 @@ export async function sendSpecialistModerationNotification(
               </div>` : ''}
 
               <!-- Documents attached -->
-              <h2 style="margin:20px 0 12px; font-size:15px; font-weight:700; color:#38bdf8; border-bottom:1px solid #334155; pb-2;">
+              <h2 style="margin:20px 0 12px; font-size:15px; font-weight:700; color:#38bdf8; border-bottom:1px solid #334155; padding-bottom:8px;">
                 📎 Прикреплённые документы (${docs.length})
               </h2>
               ${docs.length > 0 ? `
@@ -689,22 +713,21 @@ export async function sendSpecialistModerationNotification(
                 Кандидат не прикрепил дополнительные файлы документов.
               </p>`}
 
-              <!-- Legal & Compliance Audit Box -->
+              <!-- Legal Audit Box -->
               <div style="background-color:#0f172a; border:1px solid #10b981; border-radius:14px; padding:16px; margin-top:20px;">
                 <div style="font-size:12px; font-weight:700; color:#34d399; margin-bottom:8px;">
-                  ⚖️ Аудит правовых согласий (Юридическая фиксация в БД):
+                  ⚖️ Аудит правовых согласий:
                 </div>
                 <div style="font-size:12px; line-height:1.6; color:#cbd5e1;">
-                  <div>✔ <strong>Согласие на обработку персональных данных (152-ФЗ):</strong> Подтверждено (${consentTimeStr})</div>
-                  <div>✔ <strong>Пользовательское соглашение и регламент мастера:</strong> Безоговорочно принято (${consentTimeStr})</div>
-                  <div>✔ <strong>Статус:</strong> Независимый исполнитель (самозанятый/ИП), единоличная ответственность на объекте</div>
-                  <div style="color:#94a3b8; font-size:11px; margin-top:6px;">Запись сохранена в защищенной базе данных для целей административного аудита.</div>
+                  <div>✔ <strong>Согласие на обработку персональных данных:</strong> Подтверждено (${consentTimeStr})</div>
+                  <div>✔ <strong>Пользовательское соглашение и регламент мастера:</strong> Принято (${consentTimeStr})</div>
+                  <div>✔ <strong>Статус:</strong> Независимый исполнитель, прямая ответственность за качество работ</div>
                 </div>
               </div>
 
               <div style="margin-top:24px; text-align:center;">
                 <p style="margin:0 0 12px; font-size:13px; color:#94a3b8;">
-                  Для проверки анкеты, просмотра фотографий работ и принятия решения откройте панель управления администратора:
+                  Для проверки анкеты, просмотра фото работ и принятия решения откройте панель управления администратора:
                 </p>
                 <div style="display:inline-block; background-color:#38bdf8; color:#090d16; font-weight:800; font-size:13px; padding:12px 24px; border-radius:12px; text-decoration:none;">
                   Перейти в Панель управления → Мастера
@@ -717,7 +740,7 @@ export async function sendSpecialistModerationNotification(
           <tr>
             <td style="padding:16px 28px; background-color:#0f172a; border-top:1px solid #334155; text-align:center;">
               <p style="margin:0; font-size:11px; color:#64748b;">
-                Автоматическое системное уведомление платформы «СантехПро».
+                Автоматическое системное уведомление сервиса «СантехПро». Доставка на целевой адрес: ${targetEmail}
               </p>
             </td>
           </tr>
@@ -730,8 +753,10 @@ export async function sendSpecialistModerationNotification(
   `.trim();
 
   const textContent = `
-НОВАЯ ЗАЯВКА НА МОДЕРАЦИЮ МАСТЕРА — САНТЕХПРО
+${isUpdate ? 'ИЗМЕНЕНИЕ ДАННЫХ ПРОФИЛЯ МАСТЕРА' : 'НОВАЯ ЗАЯВКА НА МОДЕРАЦИЮ МАСТЕРА'} — САНТЕХПРО
 ===================================================
+${isUpdate ? 'Мастер обновил анкету. Анкета переведена в статус «Ожидает проверки».' : 'Поступила новая заявка на регистрацию мастера.'}
+
 ФИО: ${specialist.name}
 Город: г. ${specialist.city}
 Телефон: ${specialist.phone}
@@ -741,12 +766,7 @@ ${specialist.telegram ? `Telegram: ${specialist.telegram}\n` : ''}${specialist.w
 Услуги: ${servicesList}
 ${specialist.bio ? `О себе: "${specialist.bio}"\n` : ''}Документы (${docs.length}): ${docs.map((d) => d.name).join(', ') || 'Без документов'}
 
-ЮРИДИЧЕСКИЙ АУДИТ:
-- Согласие 152-ФЗ: Подтверждено (${consentTimeStr})
-- Пользовательское соглашение: Принято (${consentTimeStr})
-- Статус: Независимый исполнитель
-
-Войдите в Панель управления СантехПро (вкладка «Мастера» -> «Заявки на модерации») для одобрения или отклонения.
+Уведомление автоматически направлено на адрес: ${targetEmail}
   `.trim();
 
   if (config) {
@@ -755,27 +775,37 @@ ${specialist.bio ? `О себе: "${specialist.bio}"\n` : ''}Документы 
       const { transporter } = getMailTransporter(config);
       await transporter.sendMail({
         from: fromAddress,
-        to: adminEmail,
+        to: toList,
         subject,
         text: textContent,
         html: htmlContent,
       });
 
-      saveEmailToLocalAudit(adminEmail, `moderation-${specialist.id}`, 'sent_smtp');
-      console.log(`[SMTP] Moderation notification sent to admin (${adminEmail}) for specialist ${specialist.name}`);
+      saveEmailToLocalAudit(targetEmail, `moderation-${specialist.id}`, 'sent_smtp');
+      console.log(`[SMTP] Moderation notification sent to ${targetEmail} (${adminEmail}) for specialist ${specialist.name} (isUpdate=${isUpdate})`);
       return { success: true, simulated: false };
     } catch (smtpError: any) {
       const errMsg = smtpError?.message || 'SMTP delivery failed';
       console.error('[SMTP] Failed to send moderation notification:', errMsg);
-      saveEmailToLocalAudit(adminEmail, `moderation-${specialist.id}`, `smtp_error: ${errMsg}`);
+      saveEmailToLocalAudit(targetEmail, `moderation-${specialist.id}`, `smtp_error: ${errMsg}`);
       return { success: true, simulated: true, error: errMsg };
     }
   } else {
     // When SMTP is not configured yet, record in local audit log
-    saveEmailToLocalAudit(adminEmail, `moderation-${specialist.id}`, 'simulated');
-    console.log(`[SMTP SIMULATED] Moderation notification generated for admin (${adminEmail}) for specialist ${specialist.name}`);
+    saveEmailToLocalAudit(targetEmail, `moderation-${specialist.id}`, 'simulated');
+    console.log(`[SMTP SIMULATED] Moderation notification generated for ${targetEmail} (${adminEmail}) for specialist ${specialist.name} (isUpdate=${isUpdate})`);
     return { success: true, simulated: true };
   }
+}
+
+/**
+ * Convenience helper specifically for master profile edits
+ */
+export async function sendSpecialistProfileUpdateNotification(
+  specialist: any,
+  options?: { updatedFields?: string[] }
+): Promise<{ success: boolean; simulated: boolean; error?: string }> {
+  return sendSpecialistModerationNotification(specialist, { isUpdate: true, ...options });
 }
 
 export interface SpecialistDecisionParams {

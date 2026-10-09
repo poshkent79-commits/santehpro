@@ -71,6 +71,7 @@ import {
   sendPasswordResetEmail,
   sendAdminLoginOtpEmail,
   sendSpecialistModerationNotification,
+  sendSpecialistProfileUpdateNotification,
   sendSpecialistModerationDecisionNotification,
   sendArticleModerationNotification,
   sendArticleModerationDecisionNotification,
@@ -2284,12 +2285,12 @@ app.put('/api/specialists/:id', async (req, res) => {
 
     syncEntityToTimeWebCloud('specialists', 'update', id, updated).catch(() => {});
 
-    // If master updated profile, notify admin by email
+    // If master updated profile, notify admin at santehpro.info@yandex.ru
     if (!isAdminEdit) {
       try {
-        await sendSpecialistModerationNotification(updated);
+        await sendSpecialistProfileUpdateNotification(updated);
       } catch (emailErr) {
-        console.warn('Failed to send re-moderation email notification:', emailErr);
+        console.warn('Failed to send re-moderation email notification to santehpro.info@yandex.ru:', emailErr);
       }
     }
 
