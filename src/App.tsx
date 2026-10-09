@@ -201,7 +201,12 @@ function AppContent() {
 
   // Automatic admin login upon authentication with confirmed super-admin email or phone (+79247889900)
   useEffect(() => {
-    const superAdminEmails = ['poshkent79@gmail.com', 'admin@santehpro.ru', 'admin@santehpro.info'];
+    const superAdminEmails = [
+      'poshkent79@gmail.com',
+      'santehpro.info@yandex.ru',
+      'admin@santehpro.ru',
+      'admin@santehpro.info',
+    ];
     const email = currentUser?.email?.toLowerCase().trim();
     const phoneDigits = currentUser?.phone?.replace(/\D/g, '') || '';
     const isSuperAdminPhone =
@@ -216,7 +221,12 @@ function AppContent() {
   useEffect(() => {
     const handleAuthSuccess = (e: any) => {
       const profile = e.detail;
-      const superAdminEmails = ['poshkent79@gmail.com', 'admin@santehpro.ru', 'admin@santehpro.info'];
+      const superAdminEmails = [
+        'poshkent79@gmail.com',
+        'santehpro.info@yandex.ru',
+        'admin@santehpro.ru',
+        'admin@santehpro.info',
+      ];
       const email = profile?.email?.toLowerCase().trim();
       const phoneDigits = profile?.phone?.replace(/\D/g, '') || '';
       const isSuperAdminPhone =
@@ -248,42 +258,48 @@ function AppContent() {
           })
           .catch(() => {});
       }
+      localStorage.removeItem('santehpro_master_specialist_id');
+      localStorage.removeItem('santehpro_last_master_application');
+      localStorage.removeItem('santehpro_master_profile_cache');
+      localStorage.removeItem('santehpro_cached_master_profile');
     } catch {}
   }, []);
 
   // Detect if current logged-in user is an approved master
   const approvedMasterSpecialist = useMemo(() => {
     if (!currentUser) return null;
-    const storedSpecialistId = typeof window !== 'undefined' ? localStorage.getItem('santehpro_master_specialist_id') : null;
+
+    const curEmail = (currentUser.email || '').toLowerCase().trim();
+    const curPhone = (currentUser.phone || '').replace(/\D/g, '');
+    const curName = (currentUser.name || '').toLowerCase();
+
+    const isOwner = Boolean(
+      curEmail === 'poshkent79@gmail.com' ||
+      curEmail === 'santehpro.info@yandex.ru' ||
+      curEmail === 'admin@santehpro.ru' ||
+      curEmail === 'admin@santehpro.info' ||
+      curEmail === 'sommoni@bk.ru' ||
+      (curPhone.length >= 10 && curPhone.endsWith('9247889900')) ||
+      (curName.includes('достонджон') && curName.includes('туйчиев'))
+    );
+
     const matched = specialists.find((s) => {
-      if (storedSpecialistId && s.id === storedSpecialistId) return true;
+      // 1. Direct match by userUid
       if (s.userUid && s.userUid === currentUser.uid) return true;
+
+      // 2. Direct match by exact email
       if (s.email && currentUser.email && s.email.toLowerCase().trim() === currentUser.email.toLowerCase().trim()) return true;
+
+      // 3. Direct match by exact phone
       if (s.phone && currentUser.phone) {
         const cleanS = s.phone.replace(/\D/g, '');
         const cleanU = currentUser.phone.replace(/\D/g, '');
         if (cleanS.length >= 10 && cleanU.length >= 10 && (cleanS === cleanU || cleanS.slice(-10) === cleanU.slice(-10))) return true;
       }
-      if (currentUser.name && s.name && s.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase()) return true;
 
-      const curName = (currentUser.name || '').toLowerCase();
-      const curEmail = (currentUser.email || '').toLowerCase().trim();
-      const curPhone = (currentUser.phone || '').replace(/\D/g, '');
-      const isOwner =
-        curName.includes('достонджон') ||
-        curName.includes('туйчиев') ||
-        curEmail.includes('poshkent') ||
-        curEmail.includes('dostonjon') ||
-        curEmail.includes('sommoni') ||
-        curEmail.includes('santehpro.info') ||
-        curPhone.endsWith('9247889900') ||
-        currentUser.role === 'admin';
-
+      // 4. Founder match ONLY for founder's account
       if (isOwner) {
-        const specName = (s.name || '').toLowerCase();
         if (
-          specName.includes('достонджон') ||
-          specName.includes('туйчиев') ||
           s.id === 'spec-1790212144464' ||
           s.id === 'spec-dostonjon' ||
           (s.phone && s.phone.replace(/\D/g, '').endsWith('9247889900'))
@@ -291,32 +307,13 @@ function AppContent() {
           return true;
         }
       }
+
       return false;
     });
 
-    if (matched) return matched;
-
-    // Check localStorage questionnaire backup
-    try {
-      const cached = typeof window !== 'undefined'
-        ? (localStorage.getItem(`santehpro_master_questionnaire_${currentUser.uid}`) ||
-           localStorage.getItem('santehpro_last_master_application') ||
-           localStorage.getItem('santehpro_master_profile_cache'))
-        : null;
-      if (cached) {
-        const p = JSON.parse(cached);
-        if (p && (p.name || p.phone)) {
-          return {
-            ...p,
-            userUid: currentUser.uid || p.userUid,
-            email: currentUser.email || p.email,
-            phone: currentUser.phone || p.phone,
-            status: 'approved',
-            verified: true,
-          };
-        }
-      }
-    } catch {}
+    if (matched && (matched.status === 'approved' || matched.verified)) {
+      return matched;
+    }
 
     return null;
   }, [currentUser, specialists]);
@@ -878,101 +875,79 @@ function AppContent() {
   const totalPendingCount = totalPendingSpecialists + totalPendingServiceRequests + totalPendingQuestions;
 
   // Find linked specialist if currentUser is a master
-  const userMasterSpecialist = currentUser
-    ? specialists.find((s) => {
-        // 0. Manual link from localStorage if user picked it
-        const storedSpecialistId = typeof window !== 'undefined' ? localStorage.getItem('santehpro_master_specialist_id') : null;
-        if (storedSpecialistId && s.id === storedSpecialistId) return true;
+  const userMasterSpecialist = useMemo(() => {
+    if (!currentUser) return null;
 
-        // 1. Direct matching by userUid (highest priority)
-        if (s.userUid && currentUser.uid && s.userUid === currentUser.uid) {
-          return true;
-        }
+    const curEmail = (currentUser.email || '').toLowerCase().trim();
+    const curPhone = (currentUser.phone || '').replace(/\D/g, '');
+    const curName = (currentUser.name || '').toLowerCase();
 
-        // 2. Direct match by email
-        if (s.email && currentUser.email && s.email.toLowerCase().trim() === currentUser.email.toLowerCase().trim()) {
-          return true;
-        }
+    const isOwner = Boolean(
+      curEmail === 'poshkent79@gmail.com' ||
+      curEmail === 'santehpro.info@yandex.ru' ||
+      curEmail === 'admin@santehpro.ru' ||
+      curEmail === 'admin@santehpro.info' ||
+      curEmail === 'sommoni@bk.ru' ||
+      (curPhone.length >= 10 && curPhone.endsWith('9247889900')) ||
+      (curName.includes('достонджон') && curName.includes('туйчиев'))
+    );
 
-        // 3. Direct match by phone
-        if (s.phone && currentUser.phone) {
-          const cleanS = s.phone.replace(/\D/g, '');
-          const cleanU = currentUser.phone.replace(/\D/g, '');
-          if (cleanS.length >= 10 && cleanU.length >= 10) {
-            if (cleanS === cleanU || cleanS.slice(-10) === cleanU.slice(-10)) {
-              return true;
-            }
-          }
-        }
+    return specialists.find((s) => {
+      // 1. Direct matching by userUid (highest priority)
+      if (s.userUid && currentUser.uid && s.userUid === currentUser.uid) {
+        return true;
+      }
 
-        // 4. Owner & founder auto-match (Достонджон Туйчиев, Находка, +79247889900, poshkent79@gmail.com, etc.)
-        const curName = (currentUser.name || '').toLowerCase();
-        const curEmail = (currentUser.email || '').toLowerCase().trim();
-        const curPhone = (currentUser.phone || '').replace(/\D/g, '');
-        const isOwner =
-          curName.includes('достонджон') ||
-          curName.includes('туйчиев') ||
-          curEmail.includes('poshkent') ||
-          curEmail.includes('dostonjon') ||
-          curEmail.includes('sommoni') ||
-          curEmail.includes('santehpro.info') ||
-          curPhone.endsWith('9247889900') ||
-          currentUser.role === 'admin';
+      // 2. Direct match by exact email
+      if (s.email && currentUser.email && s.email.toLowerCase().trim() === currentUser.email.toLowerCase().trim()) {
+        return true;
+      }
 
-        if (isOwner) {
-          const specName = (s.name || '').toLowerCase();
-          if (
-            specName.includes('достонджон') ||
-            specName.includes('туйчиев') ||
-            s.id === 'spec-1790212144464' ||
-            s.id === 'spec-dostonjon' ||
-            (s.phone && s.phone.replace(/\D/g, '').endsWith('9247889900'))
-          ) {
+      // 3. Direct match by exact phone (clean 10+ digits)
+      if (s.phone && currentUser.phone) {
+        const cleanS = s.phone.replace(/\D/g, '');
+        const cleanU = currentUser.phone.replace(/\D/g, '');
+        if (cleanS.length >= 10 && cleanU.length >= 10) {
+          if (cleanS === cleanU || cleanS.slice(-10) === cleanU.slice(-10)) {
             return true;
           }
         }
+      }
 
-        // 5. Fallback match if user role is explicitly specialist
-        if (currentUser.role === 'specialist') {
-          return (
-            (s.email && currentUser.email && s.email.toLowerCase() === currentUser.email.toLowerCase()) ||
-            (s.phone && currentUser.phone && s.phone.replace(/\D/g, '') === currentUser.phone.replace(/\D/g, ''))
-          );
+      // 4. Owner & founder auto-match ONLY for verified founder account
+      if (isOwner) {
+        if (
+          s.id === 'spec-1790212144464' ||
+          s.id === 'spec-dostonjon' ||
+          (s.phone && s.phone.replace(/\D/g, '').endsWith('9247889900'))
+        ) {
+          return true;
         }
+      }
 
-        return false;
-      })
-    : null;
+      return false;
+    }) || null;
+  }, [currentUser, specialists]);
 
-  // Cache master profile in localStorage for resilient disaster recovery
+  // Cache master profile strictly per user in localStorage for resilient disaster recovery
   useEffect(() => {
-    if (userMasterSpecialist) {
+    if (userMasterSpecialist && currentUser?.uid) {
       try {
-        localStorage.setItem('santehpro_cached_master_profile', JSON.stringify(userMasterSpecialist));
-        if (userMasterSpecialist.phone) {
-          localStorage.setItem(`santehpro_master_${userMasterSpecialist.phone.replace(/\D/g, '')}`, JSON.stringify(userMasterSpecialist));
-        }
+        localStorage.setItem(`santehpro_cached_master_profile_${currentUser.uid}`, JSON.stringify(userMasterSpecialist));
       } catch {}
     }
-  }, [userMasterSpecialist]);
+  }, [userMasterSpecialist, currentUser?.uid]);
 
-  // Master Self-Healing: If user is logged in as master or has cached master data, but server lost the record
+  // Master Self-Healing: strictly scoped to current user UID
   useEffect(() => {
-    if (currentUser && !userMasterSpecialist) {
+    if (currentUser?.uid && !userMasterSpecialist) {
       try {
-        const cached = localStorage.getItem('santehpro_cached_master_profile');
+        const cached = localStorage.getItem(`santehpro_master_questionnaire_${currentUser.uid}`) ||
+                       localStorage.getItem(`santehpro_cached_master_profile_${currentUser.uid}`);
         if (cached) {
           const parsed = JSON.parse(cached);
-          const cleanUserPhone = (currentUser.phone || '').replace(/\D/g, '');
-          const cleanCachedPhone = (parsed.phone || '').replace(/\D/g, '');
-
-          const isMatch = (cleanUserPhone && cleanCachedPhone && (cleanUserPhone === cleanCachedPhone || cleanUserPhone.endsWith(cleanCachedPhone.slice(-10)))) ||
-                          (currentUser.email && parsed.email && currentUser.email.toLowerCase() === parsed.email.toLowerCase()) ||
-                          parsed.userUid === currentUser.uid ||
-                          currentUser.role === 'specialist';
-
-          if (isMatch) {
-            console.log('[Self-Healing] Restoring master profile to server from browser cache...');
+          if (parsed && parsed.userUid === currentUser.uid) {
+            console.log('[Self-Healing] Restoring master profile to server from user cache...');
             fetch('/api/specialists/self-heal', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -990,7 +965,7 @@ function AppContent() {
         }
       } catch {}
     }
-  }, [currentUser, userMasterSpecialist]);
+  }, [currentUser?.uid, userMasterSpecialist]);
 
   const masterIncomingOrdersCount = userMasterSpecialist
     ? serviceRequests.filter(

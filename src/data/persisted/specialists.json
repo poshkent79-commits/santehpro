@@ -1,5 +1,45 @@
 [
   {
+    "id": "spec-1791528499308",
+    "name": "Тест Мастер",
+    "photo": "https://ui-avatars.com/api/?name=%D0%A2%D0%B5%D1%81%D1%82%20%D0%9C%D0%B0%D1%81%D1%82%D0%B5%D1%80&background=0284c7&color=ffffff&size=256&bold=true",
+    "city": "Москва",
+    "experienceYears": 1,
+    "rating": 5,
+    "reviewsCount": 0,
+    "phone": "+79998887766",
+    "services": [
+      "Установка сантехники"
+    ],
+    "minPrice": 1000,
+    "emergency247": false,
+    "verified": false,
+    "bio": "",
+    "status": "pending",
+    "appliedAt": "2026-10-09",
+    "dataConsent": true,
+    "consentTimestamp": "2026-10-09T06:48:19.308Z",
+    "legalConsent": true,
+    "legalConsentTimestamp": "2026-10-09T06:48:19.308Z",
+    "legalChecklist": {
+      "docVerificationConsentAccepted": true,
+      "authenticityConfirmed": true,
+      "termsAccepted": true,
+      "dataConsentAccepted": true,
+      "independentContractor": true,
+      "siteLiability": true,
+      "platformIndemnity": true,
+      "version": "3.0-MASTER-LEGAL-AUDIT",
+      "signedAt": "2026-10-09T06:48:19.308Z",
+      "clientIp": "127.0.0.1",
+      "clientUserAgent": "curl/7.88.1",
+      "documentsCount": 0
+    },
+    "legalChecklistJson": "{\"docVerificationConsentAccepted\":true,\"authenticityConfirmed\":true,\"termsAccepted\":true,\"dataConsentAccepted\":true,\"independentContractor\":true,\"siteLiability\":true,\"platformIndemnity\":true,\"version\":\"3.0-MASTER-LEGAL-AUDIT\",\"signedAt\":\"2026-10-09T06:48:19.308Z\",\"clientIp\":\"127.0.0.1\",\"clientUserAgent\":\"curl/7.88.1\",\"documentsCount\":0}",
+    "verificationDocs": [],
+    "verificationDocsJson": "[]"
+  },
+  {
     "id": "spec-1790212144464",
     "name": "Туйчиев Достонджон Нортожович",
     "photo": "",

@@ -14,6 +14,7 @@ import { BookMasterModal } from './BookMasterModal';
 import { SpecialistReviewsModal } from './SpecialistReviewsModal';
 import { WorkGalleryModal } from './WorkGalleryModal';
 import { SpecialistProfileModal } from './SpecialistProfileModal';
+import { useAuth } from '../context/AuthContext';
 
 function getReviewsWord(count: number): string {
   const mod10 = count % 10;
@@ -71,6 +72,23 @@ export const SpecialistsView: React.FC<SpecialistsViewProps> = ({
     setLocalSearchQuery(val);
     onSearchQueryChange?.(val);
   };
+  const { currentUser: authUser, openAuthModal } = useAuth();
+  const effectiveUser = currentUser || authUser;
+
+  const handleOpenApplySpecialist = () => {
+    if (!effectiveUser) {
+      openAuthModal(
+        'login',
+        'Войдите через VK ID или Яндекс ID, чтобы закрепить за вами профиль мастера и личный кабинет',
+        () => {
+          setShowApplyModal(true);
+        }
+      );
+      return;
+    }
+    setShowApplyModal(true);
+  };
+
   const [onlyEmergency, setOnlyEmergency] = useState(false);
   const [onlyVerified, setOnlyVerified] = useState(false);
   const [onlyHighRating, setOnlyHighRating] = useState(false);
@@ -318,7 +336,7 @@ export const SpecialistsView: React.FC<SpecialistsViewProps> = ({
               </h4>
               <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">
                 {moderationSuccessBanner.masterName ? `Анкета мастера «${moderationSuccessBanner.masterName}» ` : 'Ваша анкета '}
-                зарегистрирована. Согласие с Пользовательским соглашением и 152-ФЗ сохранено в базе данных для административного аудита. Администратору портала направлено электронное уведомление на e-mail.
+                зарегистрирована и направлена администратору на проверку.
               </p>
             </div>
           </div>
@@ -487,7 +505,7 @@ export const SpecialistsView: React.FC<SpecialistsViewProps> = ({
             )}
 
             <button
-              onClick={() => setShowApplyModal(true)}
+              onClick={handleOpenApplySpecialist}
               className="px-4 py-2 rounded-xl bg-cyan-500 text-slate-950 font-bold text-xs hover:bg-cyan-400 transition shadow-sm"
             >
               Подать заявку мастера
@@ -686,7 +704,7 @@ export const SpecialistsView: React.FC<SpecialistsViewProps> = ({
         </div>
 
         <button
-          onClick={() => setShowApplyModal(true)}
+          onClick={handleOpenApplySpecialist}
           className="w-full md:w-auto px-6 py-3.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs sm:text-sm transition shadow-lg shadow-cyan-500/20 flex items-center justify-center space-x-2 shrink-0"
         >
           <UserPlus className="w-4 h-4" />

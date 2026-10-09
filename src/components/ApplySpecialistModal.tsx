@@ -8,7 +8,6 @@ import {
   DollarSign,
   Send,
   CheckCircle,
-  CheckCircle2,
   ChevronDown,
   FileText,
   Lock,
@@ -53,7 +52,7 @@ export const ApplySpecialistModal: React.FC<ApplySpecialistModalProps> = ({
   initialSpecialist,
   isReapplying,
 }) => {
-  const { currentUser } = useAuth();
+  const { currentUser, openAuthModal } = useAuth();
   const initialCountry = getCountryByCity(initialSpecialist?.city || currentUser?.city || 'Москва').code;
   const [selectedCountryCode, setSelectedCountryCode] = useState<string>(initialCountry);
 
@@ -195,6 +194,15 @@ export const ApplySpecialistModal: React.FC<ApplySpecialistModalProps> = ({
     e.preventDefault();
     setError(null);
 
+    if (!currentUser) {
+      setError('Для отправки анкеты необходимо войти через VK ID или Яндекс ID.');
+      openAuthModal(
+        'login',
+        'Войдите через VK ID или Яндекс ID, чтобы закрепить за вами профиль мастера и личный кабинет'
+      );
+      return;
+    }
+
     if (!formData.name.trim() || !formData.phone.trim()) {
       setError('Пожалуйста, укажите ваше ФИО и номер контактного телефона.');
       return;
@@ -332,27 +340,6 @@ export const ApplySpecialistModal: React.FC<ApplySpecialistModalProps> = ({
                 </div>
               </div>
 
-              <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800/90 text-xs text-slate-300 space-y-2.5 leading-relaxed">
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>
-                    <strong>Юридическая фиксация:</strong> Согласие с Пользовательским соглашением и согласие на обработку персональных данных (152-ФЗ) сохранены в базе данных для целей административного аудита.
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>
-                    <strong>E-mail уведомление администратору:</strong> Администратору сервиса автоматически направлено подробное электронное письмо со всеми параметрами вашей анкеты.
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>
-                    <strong>Публикация в каталоге:</strong> После проверки квалификации профиль мастера активируется в городе <strong>г. {formData.city}</strong>.
-                  </span>
-                </div>
-              </div>
-
               <button
                 type="button"
                 onClick={() => onSuccess(formData.name)}
@@ -396,6 +383,36 @@ export const ApplySpecialistModal: React.FC<ApplySpecialistModalProps> = ({
                     Рекомендация модератора: «{initialSpecialist.moderationComment}»
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Account Binding Indicator */}
+            {currentUser ? (
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-950/70 border border-slate-800 text-xs">
+                <div className="flex items-center space-x-2.5 text-slate-300">
+                  <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-bold text-xs shrink-0">
+                    ✓
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-slate-400 text-[11px] block">Профиль мастера будет закреплен за вашим аккаунтом:</span>
+                    <span className="text-white font-bold text-xs truncate inline-block">{currentUser.name}</span>
+                    {currentUser.email && <span className="text-slate-400 ml-1.5 text-[11px]">({currentUser.email})</span>}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200">
+                <div className="flex items-center space-x-2">
+                  <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>Для сохранения анкеты и управления профилем требуется войти в систему</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openAuthModal('login', 'Войдите через VK ID или Яндекс ID, чтобы закрепить за вами профиль мастера и личный кабинет')}
+                  className="px-3 py-1 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition cursor-pointer shrink-0"
+                >
+                  Войти
+                </button>
               </div>
             )}
 

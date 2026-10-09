@@ -1018,6 +1018,152 @@ ${adminComment ? `Комментарий модератора: "${adminComment}"
 }
 
 /**
+ * Sends notification to admin when a master submits a new article/course for moderation
+ */
+export async function sendArticleModerationNotification(article: {
+  id: string;
+  title: string;
+  category?: string;
+  author?: string;
+  authorEmail?: string;
+  description?: string;
+}): Promise<{ success: boolean; simulated: boolean; error?: string }> {
+  const config = getEffectiveSmtpConfig();
+
+  const recipientSet = new Set<string>();
+  if (process.env.ADMIN_EMAIL?.trim()) {
+    recipientSet.add(process.env.ADMIN_EMAIL.trim().toLowerCase());
+  }
+  recipientSet.add('poshkent79@gmail.com');
+  recipientSet.add('santehpro.info@yandex.ru');
+  if (config?.user?.trim() && config.user.includes('@')) {
+    recipientSet.add(config.user.trim().toLowerCase());
+  }
+  if (config?.fromEmail?.trim() && config.fromEmail.includes('@')) {
+    recipientSet.add(config.fromEmail.trim().toLowerCase());
+  }
+  const adminEmail = Array.from(recipientSet).join(', ');
+
+  const subject = `📚 Новая статья/курс на модерации: «${article.title}»`;
+  const textContent = `
+НОВАЯ СТАТЬЯ НА МОДЕРАЦИИ — САНТЕХПРО
+=====================================
+Название: ${article.title}
+Категория: ${article.category || 'Сантехника'}
+Автор: ${article.author || 'Мастер'} ${article.authorEmail ? `(${article.authorEmail})` : ''}
+Описание: ${article.description || 'Не указано'}
+
+Войдите в Панель управления СантехПро (вкладка «Модерация» -> «Статьи мастеров») для проверки и публикации.
+  `.trim();
+
+  const htmlContent = `
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>${subject}</title>
+</head>
+<body style="margin:0; padding:0; background-color:#0f172a; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color:#f8fafc;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#0f172a; padding:32px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" style="max-width:600px; background-color:#1e293b; border-radius:20px; border:1px solid #334155; overflow:hidden;">
+          <tr>
+            <td style="padding:24px; background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%);">
+              <span style="font-size:11px; text-transform:uppercase; font-weight:800; background:rgba(255,255,255,0.2); padding:4px 10px; border-radius:9999px; color:#ffffff;">Модерация контента</span>
+              <h1 style="margin:8px 0 0; font-size:20px; font-weight:800; color:#ffffff;">📚 Новая публикация мастера</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px;">
+              <h2 style="margin:0 0 12px; font-size:16px; color:#38bdf8;">«${article.title}»</h2>
+              <p style="color:#cbd5e1; font-size:13px; margin:0 0 8px;"><strong>Автор:</strong> ${article.author || 'Мастер'} ${article.authorEmail ? `(${article.authorEmail})` : ''}</p>
+              <p style="color:#cbd5e1; font-size:13px; margin:0 0 16px;"><strong>Категория:</strong> ${article.category || 'Сантехника'}</p>
+              ${article.description ? `<p style="color:#94a3b8; font-size:12px; background:#0f172a; padding:12px; border-radius:8px;">${article.description}</p>` : ''}
+              <div style="margin-top:20px; text-align:center;">
+                <p style="font-size:12px; color:#94a3b8;">Откройте панель управления администратора для проверки и публикации статьи.</p>
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+
+  if (config) {
+    const fromAddress = `«${config.fromName || 'СантехПро'}» <${config.fromEmail || config.user}>`;
+    try {
+      const { transporter } = getMailTransporter(config);
+      await transporter.sendMail({
+        from: fromAddress,
+        to: Array.from(recipientSet),
+        subject,
+        text: textContent,
+        html: htmlContent,
+      });
+      saveEmailToLocalAudit(adminEmail, `article-pending-${article.id}`, 'sent_smtp');
+      return { success: true, simulated: false };
+    } catch (smtpErr: any) {
+      const errMsg = smtpErr?.message || 'SMTP delivery failed';
+      saveEmailToLocalAudit(adminEmail, `article-pending-${article.id}`, `smtp_error: ${errMsg}`);
+      return { success: true, simulated: true, error: errMsg };
+    }
+  } else {
+    saveEmailToLocalAudit(adminEmail, `article-pending-${article.id}`, 'simulated');
+    return { success: true, simulated: true };
+  }
+}
+
+/**
+ * Sends notification to master when their article/course is approved or rejected by admin
+ */
+export async function sendArticleModerationDecisionNotification(params: {
+  article: any;
+  status: 'approved' | 'rejected';
+  comment?: string;
+  authorEmail?: string;
+}): Promise<{ success: boolean; simulated: boolean; error?: string }> {
+  const { article, status, comment, authorEmail } = params;
+  const targetEmail = authorEmail?.trim();
+  const isApproved = status === 'approved';
+
+  const subject = isApproved
+    ? `🎉 Ваша статья «${article.title}» опубликована на СантехПро`
+    : `⚠️ Статья «${article.title}» требует доработки — СантехПро`;
+
+  const config = getEffectiveSmtpConfig();
+  const recipientEmail = targetEmail || 'master@santehpro.ru';
+
+  const textContent = isApproved
+    ? `Здравствуйте!\nВаша статья «${article.title}» успешно прошла модерацию и опубликована в разделе «Курсы и советы» сервиса СантехПро.\n${comment ? `Комментарий: "${comment}"\n` : ''}`
+    : `Здравствуйте!\nПо вашей статье «${article.title}» есть замечания модератора.\nКомментарий: "${comment || 'Требуется доработка текста или фото'}"\nВы можете внести правки в Личном кабинете мастера и отправить статью повторно.`;
+
+  if (config && targetEmail) {
+    const fromAddress = `«${config.fromName || 'СантехПро'}» <${config.fromEmail || config.user}>`;
+    try {
+      const { transporter } = getMailTransporter(config);
+      await transporter.sendMail({
+        from: fromAddress,
+        to: recipientEmail,
+        subject,
+        text: textContent,
+      });
+      saveEmailToLocalAudit(recipientEmail, `article-decision-${status}-${article.id}`, 'sent_smtp');
+      return { success: true, simulated: false };
+    } catch (smtpErr: any) {
+      saveEmailToLocalAudit(recipientEmail, `article-decision-${status}-${article.id}`, `smtp_error: ${smtpErr?.message}`);
+      return { success: true, simulated: true, error: smtpErr?.message };
+    }
+  } else {
+    saveEmailToLocalAudit(recipientEmail, `article-decision-${status}-${article.id}`, 'simulated');
+    return { success: true, simulated: true };
+  }
+}
+
+/**
  * Saves sent emails to a server-side audit file for testing and debugging.
  */
 function saveEmailToLocalAudit(to: string, code: string, status: string) {
@@ -1033,11 +1179,20 @@ function saveEmailToLocalAudit(to: string, code: string, status: string) {
         logs = [];
       }
     }
+    let friendlySubject = 'Системное уведомление';
+    if (code.startsWith('moderation-')) friendlySubject = 'Заявка мастера на модерацию';
+    else if (code.startsWith('decision-approved')) friendlySubject = 'Одобрение анкеты мастера';
+    else if (code.startsWith('decision-rejected')) friendlySubject = 'Отклонение анкеты мастера';
+    else if (code.startsWith('article-pending')) friendlySubject = 'Статья мастера на модерацию';
+    else if (code.startsWith('article-decision')) friendlySubject = 'Решение по статье мастера';
+    else if (code.startsWith('ticket-')) friendlySubject = 'Обращение в поддержку';
+    else if (code.includes('RESET') || code.includes('code')) friendlySubject = 'Код восстановления пароля';
+
     logs.unshift({
       id: `log_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       timestamp: new Date().toISOString(),
       to,
-      subject: code.startsWith('moderation-') ? 'Заявка мастера на модерацию' : 'Код восстановления пароля',
+      subject: friendlySubject,
       code,
       status,
     });

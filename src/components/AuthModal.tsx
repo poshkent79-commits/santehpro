@@ -5,9 +5,6 @@ import {
   Loader2,
   AlertCircle,
   ExternalLink,
-  KeyRound,
-  Lock,
-  UserCheck,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { LegalTermsModal } from './LegalTermsModal';
@@ -23,7 +20,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
     closeAuthModal,
     loginWithYandex,
     loginWithVk,
-    login,
+    authModalReason,
   } = useAuth();
 
   const [dataConsentAccepted, setDataConsentAccepted] = useState(true);
@@ -32,12 +29,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
   const [isVkLoading, setIsVkLoading] = useState(false);
   const [popupBlockedUrl, setPopupBlockedUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  // Login by credentials state
-  const [showPasswordLogin, setShowPasswordLogin] = useState(false);
-  const [emailInput, setEmailInput] = useState('');
-  const [passwordInput, setPasswordInput] = useState('');
-  const [isPasswordLoading, setIsPasswordLoading] = useState(false);
 
   // Legal modal state
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
@@ -50,32 +41,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
       setPopupBlockedUrl(null);
       setIsYandexLoading(false);
       setIsVkLoading(false);
-      setIsPasswordLoading(false);
     }
   }, [isAuthModalOpen]);
-
-  const handlePasswordLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!dataConsentAccepted || !termsAccepted) {
-      setError('Для продолжения необходимо подтвердить согласие с Политикой конфиденциальности и Пользовательским соглашением');
-      return;
-    }
-    if (!emailInput.trim() || !passwordInput.trim()) {
-      setError('Введите логин или email и пароль');
-      return;
-    }
-
-    setIsPasswordLoading(true);
-    setError(null);
-    try {
-      await login({ email: emailInput.trim(), password: passwordInput });
-      if (onNavigateTab) onNavigateTab('cabinet');
-    } catch (err: any) {
-      setError(formatErrorMessage(err));
-    } finally {
-      setIsPasswordLoading(false);
-    }
-  };
 
   // Listen to postMessage from VK OAuth callback popup
   useEffect(() => {
@@ -260,9 +227,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
               Вход в СантехПро
             </h2>
 
-            {/* Подзаголовок: «Единый личный кабинет для клиентов и мастеров» */}
+            {/* Подзаголовок: динамический или стандартный */}
             <p className="text-xs sm:text-sm text-slate-400 leading-snug">
-              Быстрый вход через ВКонтакте или Яндекс ID
+              {authModalReason || 'Быстрый вход через ВКонтакте или Яндекс ID'}
             </p>
           </div>
 
@@ -335,75 +302,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
               </span>
             </button>
 
-            {/* Кнопка 3: Переключатель для входа по логину и паролю */}
-            <div className="pt-1 text-center">
-              <button
-                type="button"
-                id="toggle-password-auth-btn"
-                onClick={() => setShowPasswordLogin(!showPasswordLogin)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-xs font-semibold text-slate-300 hover:text-white border border-slate-700/60 transition cursor-pointer select-none"
-              >
-                <KeyRound className="w-3.5 h-3.5 text-blue-400" />
-                <span>{showPasswordLogin ? 'Скрыть форму входа' : 'Вход по логину и паролю'}</span>
-              </button>
-            </div>
-
-            {/* Выпадающая форма ввода логина и пароля */}
-            {showPasswordLogin && (
-              <form onSubmit={handlePasswordLogin} className="space-y-2.5 p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 animate-in fade-in duration-200">
-                <div className="flex items-center justify-between pb-0.5">
-                  <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                    <Lock className="w-3.5 h-3.5 text-blue-400" />
-                    Вход по логину и паролю
-                  </span>
-                </div>
-
-                <div>
-                  <input
-                    type="text"
-                    value={emailInput}
-                    onChange={(e) => setEmailInput(e.target.value)}
-                    placeholder="Email или телефон"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-blue-500 transition"
-                  />
-                </div>
-
-                <div>
-                  <input
-                    type="password"
-                    value={passwordInput}
-                    onChange={(e) => setPasswordInput(e.target.value)}
-                    placeholder="Пароль"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-blue-500 transition"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isPasswordLoading}
-                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition cursor-pointer disabled:opacity-60"
-                >
-                  {isPasswordLoading ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <UserCheck className="w-3.5 h-3.5" />
-                  )}
-                  <span>Войти</span>
-                </button>
-              </form>
-            )}
-
             {/* ================= 4. БЛОК СОГЛАСИЙ (ВНИЗУ) ================= */}
-            <div className="space-y-2 pt-1 text-xs text-slate-200">
-              {/* Отмеченный чекбокс: белый текст «Согласен на обработку персональных данных (152-ФЗ)», фраза выделена как синяя кликабельная ссылка */}
-              <label className="flex items-start space-x-2.5 cursor-pointer select-none">
+            <div className="space-y-1.5 pt-2 text-[11px] leading-tight text-slate-300">
+              {/* Отмеченный чекбокс: согласие на обработку персональных данных */}
+              <label className="flex items-start space-x-2 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={dataConsentAccepted}
                   onChange={(e) => setDataConsentAccepted(e.target.checked)}
-                  className="mt-0.5 w-4 h-4 rounded border-slate-700 bg-slate-950 text-blue-500 accent-blue-600 cursor-pointer shrink-0"
+                  className="mt-0.5 w-3.5 h-3.5 rounded border-slate-700 bg-slate-950 text-blue-500 accent-blue-600 cursor-pointer shrink-0"
                 />
-                <span className="leading-snug text-slate-300">
+                <span className="text-slate-300 text-[11px] leading-tight">
                   Согласен на{' '}
                   <button
                     type="button"
@@ -413,22 +322,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
                       setLegalDocType('privacy');
                       setIsLegalModalOpen(true);
                     }}
-                    className="text-blue-400 hover:text-blue-300 underline decoration-blue-400/50 hover:decoration-blue-300 underline-offset-2 transition-colors cursor-pointer inline p-0 bg-transparent border-0 font-medium text-xs"
+                    className="text-blue-400 hover:text-blue-300 underline decoration-blue-400/40 hover:decoration-blue-300 underline-offset-2 transition-colors cursor-pointer inline p-0 bg-transparent border-0 font-medium text-[11px]"
                   >
-                    обработку персональных данных (152-ФЗ)
+                    обработку персональных данных
                   </button>
                 </span>
               </label>
 
-              {/* Отмеченный чекбокс: белый текст «Принимаю условия Пользовательского соглашения», фраза выделена как синяя кликабельная ссылка */}
-              <label className="flex items-start space-x-2.5 cursor-pointer select-none">
+              {/* Отмеченный чекбокс: условия Пользовательского соглашения */}
+              <label className="flex items-start space-x-2 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={termsAccepted}
                   onChange={(e) => setTermsAccepted(e.target.checked)}
-                  className="mt-0.5 w-4 h-4 rounded border-slate-700 bg-slate-950 text-blue-500 accent-blue-600 cursor-pointer shrink-0"
+                  className="mt-0.5 w-3.5 h-3.5 rounded border-slate-700 bg-slate-950 text-blue-500 accent-blue-600 cursor-pointer shrink-0"
                 />
-                <span className="leading-snug text-slate-300">
+                <span className="text-slate-300 text-[11px] leading-tight">
                   Принимаю условия{' '}
                   <button
                     type="button"
@@ -438,7 +347,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
                       setLegalDocType('terms');
                       setIsLegalModalOpen(true);
                     }}
-                    className="text-blue-400 hover:text-blue-300 underline decoration-blue-400/50 hover:decoration-blue-300 underline-offset-2 transition-colors cursor-pointer inline p-0 bg-transparent border-0 font-medium text-xs"
+                    className="text-blue-400 hover:text-blue-300 underline decoration-blue-400/40 hover:decoration-blue-300 underline-offset-2 transition-colors cursor-pointer inline p-0 bg-transparent border-0 font-medium text-[11px]"
                   >
                     Пользовательского соглашения
                   </button>

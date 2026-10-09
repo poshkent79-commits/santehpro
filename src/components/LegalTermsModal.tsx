@@ -73,7 +73,7 @@ export const LegalTermsModal: React.FC<LegalTermsModalProps> = ({
       : activeDoc === 'master_moderation'
       ? 'Соглашение о модерации и верификации документов исполнителя'
       : activeDoc === 'privacy'
-      ? 'Политика конфиденциальности (152-ФЗ)'
+      ? 'Политика конфиденциальности'
       : activeDoc === 'offer'
       ? 'Публичная оферта о добровольном пожертвовании'
       : 'Пользовательское соглашение сервиса';
