@@ -201,7 +201,12 @@ function AppContent() {
 
   // Automatic admin login upon authentication with confirmed super-admin email or phone (+79247889900)
   useEffect(() => {
-    const superAdminEmails = ['poshkent79@gmail.com', 'admin@santehpro.ru', 'admin@santehpro.info'];
+    const superAdminEmails = [
+      'poshkent79@gmail.com',
+      'santehpro.info@yandex.ru',
+      'admin@santehpro.ru',
+      'admin@santehpro.info',
+    ];
     const email = currentUser?.email?.toLowerCase().trim();
     const phoneDigits = currentUser?.phone?.replace(/\D/g, '') || '';
     const isSuperAdminPhone =
@@ -216,7 +221,12 @@ function AppContent() {
   useEffect(() => {
     const handleAuthSuccess = (e: any) => {
       const profile = e.detail;
-      const superAdminEmails = ['poshkent79@gmail.com', 'admin@santehpro.ru', 'admin@santehpro.info'];
+      const superAdminEmails = [
+        'poshkent79@gmail.com',
+        'santehpro.info@yandex.ru',
+        'admin@santehpro.ru',
+        'admin@santehpro.info',
+      ];
       const email = profile?.email?.toLowerCase().trim();
       const phoneDigits = profile?.phone?.replace(/\D/g, '') || '';
       const isSuperAdminPhone =
@@ -265,6 +275,7 @@ function AppContent() {
 
     const isOwner = Boolean(
       curEmail === 'poshkent79@gmail.com' ||
+      curEmail === 'santehpro.info@yandex.ru' ||
       curEmail === 'admin@santehpro.ru' ||
       curEmail === 'admin@santehpro.info' ||
       curEmail === 'sommoni@bk.ru' ||
@@ -873,6 +884,7 @@ function AppContent() {
 
     const isOwner = Boolean(
       curEmail === 'poshkent79@gmail.com' ||
+      curEmail === 'santehpro.info@yandex.ru' ||
       curEmail === 'admin@santehpro.ru' ||
       curEmail === 'admin@santehpro.info' ||
       curEmail === 'sommoni@bk.ru' ||

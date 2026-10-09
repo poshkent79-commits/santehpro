@@ -8,6 +8,7 @@ import path from 'path';
 // Super Admin emails & phones configuration with automatic admin privileges
 export const SUPER_ADMIN_EMAILS = [
   'poshkent79@gmail.com',
+  'santehpro.info@yandex.ru',
   'admin@santehpro.ru',
   'admin@santehpro.info',
 ];

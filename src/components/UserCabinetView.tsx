@@ -133,6 +133,7 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
     currentUser && (
       (currentUser.email && (
         currentUser.email.toLowerCase().trim() === 'poshkent79@gmail.com' ||
+        currentUser.email.toLowerCase().trim() === 'santehpro.info@yandex.ru' ||
         currentUser.email.toLowerCase().trim() === 'admin@santehpro.ru' ||
         currentUser.email.toLowerCase().trim() === 'admin@santehpro.info' ||
         currentUser.email.toLowerCase().trim() === 'sommoni@bk.ru'

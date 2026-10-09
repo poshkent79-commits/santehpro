@@ -57,7 +57,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AUTH_STORAGE_KEY = 'santehpro_auth_user';
 const GUEST_FAVORITES_KEY = 'santehpro_guest_favorites';
-const SUPER_ADMIN_EMAILS = ['poshkent79@gmail.com', 'admin@santehpro.ru', 'admin@santehpro.info'];
+const SUPER_ADMIN_EMAILS = [
+  'poshkent79@gmail.com',
+  'santehpro.info@yandex.ru',
+  'admin@santehpro.ru',
+  'admin@santehpro.info',
+];
 const SUPER_ADMIN_PHONES = ['+79247889900', '79247889900', '89247889900', '9247889900'];
 
 const isSuperAdminUser = (user?: Partial<UserProfile> | null): boolean => {
