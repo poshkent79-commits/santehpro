@@ -47,8 +47,8 @@ export const RegistrationPromptBanner: React.FC<RegistrationPromptBannerProps> =
           {/* Яндекс ID */}
           <button
             type="button"
-            onClick={() => openAuthModal('login', 'Вход в аккаунт через Яндекс ID', () => onNavigateCabinet ? onNavigateCabinet() : undefined)}
-            className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-extrabold text-[11px] sm:text-xs transition shadow-xs flex items-center space-x-1.5 cursor-pointer active:scale-95 shrink-0"
+            onClick={() => openAuthModal('login', 'Выберите удобный способ входа', () => onNavigateCabinet ? onNavigateCabinet() : undefined)}
+            className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#fc3f1d] hover:bg-[#e03314] text-white font-extrabold text-[11px] sm:text-xs transition shadow-xs flex items-center space-x-1.5 cursor-pointer active:scale-95 shrink-0"
             title="Войти с Яндекс ID"
           >
             <span className="w-4 h-4 rounded-full bg-white text-red-600 text-[10px] font-black flex items-center justify-center shrink-0">Я</span>
@@ -58,7 +58,7 @@ export const RegistrationPromptBanner: React.FC<RegistrationPromptBannerProps> =
           {/* VK ID */}
           <button
             type="button"
-            onClick={() => openAuthModal('login', 'Вход в аккаунт через VK ID', () => onNavigateCabinet ? onNavigateCabinet() : undefined)}
+            onClick={() => openAuthModal('login', 'Выберите удобный способ входа', () => onNavigateCabinet ? onNavigateCabinet() : undefined)}
             className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#0077ff] hover:bg-[#0066ee] text-white font-extrabold text-[11px] sm:text-xs transition shadow-xs flex items-center space-x-1.5 cursor-pointer active:scale-95 shrink-0"
             title="Войти через VK ID"
           >

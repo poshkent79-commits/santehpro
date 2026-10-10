@@ -486,7 +486,7 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
           </div>
           <h2 className="text-xl sm:text-2xl font-black text-white">Личный кабинет «СантехПро»</h2>
           <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-sm mx-auto leading-relaxed">
-            Вход и регистрация в личном кабинете осуществляются через защищённый Яндекс ID.
+            Вход и регистрация в личном кабинете осуществляются через защищённые сервисы VK ID или Яндекс ID.
           </p>
         </div>
 
@@ -512,24 +512,24 @@ export const UserCabinetView: React.FC<UserCabinetViewProps> = ({
           <div className="pt-2 space-y-2.5">
             <button
               type="button"
-              onClick={() => openAuthModal('login', 'Вход и регистрация через Яндекс ID')}
-              className="w-full py-3.5 px-4 rounded-2xl bg-white hover:bg-slate-100 text-slate-950 font-black text-sm flex items-center justify-center space-x-3 transition-all duration-200 shadow-xl shadow-red-600/10 hover:shadow-red-600/20 cursor-pointer border border-white"
-            >
-              <div className="w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center font-black text-sm shrink-0">
-                Я
-              </div>
-              <span>Войти с Яндекс ID</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => openAuthModal('login', 'Вход и регистрация через VK ID')}
+              onClick={() => openAuthModal('login', 'Выберите удобный способ входа')}
               className="w-full py-3.5 px-4 rounded-2xl bg-[#0077ff] hover:bg-[#0066ee] text-white font-black text-sm flex items-center justify-center space-x-3 transition-all duration-200 shadow-xl shadow-blue-600/25 hover:shadow-blue-600/35 cursor-pointer"
             >
               <div className="w-6 h-6 rounded-lg bg-white/20 text-white flex items-center justify-center font-black text-xs shrink-0">
                 VK
               </div>
               <span>Войти через VK ID</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => openAuthModal('login', 'Выберите удобный способ входа')}
+              className="w-full py-3.5 px-4 rounded-2xl bg-[#fc3f1d] hover:bg-[#e03314] text-white font-black text-sm flex items-center justify-center space-x-3 transition-all duration-200 shadow-xl shadow-red-600/25 hover:shadow-red-600/35 cursor-pointer"
+            >
+              <div className="w-6 h-6 rounded-full bg-white/20 text-white flex items-center justify-center font-black text-sm shrink-0">
+                Я
+              </div>
+              <span>Войти с Яндекс ID</span>
             </button>
           </div>
 

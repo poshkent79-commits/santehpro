@@ -167,47 +167,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200">
       <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-sm sm:max-w-md overflow-hidden shadow-2xl relative flex flex-col">
-        {/* ================= 1. ШАПКА ================= */}
-        <div className="px-5 py-3.5 border-b border-slate-800/80 flex items-center justify-between bg-slate-950/60">
-          <div className="flex items-center space-x-2.5">
-            {/* Аккуратный синий логотип с гаечным ключом */}
-            <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center shadow-md shadow-blue-600/30 text-white shrink-0">
-              <Wrench className="w-4 h-4 text-white" />
-            </div>
-            {/* Текст «Сантех» (красный), «Про» (синий) · Вход */}
-            <div className="text-sm sm:text-base font-black tracking-tight">
-              <span className="text-red-500">Сантех</span>
-              <span className="text-blue-500">Про</span>
-              <span className="text-slate-400 font-normal text-xs sm:text-sm"> · Вход</span>
-            </div>
-          </div>
+        {/* Кнопка закрытия модального окна (крестик в правом верхнем углу) */}
+        <button
+          type="button"
+          id="auth-modal-close-btn"
+          onClick={closeAuthModal}
+          aria-label="Закрыть окно"
+          className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 z-10 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/80 transition cursor-pointer"
+        >
+          <X className="w-5 h-5" />
+        </button>
 
-          {/* Маленькая иконка закрытия крестик «✕» */}
-          <button
-            type="button"
-            id="auth-modal-close-btn"
-            onClick={closeAuthModal}
-            aria-label="Закрыть окно"
-            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/80 transition cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* ================= 2. ЦЕНТРАЛЬНЫЙ БЛОК АВТОРИЗАЦИИ ================= */}
-        <div className="p-5 sm:p-6 space-y-5">
-          {/* По центру брендовые иконки VK ID и Яндекс ID */}
-          <div className="text-center space-y-2.5 pt-1">
-            <div className="flex items-center justify-center space-x-3 mx-auto">
-              {/* Синяя иконка VK */}
-              <div className="w-14 h-14 rounded-2xl bg-[#0077ff] text-white flex items-center justify-center shadow-xl shadow-blue-600/30 font-black text-2xl transform hover:scale-105 transition-transform duration-200 select-none">
-                <span>VK</span>
-              </div>
-              <span className="text-slate-500 font-bold text-lg">•</span>
-              {/* Красная иконка Яндекс «Я» */}
-              <div className="w-14 h-14 rounded-2xl bg-red-600 text-white flex items-center justify-center shadow-xl shadow-red-600/30 font-black text-2xl transform hover:scale-105 transition-transform duration-200 select-none">
-                <span>Я</span>
-              </div>
+        {/* ================= ЦЕНТРАЛЬНЫЙ БЛОК АВТОРИЗАЦИИ ================= */}
+        <div className="p-5 sm:p-6 pt-6 sm:pt-7 space-y-5">
+          {/* Верхняя часть модального окна: аккуратная иконка приложения и заголовок */}
+          <div className="text-center space-y-2 pt-1">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-500 via-red-500 to-indigo-600 flex items-center justify-center shadow-xl shadow-rose-500/25 text-white mx-auto mb-2.5 select-none">
+              <Wrench className="w-7 h-7 text-white stroke-[2.2]" />
             </div>
 
             {/* Четкий белый заголовок: «Вход в СантехПро» */}
@@ -215,9 +191,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
               Вход в СантехПро
             </h2>
 
-            {/* Подзаголовок: динамический или стандартный */}
+            {/* Подзаголовок: универсальный или переданный контекстный */}
             <p className="text-xs sm:text-sm text-slate-400 leading-snug">
-              {authModalReason || 'Быстрый вход через ВКонтакте или Яндекс ID'}
+              {!authModalReason || authModalReason.includes('Яндекс ID') && !authModalReason.includes('мастера') || authModalReason.includes('ВКонтакте или Яндекс ID')
+                ? 'Выберите удобный способ входа'
+                : authModalReason}
             </p>
           </div>
 
@@ -249,9 +227,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
             </div>
           )}
 
-          {/* ================= 3. КНОПКИ АВТОРИЗАЦИИ ================= */}
+          {/* ================= 3. КНОПКИ АВТОРИЗАЦИИ (ЕДИНЫЙ ВИЗУАЛЬНЫЙ ВЕС) ================= */}
           <div className="space-y-3 pt-1">
-            {/* Кнопка 1: Официальный вход через VK ID */}
+            {/* Кнопка 1: Вход через VK ID */}
             <button
               type="button"
               id="auth-vk-primary-btn"
@@ -274,25 +252,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
               <div className="flex-1 h-px bg-slate-800" />
             </div>
 
-            {/* Кнопка 2: Вход с Яндекс ID */}
+            {/* Кнопка 2: Вход с Яндекс ID (сбалансированный визуальный вес в фирменном красном стиле Яндекс) */}
             <button
               type="button"
               id="auth-yandex-primary-btn"
               disabled={isYandexLoading || isVkLoading}
               onClick={handleYandexAuth}
-              className="w-full py-3 px-4 rounded-2xl bg-white hover:bg-slate-100 text-slate-950 font-bold text-sm sm:text-base flex items-center justify-center space-x-3 transition-all duration-200 shadow-lg shadow-black/20 cursor-pointer border border-white active:scale-[0.99] disabled:opacity-60"
+              className="w-full py-3.5 px-4 rounded-2xl bg-[#fc3f1d] hover:bg-[#e03314] text-white font-bold text-sm sm:text-base flex items-center justify-center space-x-3 transition-all duration-200 shadow-xl shadow-red-600/25 hover:shadow-red-600/35 cursor-pointer active:scale-[0.99] disabled:opacity-60"
             >
-              <div className="w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+              <div className="w-6 h-6 rounded-full bg-white/20 text-white flex items-center justify-center font-black text-xs shrink-0">
                 {isYandexLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin text-white" /> : <span>Я</span>}
               </div>
-              <span className="text-slate-950 font-extrabold tracking-tight">
+              <span className="font-extrabold tracking-tight">
                 {isYandexLoading ? 'Подключение к Яндекс ID...' : 'Войти с Яндекс ID'}
               </span>
             </button>
 
-            {/* ================= 4. БЛОК СОГЛАСИЙ (КОМПАКТНЫЙ) ================= */}
-            <p className="pt-2 text-[11px] leading-snug text-slate-400 text-center">
-              Входя в аккаунт, вы принимаете{' '}
+            {/* ================= 4. БЛОК СОГЛАСИЙ (ЕДИНЫЙ ЦВЕТ ТЕКСТА С ПОДЧЁРКИВАНИЕМ) ================= */}
+            <p className="pt-2 text-[11px] leading-relaxed text-slate-400 text-center">
+              Входя в аккаунт, вы принимаете условия{' '}
               <button
                 type="button"
                 onClick={(e) => {
@@ -301,9 +279,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
                   setLegalDocType('terms');
                   setIsLegalModalOpen(true);
                 }}
-                className="text-blue-400 hover:text-blue-300 underline underline-offset-2 transition-colors cursor-pointer inline p-0 bg-transparent border-0 font-medium text-[11px]"
+                className="text-slate-400 hover:text-slate-200 underline underline-offset-2 transition-colors cursor-pointer inline p-0 bg-transparent border-0 text-[11px]"
               >
-                Пользовательское соглашение
+                Пользовательского соглашения
               </button>{' '}
               и соглашаетесь на{' '}
               <button
@@ -314,9 +292,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
                   setLegalDocType('privacy');
                   setIsLegalModalOpen(true);
                 }}
-                className="text-blue-400 hover:text-blue-300 underline underline-offset-2 transition-colors cursor-pointer inline p-0 bg-transparent border-0 font-medium text-[11px]"
+                className="text-slate-400 hover:text-slate-200 underline underline-offset-2 transition-colors cursor-pointer inline p-0 bg-transparent border-0 text-[11px]"
               >
-                обработку данных (152-ФЗ)
+                обработку персональных данных
               </button>.
             </p>
           </div>

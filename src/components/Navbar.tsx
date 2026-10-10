@@ -159,7 +159,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={() => {
                 if (!currentUser) {
-                  openAuthModal('login', 'Вход и регистрация через Яндекс ID');
+                  openAuthModal('login', 'Выберите удобный способ входа');
                 } else {
                   handleTabClick('cabinet');
                 }
@@ -169,7 +169,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
                   : 'text-slate-300 hover:bg-slate-800 hover:text-white'
               }`}
-              title={currentUser ? "Панель пользователя (Личный кабинет)" : "Вход и регистрация через Яндекс ID"}
+              title={currentUser ? "Панель пользователя (Личный кабинет)" : "Вход в личный кабинет"}
             >
               <User className="w-4 h-4 text-cyan-400" />
               <span>{currentUser ? 'Кабинет' : 'Войти'}</span>
@@ -269,7 +269,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         <button
           onClick={() => {
             if (!currentUser) {
-              openAuthModal('login', 'Вход и регистрация через Яндекс ID');
+              openAuthModal('login', 'Выберите удобный способ входа');
             } else {
               handleTabClick('cabinet');
             }
@@ -279,7 +279,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               ? 'text-cyan-400 bg-slate-900 border border-slate-800 font-bold shadow-sm'
               : 'text-slate-400 hover:text-slate-200'
           }`}
-          title={currentUser ? "Панель пользователя (Личный кабинет)" : "Вход и регистрация через Яндекс ID"}
+          title={currentUser ? "Панель пользователя (Личный кабинет)" : "Вход в личный кабинет"}
         >
           <User className="w-4 h-4 mb-0.5 text-cyan-400" />
           <span className="leading-tight">{currentUser ? 'Кабинет' : 'Войти'}</span>

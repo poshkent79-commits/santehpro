@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   Loader2,
   UserCheck,
+  User,
   Users,
   Sparkles,
   BookOpen,
@@ -52,7 +53,7 @@ const SECTION_CONFIG: Record<
   },
   cabinet: {
     title: 'Личный кабинет',
-    subtitle: 'Доступен всем пользователям бесплатно. Войдите через Яндекс ID для синхронизации данных.',
+    subtitle: 'Доступен всем пользователям бесплатно. Войдите через VK ID или Яндекс ID для синхронизации данных.',
   },
 };
 
@@ -139,12 +140,10 @@ export const ProtectedSectionGuard: React.FC<ProtectedSectionGuardProps> = ({
           <button
             type="button"
             onClick={onLogin}
-            className="w-full py-3.5 px-5 rounded-2xl bg-white hover:bg-slate-100 text-slate-950 font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-2.5 shadow-md cursor-pointer border border-white"
+            className="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-blue-600 to-rose-600 hover:from-blue-500 hover:to-rose-500 text-white font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-2.5 shadow-md cursor-pointer"
           >
-            <div className="w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center font-black text-xs shrink-0">
-              Я
-            </div>
-            <span>Войти через Яндекс ID</span>
+            <User className="w-4 h-4 text-white" />
+            <span>Войти через VK ID или Яндекс ID</span>
           </button>
 
           {/* Back Button */}
