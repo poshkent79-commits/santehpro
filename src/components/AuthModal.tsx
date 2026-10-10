@@ -101,7 +101,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
                   const data = await VKID.Auth.exchangeCode(payload.code, payload.device_id);
                   const user = data.user || data;
                   await loginWithVk(user);
-                  if (onNavigateTab) onNavigateTab('cabinet');
+                  if (onNavigateTab) onNavigateTab('calculator');
                 }
               })
               .catch((err: any) => {
@@ -148,7 +148,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
     try {
       await loginWithYandex(false);
       if (onNavigateTab) {
-        onNavigateTab('cabinet');
+        onNavigateTab('calculator');
       }
     } catch (err: any) {
       const msg = err?.message || '';

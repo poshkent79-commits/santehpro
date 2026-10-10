@@ -44,7 +44,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="w-full px-3 sm:px-6 lg:px-8 2xl:px-12 py-2.5 sm:py-3 border-b border-slate-800/80 flex items-center justify-between gap-4">
         {/* Upper Left: Main Logo & Subtitles */}
         <div
-          onClick={() => setActiveTab('handbook')}
+          onClick={() => setActiveTab('calculator')}
           className="flex items-center space-x-3 cursor-pointer group"
         >
           <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-rose-500 via-red-500 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-rose-500/35 group-hover:scale-105 transition transform shrink-0 border border-white/20">

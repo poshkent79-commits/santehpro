@@ -38,7 +38,7 @@ function AppContent() {
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     return (localStorage.getItem('app-theme') as 'dark' | 'light') || 'dark';
   });
-  const [activeTab, setActiveTab] = useState<'handbook' | 'courses' | 'calculator' | 'specialists' | 'diagnostic' | 'admin' | 'cabinet'>('handbook');
+  const [activeTab, setActiveTab] = useState<'handbook' | 'courses' | 'calculator' | 'specialists' | 'diagnostic' | 'admin' | 'cabinet'>('calculator');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('all');
   const [selectedCity, setSelectedCity] = useState<string>(() => {
@@ -188,12 +188,12 @@ function AppContent() {
 
   const { currentUser, isLoading, openAuthModal, authNotice, dismissAuthNotice, refreshPurchases, updateProfile } = useAuth();
 
-  // When an unauthenticated user is on cabinet (e.g. upon logout), redirect to handbook and open AuthModal
+  // When an unauthenticated user is on cabinet (e.g. upon logout), redirect to calculator (Материалы) and open AuthModal
   useEffect(() => {
     if (activeTab === 'cabinet' && !currentUser && !isLoading) {
-      setActiveTab('handbook');
+      setActiveTab('calculator');
       openAuthModal('login', 'Вход в СантехПро', () => {
-        setActiveTab('cabinet');
+        setActiveTab('calculator');
       });
     }
   }, [activeTab, currentUser, isLoading, openAuthModal]);
