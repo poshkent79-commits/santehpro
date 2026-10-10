@@ -11,7 +11,6 @@ import { CoursesView } from './components/CoursesView';
 import { MaterialsCalculator } from './components/MaterialsCalculator';
 import { AuthModal } from './components/AuthModal';
 import { UserCabinetView } from './components/UserCabinetView';
-import { RegistrationPromptBanner } from './components/RegistrationPromptBanner';
 import { ProtectedSectionGuard, ProtectedSectionType } from './components/ProtectedSectionGuard';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Article, PlumbingSpecialist, ServiceCallRequest, CommunityQuestion } from './types';
@@ -1175,10 +1174,6 @@ function AppContent() {
           </div>
         )}
 
-        {/* Welcome Banner for unregistered users */}
-        {activeTab === 'handbook' && (
-          <RegistrationPromptBanner onNavigateCabinet={() => setActiveTab('cabinet')} />
-        )}
 
         {activeTab === 'handbook' && (
           <HandbookView

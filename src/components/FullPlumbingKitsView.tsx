@@ -29,6 +29,8 @@ import {
   Download,
   Eye,
   ShoppingCart,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import {
   BuildingType,
@@ -146,6 +148,14 @@ export const FullPlumbingKitsView: React.FC<FullPlumbingKitsViewProps> = ({
       // ignore
     }
   }, [customPositions]);
+
+  const materialsScrollRef = React.useRef<HTMLDivElement>(null);
+  const handleScrollMaterials = (dir: 'left' | 'right') => {
+    if (materialsScrollRef.current) {
+      const scrollAmt = dir === 'left' ? -260 : 260;
+      materialsScrollRef.current.scrollBy({ left: scrollAmt, behavior: 'smooth' });
+    }
+  };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -712,12 +722,38 @@ export const FullPlumbingKitsView: React.FC<FullPlumbingKitsViewProps> = ({
               <span>Материал монтажа (Трубопроводная система):</span>
             </span>
 
-            <span className="text-[11px] text-amber-400/90 font-mono hidden sm:inline">
-              Комплектующие обновляются автоматически
-            </span>
+            <div className="flex items-center space-x-2">
+              <span className="text-[11px] text-amber-400/90 font-mono hidden sm:inline">
+                Комплектующие обновляются автоматически
+              </span>
+
+              {/* Scroll buttons */}
+              <div className="flex items-center space-x-1">
+                <button
+                  type="button"
+                  onClick={() => handleScrollMaterials('left')}
+                  className="p-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 transition cursor-pointer"
+                  title="Прокрутить влево"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleScrollMaterials('right')}
+                  className="p-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 transition cursor-pointer"
+                  title="Прокрутить вправо"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          {/* Horizontal Scroll Material Cards Track */}
+          <div
+            ref={materialsScrollRef}
+            className="flex items-stretch gap-2.5 overflow-x-auto no-scrollbar scroll-smooth pb-2 pt-0.5"
+          >
             {INSTALLATION_MATERIALS.map((mat) => {
               const isSelected = selectedMaterial === mat.id;
               const isFloor = mat.id === 'underfloor_heating';
@@ -735,7 +771,7 @@ export const FullPlumbingKitsView: React.FC<FullPlumbingKitsViewProps> = ({
                       showToast(`Выбран материал: ${mat.name}`);
                     }
                   }}
-                  className={`p-3 rounded-2xl border text-left transition-all duration-150 cursor-pointer flex flex-col justify-between space-y-2 ${
+                  className={`p-3 rounded-2xl border text-left transition-all duration-150 cursor-pointer flex flex-col justify-between space-y-2 shrink-0 w-44 sm:w-52 ${
                     isSelected
                       ? isFloor
                         ? 'bg-gradient-to-b from-orange-950/60 to-slate-900 border-orange-400 text-white shadow-lg shadow-orange-500/20 ring-2 ring-orange-500/40'
@@ -1741,7 +1777,7 @@ export const FullPlumbingKitsView: React.FC<FullPlumbingKitsViewProps> = ({
                   type="text"
                   value={newCustomName}
                   onChange={(e) => setNewCustomName(e.target.value)}
-                  placeholder="Например: Кран шаровый Valtec 1/2 с бабочкой"
+                  placeholder="Например: Кран шаровой 1/2 с бабочкой латунный"
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:border-amber-500 focus:outline-none"
                   required
                   autoFocus

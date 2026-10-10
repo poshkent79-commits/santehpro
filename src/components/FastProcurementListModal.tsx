@@ -182,7 +182,7 @@ export const FastProcurementListModal: React.FC<FastProcurementListModalProps> =
   const [copied, setCopied] = useState<boolean>(false);
   const [isStoreMode, setIsStoreMode] = useState<boolean>(false); // Store checklist mode
   const [hidePurchased, setHidePurchased] = useState<boolean>(false); // Exclude completed items from view
-  const [showPriceBanner, setShowPriceBanner] = useState<boolean>(false); // Compact preliminary cost banner toggle
+
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -665,21 +665,6 @@ export const FastProcurementListModal: React.FC<FastProcurementListModalProps> =
 
               {items.length > 0 && (
                 <div className="flex items-center gap-2">
-                  {/* Кнопка предварительной стоимости в компактном баннере */}
-                  <button
-                    type="button"
-                    onClick={() => setShowPriceBanner(!showPriceBanner)}
-                    className={`px-2.5 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                      showPriceBanner
-                        ? 'bg-emerald-500 text-slate-950 shadow-md font-black'
-                        : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'
-                    }`}
-                    title="Показать предварительный расчет стоимости в компактном баннере"
-                  >
-                    <span>💰</span>
-                    <span>{showPriceBanner ? 'Скрыть стоимость' : 'Предварительная стоимость'}</span>
-                  </button>
-
                   <button
                     type="button"
                     onClick={() => setItems([])}
@@ -691,37 +676,6 @@ export const FastProcurementListModal: React.FC<FastProcurementListModalProps> =
                 </div>
               )}
             </div>
-
-            {/* Компактный баннер предварительной стоимости (появляется только по нажатию кнопки) */}
-            {showPriceBanner && items.length > 0 && (
-              <div className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-emerald-950/80 via-slate-900 to-emerald-950/80 border border-emerald-500/40 flex items-center justify-between gap-3 shadow-lg animate-in fade-in slide-in-from-top-1">
-                <div className="flex items-center space-x-2.5 min-w-0">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center shrink-0 text-sm">
-                    💰
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-bold">
-                      Предварительная стоимость:
-                    </span>
-                    <div className="flex items-baseline space-x-2">
-                      <span className="text-base sm:text-lg font-black text-emerald-300">
-                        ~{totalSum.toLocaleString('ru-RU')} ₽
-                      </span>
-                      <span className="text-[11px] text-slate-400">
-                        ({items.length} поз., {totalCount} ед.)
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowPriceBanner(false)}
-                  className="text-xs text-slate-400 hover:text-white px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 shrink-0 cursor-pointer"
-                >
-                  ✕ Скрыть
-                </button>
-              </div>
-            )}
 
             {/* List Rows — без зачеркнутых элементов, чистый удобный список */}
             {filteredItems.length === 0 ? (
@@ -783,17 +737,6 @@ export const FastProcurementListModal: React.FC<FastProcurementListModalProps> =
                           <span className="text-slate-500">{it.category}</span>
                           <span>•</span>
                           <span className="text-cyan-400 font-bold">{it.quantity} {it.unit}</span>
-                          {/* Цена видна только при нажатой кнопке предварительной стоимости */}
-                          {showPriceBanner && (
-                            <>
-                              <span>•</span>
-                              <span>~{it.pricePerUnit} ₽/{it.unit}</span>
-                              <span>•</span>
-                              <span className="font-bold text-emerald-400">
-                                Всего: {(it.quantity * it.pricePerUnit).toLocaleString('ru-RU')} ₽
-                              </span>
-                            </>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -836,109 +779,72 @@ export const FastProcurementListModal: React.FC<FastProcurementListModalProps> =
           </div>
         </div>
 
-        {/* Footer with Summary & Share / Export Actions */}
-        <div className="p-4 sm:p-5 border-t border-slate-800 bg-slate-950/90 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
-          <div className="text-left w-full sm:w-auto">
-            {showPriceBanner ? (
-              <div>
-                <span className="text-[10px] text-slate-400 uppercase tracking-wider block">ПРЕДВАРИТЕЛЬНАЯ СТОИМОСТЬ:</span>
-                <div className="flex items-baseline space-x-2">
-                  <span className="text-xl sm:text-2xl font-black text-emerald-400">
-                    ~{totalSum.toLocaleString('ru-RU')} ₽
-                  </span>
-                  <span className="text-xs text-slate-400">
-                    ({items.length} поз., {totalCount} ед.)
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setShowPriceBanner(false)}
-                    className="text-[11px] text-slate-400 hover:text-slate-200 ml-2 cursor-pointer underline"
-                  >
-                    Скрыть
-                  </button>
-                </div>
+        {/* Footer with Summary & Share / Export Actions (отображается только при наличии добавленных позиций) */}
+        {items.length > 0 && (
+          <div className="p-4 sm:p-5 border-t border-slate-800 bg-slate-950/95 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0 animate-in fade-in slide-in-from-bottom-2 duration-150">
+            <div className="text-left w-full sm:w-auto">
+              <div className="text-xs font-bold text-slate-300">
+                Позиций в закупке: <span className="text-white font-black">{items.length}</span> ({totalCount} ед.)
               </div>
-            ) : (
-              <div className="flex flex-wrap items-center gap-2.5">
-                <div className="text-xs font-bold text-slate-300">
-                  Позиций в закупке: <span className="text-white font-black">{items.length}</span> ({totalCount} ед.)
-                </div>
-                {items.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setShowPriceBanner(true)}
-                    className="px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-850 hover:bg-slate-800 text-slate-200 border border-slate-700 transition flex items-center gap-1.5 cursor-pointer shadow-sm"
-                    title="Показать предварительный расчет стоимости"
-                  >
-                    <span>💰</span>
-                    <span>Предварительная стоимость</span>
-                  </button>
-                )}
-              </div>
-            )}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+              {/* WhatsApp */}
+              <button
+                type="button"
+                onClick={handleSendWhatsApp}
+                className="p-2 sm:px-3 sm:py-2 rounded-xl bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-800/80 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                title="Отправить список закупки в WhatsApp"
+              >
+                <Send className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="hidden sm:inline">WhatsApp</span>
+              </button>
+
+              {/* Telegram */}
+              <button
+                type="button"
+                onClick={handleSendTelegram}
+                className="p-2 sm:px-3 sm:py-2 rounded-xl bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-800/80 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                title="Отправить в Telegram"
+              >
+                <Share2 className="w-3.5 h-3.5 text-sky-400" />
+                <span className="hidden sm:inline">Telegram</span>
+              </button>
+
+              {/* Copy */}
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                title="Скопировать перечень"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{copied ? 'Скопировано!' : 'Копировать'}</span>
+              </button>
+
+              {/* Save directly */}
+              <button
+                type="button"
+                onClick={handleSaveDirectly}
+                className="px-3 py-2 rounded-xl bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-800/80 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                title="Сохранить в Мои сметы"
+              >
+                <FolderDown className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Сохранить</span>
+              </button>
+
+              {/* Add to main kit specification */}
+              <button
+                type="button"
+                onClick={handleAddToMainKit}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs transition flex items-center gap-1.5 shadow-lg shadow-emerald-500/25 border border-emerald-400/40 cursor-pointer active:scale-95"
+              >
+                <Check className="w-4 h-4 stroke-[2.5]" />
+                <span>В спецификацию</span>
+              </button>
+            </div>
           </div>
-
-          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
-            {/* WhatsApp */}
-            <button
-              type="button"
-              onClick={handleSendWhatsApp}
-              disabled={items.length === 0}
-              className="p-2 sm:px-3 sm:py-2 rounded-xl bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-800/80 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-              title="Отправить список закупки в WhatsApp"
-            >
-              <Send className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="hidden sm:inline">WhatsApp</span>
-            </button>
-
-            {/* Telegram */}
-            <button
-              type="button"
-              onClick={handleSendTelegram}
-              disabled={items.length === 0}
-              className="p-2 sm:px-3 sm:py-2 rounded-xl bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-800/80 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-              title="Отправить в Telegram"
-            >
-              <Share2 className="w-3.5 h-3.5 text-sky-400" />
-              <span className="hidden sm:inline">Telegram</span>
-            </button>
-
-            {/* Copy */}
-            <button
-              type="button"
-              onClick={handleCopy}
-              disabled={items.length === 0}
-              className="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-              title="Скопировать перечень"
-            >
-              <Copy className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{copied ? 'Скопировано!' : 'Копировать'}</span>
-            </button>
-
-            {/* Save directly */}
-            <button
-              type="button"
-              onClick={handleSaveDirectly}
-              disabled={items.length === 0}
-              className="px-3 py-2 rounded-xl bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-800/80 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-              title="Сохранить в Мои сметы"
-            >
-              <FolderDown className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Сохранить</span>
-            </button>
-
-            {/* Add to main kit specification */}
-            <button
-              type="button"
-              onClick={handleAddToMainKit}
-              disabled={items.length === 0}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs transition flex items-center gap-1.5 shadow-lg shadow-emerald-500/25 border border-emerald-400/40 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
-            >
-              <Check className="w-4 h-4 stroke-[2.5]" />
-              <span>В спецификацию</span>
-            </button>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

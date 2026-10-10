@@ -298,7 +298,7 @@ export interface MasterPlumbingEstimate {
   executionDays: string;
   paymentTerms?: string;
   notes?: string;
-  status: 'draft' | 'sent' | 'accepted' | 'declined' | 'completed';
+  status: 'new' | 'draft' | 'sent' | 'in_progress' | 'accepted' | 'completed' | 'declined';
   serviceRequestId?: string;
   createdAt: string;
   updatedAt?: string;

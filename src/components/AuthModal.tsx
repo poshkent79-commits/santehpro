@@ -23,8 +23,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
     authModalReason,
   } = useAuth();
 
-  const [dataConsentAccepted, setDataConsentAccepted] = useState(true);
-  const [termsAccepted, setTermsAccepted] = useState(true);
   const [isYandexLoading, setIsYandexLoading] = useState(false);
   const [isVkLoading, setIsVkLoading] = useState(false);
   const [popupBlockedUrl, setPopupBlockedUrl] = useState<string | null>(null);
@@ -80,11 +78,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
 
   // Unified VK ID OAuth (App ID: 54798550)
   const handleVkAuth = async () => {
-    if (!dataConsentAccepted || !termsAccepted) {
-      setError('Для продолжения необходимо подтвердить согласие с Политикой обработки персональных данных и Пользовательским соглашением');
-      return;
-    }
-
     setIsVkLoading(true);
     setError(null);
     setPopupBlockedUrl(null);
@@ -148,11 +141,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
 
   // Unified Yandex ID OAuth
   const handleYandexAuth = async () => {
-    if (!dataConsentAccepted || !termsAccepted) {
-      setError('Для продолжения необходимо подтвердить согласие с Политикой обработки персональных данных и Пользовательским соглашением');
-      return;
-    }
-
     setIsYandexLoading(true);
     setError(null);
     setPopupBlockedUrl(null);
@@ -302,58 +290,35 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onNavigateTab }) => {
               </span>
             </button>
 
-            {/* ================= 4. БЛОК СОГЛАСИЙ (ВНИЗУ) ================= */}
-            <div className="space-y-1.5 pt-2 text-[11px] leading-tight text-slate-300">
-              {/* Отмеченный чекбокс: согласие на обработку персональных данных */}
-              <label className="flex items-start space-x-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={dataConsentAccepted}
-                  onChange={(e) => setDataConsentAccepted(e.target.checked)}
-                  className="mt-0.5 w-3.5 h-3.5 rounded border-slate-700 bg-slate-950 text-blue-500 accent-blue-600 cursor-pointer shrink-0"
-                />
-                <span className="text-slate-300 text-[11px] leading-tight">
-                  Согласен на{' '}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setLegalDocType('privacy');
-                      setIsLegalModalOpen(true);
-                    }}
-                    className="text-blue-400 hover:text-blue-300 underline decoration-blue-400/40 hover:decoration-blue-300 underline-offset-2 transition-colors cursor-pointer inline p-0 bg-transparent border-0 font-medium text-[11px]"
-                  >
-                    обработку персональных данных
-                  </button>
-                </span>
-              </label>
-
-              {/* Отмеченный чекбокс: условия Пользовательского соглашения */}
-              <label className="flex items-start space-x-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={termsAccepted}
-                  onChange={(e) => setTermsAccepted(e.target.checked)}
-                  className="mt-0.5 w-3.5 h-3.5 rounded border-slate-700 bg-slate-950 text-blue-500 accent-blue-600 cursor-pointer shrink-0"
-                />
-                <span className="text-slate-300 text-[11px] leading-tight">
-                  Принимаю условия{' '}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setLegalDocType('terms');
-                      setIsLegalModalOpen(true);
-                    }}
-                    className="text-blue-400 hover:text-blue-300 underline decoration-blue-400/40 hover:decoration-blue-300 underline-offset-2 transition-colors cursor-pointer inline p-0 bg-transparent border-0 font-medium text-[11px]"
-                  >
-                    Пользовательского соглашения
-                  </button>
-                </span>
-              </label>
-            </div>
+            {/* ================= 4. БЛОК СОГЛАСИЙ (КОМПАКТНЫЙ) ================= */}
+            <p className="pt-2 text-[11px] leading-snug text-slate-400 text-center">
+              Входя в аккаунт, вы принимаете{' '}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setLegalDocType('terms');
+                  setIsLegalModalOpen(true);
+                }}
+                className="text-blue-400 hover:text-blue-300 underline underline-offset-2 transition-colors cursor-pointer inline p-0 bg-transparent border-0 font-medium text-[11px]"
+              >
+                Пользовательское соглашение
+              </button>{' '}
+              и соглашаетесь на{' '}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setLegalDocType('privacy');
+                  setIsLegalModalOpen(true);
+                }}
+                className="text-blue-400 hover:text-blue-300 underline underline-offset-2 transition-colors cursor-pointer inline p-0 bg-transparent border-0 font-medium text-[11px]"
+              >
+                обработку данных (152-ФЗ)
+              </button>.
+            </p>
           </div>
 
           {/* ================= 5. ФУТЕР ================= */}

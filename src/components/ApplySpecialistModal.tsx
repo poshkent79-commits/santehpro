@@ -92,9 +92,9 @@ export const ApplySpecialistModal: React.FC<ApplySpecialistModalProps> = ({
   // Main Photo State
   const [customPhotoSelected, setCustomPhotoSelected] = useState(Boolean(initialSpecialist?.photo));
 
-  // 2 Consolidated Legal Agreement states (152-FZ Personal Data & Document Verification + Terms of Use & Authenticity Guarantee)
-  const [dataConsentAccepted, setDataConsentAccepted] = useState(Boolean(initialSpecialist?.dataConsent));
-  const [termsAccepted, setTermsAccepted] = useState(Boolean(initialSpecialist?.legalConsent));
+  // Consolidated Legal Agreement states
+  const [dataConsentAccepted, setDataConsentAccepted] = useState(true);
+  const [termsAccepted, setTermsAccepted] = useState(true);
   const [legalDocType, setLegalDocType] = useState<'privacy' | 'terms' | 'master_moderation' | 'offer'>('master_moderation');
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -811,85 +811,50 @@ export const ApplySpecialistModal: React.FC<ApplySpecialistModalProps> = ({
                 )}
               </div>
 
-              {/* Compact Legal Checkboxes for Specialists */}
-              <div className="space-y-2 select-none">
-                {/* Checkbox 1: Personal Data & Documents Verification */}
-                <label className="flex items-start gap-2.5 p-3 rounded-2xl bg-slate-950/80 border border-slate-800 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    required
-                    checked={dataConsentAccepted}
-                    onChange={(e) => {
-                      setDataConsentAccepted(e.target.checked);
-                      if (error) setError(null);
+              {/* Compact Unified Legal Agreement */}
+              <label className="flex items-start gap-2 p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  required
+                  checked={dataConsentAccepted && termsAccepted}
+                  onChange={(e) => {
+                    setDataConsentAccepted(e.target.checked);
+                    setTermsAccepted(e.target.checked);
+                    if (error) setError(null);
+                  }}
+                  className="mt-0.5 w-3.5 h-3.5 rounded border-slate-700 text-cyan-500 bg-slate-950 accent-cyan-500 cursor-pointer shrink-0"
+                />
+                <div className="text-[11px] text-slate-300 leading-tight">
+                  <span>Согласен(-на) на </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setLegalDocType('privacy');
+                      setIsLegalModalOpen(true);
                     }}
-                    className="mt-0.5 w-4 h-4 rounded border-slate-700 text-cyan-500 bg-slate-950 accent-cyan-500 cursor-pointer shrink-0"
-                  />
-                  <div className="text-xs text-slate-300 leading-snug">
-                    <span>Согласен(-на) на </span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setLegalDocType('privacy');
-                        setIsLegalModalOpen(true);
-                      }}
-                      className="text-cyan-400 hover:text-cyan-300 font-medium underline underline-offset-2 transition-colors inline-flex items-center gap-0.5 cursor-pointer"
-                    >
-                      <span>обработку персональных данных</span>
-                      <ExternalLink className="w-2.5 h-2.5 inline shrink-0" />
-                    </button>
-                    <span> и </span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setLegalDocType('master_moderation');
-                        setIsLegalModalOpen(true);
-                      }}
-                      className="text-cyan-400 hover:text-cyan-300 font-medium underline underline-offset-2 transition-colors inline-flex items-center gap-0.5 cursor-pointer"
-                    >
-                      <span>проверку документов</span>
-                      <ExternalLink className="w-2.5 h-2.5 inline shrink-0" />
-                    </button>
-                    <span className="text-rose-400 font-bold ml-0.5">*</span>
-                  </div>
-                </label>
-
-                {/* Checkbox 2: Terms of Use & Authenticity */}
-                <label className="flex items-start gap-2.5 p-3 rounded-2xl bg-slate-950/80 border border-slate-800 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    required
-                    checked={termsAccepted}
-                    onChange={(e) => {
-                      setTermsAccepted(e.target.checked);
-                      if (error) setError(null);
+                    className="text-cyan-400 hover:text-cyan-300 underline underline-offset-2 transition-colors inline cursor-pointer font-medium"
+                  >
+                    обработку данных (152-ФЗ)
+                  </button>
+                  <span>, </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setLegalDocType('terms');
+                      setIsLegalModalOpen(true);
                     }}
-                    className="mt-0.5 w-4 h-4 rounded border-slate-700 text-cyan-500 bg-slate-950 accent-cyan-500 cursor-pointer shrink-0"
-                  />
-                  <div className="text-xs text-slate-300 leading-snug">
-                    <span>Принимаю условия </span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setLegalDocType('terms');
-                        setIsLegalModalOpen(true);
-                      }}
-                      className="text-cyan-400 hover:text-cyan-300 font-medium underline underline-offset-2 transition-colors inline-flex items-center gap-0.5 cursor-pointer"
-                    >
-                      <span>Пользовательского соглашения</span>
-                      <ExternalLink className="w-2.5 h-2.5 inline shrink-0" />
-                    </button>
-                    <span> и подтверждаю подлинность документов</span>
-                    <span className="text-rose-400 font-bold ml-0.5">*</span>
-                  </div>
-                </label>
-              </div>
+                    className="text-cyan-400 hover:text-cyan-300 underline underline-offset-2 transition-colors inline cursor-pointer font-medium"
+                  >
+                    условия соглашения
+                  </button>
+                  <span> и подтверждаю подлинность документов</span>
+                  <span className="text-rose-400 font-bold ml-0.5">*</span>
+                </div>
+              </label>
 
               {error && (
                 <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center space-x-2">

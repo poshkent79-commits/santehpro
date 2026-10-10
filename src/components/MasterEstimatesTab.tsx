@@ -24,7 +24,8 @@ import {
   FileSpreadsheet,
   Check,
   AlertCircle,
-  FileCheck
+  FileCheck,
+  ChevronDown
 } from 'lucide-react';
 import { MasterPlumbingEstimate, PlumbingSpecialist, ServiceCallRequest, PlumbingContract } from '../types';
 import { MasterEstimateBuilderModal } from './MasterEstimateBuilderModal';
@@ -48,7 +49,7 @@ export const MasterEstimatesTab: React.FC<MasterEstimatesTabProps> = ({
   const [estimates, setEstimates] = useState<MasterPlumbingEstimate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'sent' | 'accepted' | 'completed'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'new' | 'in_progress' | 'completed' | 'draft' | 'declined'>('all');
 
   // Modals state
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
@@ -146,87 +147,184 @@ export const MasterEstimatesTab: React.FC<MasterEstimatesTabProps> = ({
       console.error('Failed to read localStorage estimates:', e);
     }
 
-    // If still completely empty, pre-create 1 rich demo estimate so the master immediately sees how convenient it is
+    // If still completely empty, pre-create rich demo estimates covering all key statuses
     if (loadedEstimates.length === 0) {
-      const sampleEstimate: MasterPlumbingEstimate = {
-        id: `est-sample-${Date.now()}`,
-        specialistId: specialist.id,
-        specialistName: specialist.name,
-        specialistPhone: specialist.phone,
-        specialistCity: specialist.city,
-        clientName: 'Михаил (ЖК Новая Волна)',
-        clientPhone: '+7 (916) 456-78-90',
-        clientAddress: 'ул. Садовая 15, кв. 84',
-        objectType: 'Квартира новостройка',
-        title: 'Комплексная разводка труб и монтаж инсталляции',
-        items: [
-          {
-            id: 'item-1',
-            type: 'work',
-            name: 'Разводка труб ХВС/ГВС сшитый полиэтилен (Rehau)',
-            category: 'Разводка и трубы',
-            unit: 'точка',
-            quantity: 5,
-            price: 2500,
-            total: 12500,
-          },
-          {
-            id: 'item-2',
-            type: 'work',
-            name: 'Монтаж коллекторного узла с манометрами и редукторами',
-            category: 'Разводка и трубы',
-            unit: 'компл',
-            quantity: 1,
-            price: 4500,
-            total: 4500,
-          },
-          {
-            id: 'item-3',
-            type: 'work',
-            name: 'Монтаж инсталляции Geberit с регулировкой рамы',
-            category: 'Сантехприборы',
-            unit: 'шт',
-            quantity: 1,
-            price: 4500,
-            total: 4500,
-          },
-          {
-            id: 'item-4',
-            type: 'material',
-            name: 'Труба Rehau Rautitan stabil Ø16 (бухта)',
-            category: 'Трубы и фитинги',
-            unit: 'м.п.',
-            quantity: 40,
-            price: 280,
-            total: 11200,
-          },
-          {
-            id: 'item-5',
-            type: 'material',
-            name: 'Коллекторы распределительные Far с кранами (пара)',
-            category: 'Арматура',
-            unit: 'компл',
-            quantity: 1,
-            price: 6500,
-            total: 6500,
-          },
-        ],
-        worksTotal: 21500,
-        materialsTotal: 17700,
-        discountType: 'percent',
-        discountValue: 5,
-        discountAmount: 1960,
-        grandTotal: 37240,
-        advancePayment: 15000,
-        remainingPayment: 22240,
-        warrantyMonths: 24,
-        executionDays: '2 рабочих дня',
-        paymentTerms: 'Аванс 15 000 ₽ на материалы, остаток по акту приемки',
-        notes: 'Все трассы будут опрессованы избыточным давлением 10 бар с видеофиксацией для заказчика.',
-        status: 'accepted',
-        createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-      };
-      loadedEstimates = [sampleEstimate];
+      const sampleEstimates: MasterPlumbingEstimate[] = [
+        {
+          id: `est-sample-1`,
+          specialistId: specialist.id,
+          specialistName: specialist.name,
+          specialistPhone: specialist.phone,
+          specialistCity: specialist.city,
+          clientName: 'Михаил (ЖК Новая Волна)',
+          clientPhone: '+7 (916) 456-78-90',
+          clientAddress: 'ул. Садовая 15, кв. 84',
+          objectType: 'Квартира новостройка',
+          title: 'Комплексная разводка труб и монтаж инсталляции',
+          items: [
+            {
+              id: 'item-1',
+              type: 'work',
+              name: 'Разводка труб ХВС/ГВС сшитый полиэтилен (Rehau)',
+              category: 'Разводка и трубы',
+              unit: 'точка',
+              quantity: 5,
+              price: 2500,
+              total: 12500,
+            },
+            {
+              id: 'item-2',
+              type: 'work',
+              name: 'Монтаж коллекторного узла с манометрами и редукторами',
+              category: 'Разводка и трубы',
+              unit: 'компл',
+              quantity: 1,
+              price: 4500,
+              total: 4500,
+            },
+            {
+              id: 'item-3',
+              type: 'work',
+              name: 'Монтаж инсталляции Geberit с регулировкой рамы',
+              category: 'Сантехприборы',
+              unit: 'шт',
+              quantity: 1,
+              price: 4500,
+              total: 4500,
+            },
+            {
+              id: 'item-4',
+              type: 'material',
+              name: 'Труба Rehau Rautitan stabil Ø16 (бухта)',
+              category: 'Трубы и фитинги',
+              unit: 'м.п.',
+              quantity: 40,
+              price: 280,
+              total: 11200,
+            },
+            {
+              id: 'item-5',
+              type: 'material',
+              name: 'Коллекторы распределительные Far с кранами (пара)',
+              category: 'Арматура',
+              unit: 'компл',
+              quantity: 1,
+              price: 6500,
+              total: 6500,
+            },
+          ],
+          worksTotal: 21500,
+          materialsTotal: 17700,
+          discountType: 'percent',
+          discountValue: 5,
+          discountAmount: 1960,
+          grandTotal: 37240,
+          advancePayment: 15000,
+          remainingPayment: 22240,
+          warrantyMonths: 24,
+          executionDays: '2 рабочих дня',
+          paymentTerms: 'Аванс 15 000 ₽ на материалы, остаток по акту приемки',
+          notes: 'Все трассы будут опрессованы избыточным давлением 10 бар с видеофиксацией для заказчика.',
+          status: 'in_progress',
+          createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+        },
+        {
+          id: `est-sample-2`,
+          specialistId: specialist.id,
+          specialistName: specialist.name,
+          specialistPhone: specialist.phone,
+          specialistCity: specialist.city,
+          clientName: 'Алексей (ЖК Символ)',
+          clientPhone: '+7 (925) 333-22-11',
+          clientAddress: 'ш. Энтузиастов 3, кв. 112',
+          objectType: 'Квартира новостройка',
+          title: 'Монтаж узла ввода ХВС/ГВС и защита от протечек',
+          items: [
+            {
+              id: 'item-201',
+              type: 'work',
+              name: 'Сборка узла ввода: краны Bugatti, грязевики, редукторы',
+              category: 'Узел ввода',
+              unit: 'компл',
+              quantity: 1,
+              price: 6000,
+              total: 6000,
+            },
+            {
+              id: 'item-202',
+              type: 'work',
+              name: 'Монтаж системы контроля протечки Нептун Smart с радиодатчиками',
+              category: 'Автоматика',
+              unit: 'компл',
+              quantity: 1,
+              price: 3500,
+              total: 3500,
+            },
+            {
+              id: 'item-203',
+              type: 'material',
+              name: 'Система контроля протечки Нептун Smart 1/2" с электрокранами Bugatti',
+              category: 'Оборудование',
+              unit: 'компл',
+              quantity: 1,
+              price: 24900,
+              total: 24900,
+            },
+          ],
+          worksTotal: 9500,
+          materialsTotal: 24900,
+          grandTotal: 34400,
+          advancePayment: 25000,
+          remainingPayment: 9400,
+          warrantyMonths: 24,
+          executionDays: '1 рабочий день',
+          notes: 'Настройка мобильного приложения Нептун на смартфоне клиента включена.',
+          status: 'new',
+          createdAt: new Date(Date.now() - 86400000 * 1).toISOString(),
+        },
+        {
+          id: `est-sample-3`,
+          specialistId: specialist.id,
+          specialistName: specialist.name,
+          specialistPhone: specialist.phone,
+          specialistCity: specialist.city,
+          clientName: 'Елена Викторовна',
+          clientPhone: '+7 (903) 777-88-99',
+          clientAddress: 'ул. Тверская 12, кв. 45',
+          objectType: 'Вторичное жилье',
+          title: 'Замена стояков и установка промывных фильтров тонкой очистки',
+          items: [
+            {
+              id: 'item-301',
+              type: 'work',
+              name: 'Демонтаж и замена участков стояков ХВС/ГВС',
+              category: 'Стояки',
+              unit: 'компл',
+              quantity: 2,
+              price: 4000,
+              total: 8000,
+            },
+            {
+              id: 'item-302',
+              type: 'work',
+              name: 'Установка фильтров 100 мкм с обратной промывкой и дренажом',
+              category: 'Фильтрация',
+              unit: 'пара',
+              quantity: 1,
+              price: 3000,
+              total: 3000,
+            },
+          ],
+          worksTotal: 11000,
+          materialsTotal: 12500,
+          grandTotal: 23500,
+          warrantyMonths: 36,
+          executionDays: '1 день',
+          status: 'completed',
+          createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+        },
+      ];
+      loadedEstimates = sampleEstimates;
       try {
         localStorage.setItem(storageKey, JSON.stringify(loadedEstimates));
       } catch (e) {}
@@ -471,6 +569,50 @@ export const MasterEstimatesTab: React.FC<MasterEstimatesTabProps> = ({
             Все ({estimates.length})
           </button>
           <button
+            onClick={() => setStatusFilter('new')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer flex items-center gap-1 ${
+              statusFilter === 'new'
+                ? 'bg-sky-500 text-slate-950 font-bold shadow-md'
+                : 'bg-slate-900 text-sky-400 hover:text-sky-300 border border-slate-800'
+            }`}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-sky-400"></span>
+            <span>Новые ({estimates.filter((e) => e.status === 'new').length})</span>
+          </button>
+          <button
+            onClick={() => setStatusFilter('in_progress')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer flex items-center gap-1 ${
+              statusFilter === 'in_progress'
+                ? 'bg-amber-500 text-slate-950 font-bold shadow-md'
+                : 'bg-slate-900 text-amber-400 hover:text-amber-300 border border-slate-800'
+            }`}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+            <span>В работе ({estimates.filter((e) => e.status === 'in_progress').length})</span>
+          </button>
+          <button
+            onClick={() => setStatusFilter('completed')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer flex items-center gap-1 ${
+              statusFilter === 'completed'
+                ? 'bg-purple-600 text-white font-bold shadow-md'
+                : 'bg-slate-900 text-purple-400 hover:text-purple-300 border border-slate-800'
+            }`}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+            <span>Завершены ({estimates.filter((e) => e.status === 'completed').length})</span>
+          </button>
+          <button
+            onClick={() => setStatusFilter('accepted')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer flex items-center gap-1 ${
+              statusFilter === 'accepted'
+                ? 'bg-emerald-600 text-white font-bold shadow-md'
+                : 'bg-slate-900 text-emerald-400 hover:text-emerald-300 border border-slate-800'
+            }`}
+          >
+            <CheckCircle2 className="w-3 h-3" />
+            <span>Согласованы ({estimates.filter((e) => e.status === 'accepted').length})</span>
+          </button>
+          <button
             onClick={() => setStatusFilter('draft')}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
               statusFilter === 'draft'
@@ -478,27 +620,7 @@ export const MasterEstimatesTab: React.FC<MasterEstimatesTabProps> = ({
                 : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
             }`}
           >
-            Черновики
-          </button>
-          <button
-            onClick={() => setStatusFilter('sent')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
-              statusFilter === 'sent'
-                ? 'bg-blue-600 text-white'
-                : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
-            }`}
-          >
-            Отправлены
-          </button>
-          <button
-            onClick={() => setStatusFilter('accepted')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
-              statusFilter === 'accepted'
-                ? 'bg-emerald-600 text-white'
-                : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
-            }`}
-          >
-            Согласованы
+            Черновики ({estimates.filter((e) => e.status === 'draft').length})
           </button>
         </div>
       </div>
@@ -556,25 +678,33 @@ export const MasterEstimatesTab: React.FC<MasterEstimatesTabProps> = ({
                       </p>
                     </div>
 
-                    {/* Status Badge */}
-                    <div>
-                      {est.status === 'accepted' ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                          <CheckCircle2 className="w-3 h-3" /> Согласована
-                        </span>
-                      ) : est.status === 'sent' ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/40">
-                          <Send className="w-3 h-3" /> Отправлена
-                        </span>
-                      ) : est.status === 'completed' ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40">
-                          Завершена
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-800 text-slate-400 border border-slate-700">
-                          Черновик
-                        </span>
-                      )}
+                    {/* Status Badge & Selector */}
+                    <div className="relative group/status">
+                      <select
+                        value={est.status || 'draft'}
+                        onChange={(e) => handleStatusChange(est.id, e.target.value as any)}
+                        className={`text-[11px] font-bold rounded-full px-2.5 py-1 pr-6 border cursor-pointer appearance-none outline-none transition ${
+                          est.status === 'new'
+                            ? 'bg-sky-500/20 text-sky-300 border-sky-500/40'
+                            : est.status === 'in_progress'
+                            ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                            : est.status === 'accepted'
+                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                            : est.status === 'completed'
+                            ? 'bg-purple-500/20 text-purple-300 border-purple-500/40'
+                            : est.status === 'sent'
+                            ? 'bg-blue-500/20 text-blue-300 border-blue-500/40'
+                            : 'bg-slate-800 text-slate-400 border-slate-700'
+                        }`}
+                        title="Нажмите, чтобы изменить статус сметы"
+                      >
+                        <option value="new" className="bg-slate-900 text-sky-400">⚡ Новая</option>
+                        <option value="in_progress" className="bg-slate-900 text-amber-400">🔨 В работе</option>
+                        <option value="accepted" className="bg-slate-900 text-emerald-400">✅ Согласована</option>
+                        <option value="completed" className="bg-slate-900 text-purple-400">🏆 Завершена</option>
+                        <option value="draft" className="bg-slate-900 text-slate-400">📝 Черновик</option>
+                      </select>
+                      <ChevronDown className="w-3 h-3 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-60 text-current" />
                     </div>
                   </div>
 

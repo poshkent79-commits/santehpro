@@ -189,7 +189,7 @@ export const DiagnosticWizard: React.FC<DiagnosticWizardProps> = ({
           <div className="space-y-1">
             <div className="flex items-center space-x-2">
               <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-[10px] font-black tracking-wider uppercase">
-                Основной инструмент по умолчанию
+                Диагностика
               </span>
               <span className="text-[11px] text-slate-400 font-medium">База 50+ пошаговых решений</span>
             </div>

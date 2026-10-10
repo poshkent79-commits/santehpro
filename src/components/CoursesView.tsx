@@ -1,28 +1,25 @@
 import React, { useState } from 'react';
 import {
   Lightbulb,
-  PlayCircle,
-  Volume2,
-  Image as ImageIcon,
-  MapPin,
-  Award,
-  Users,
-  Star,
   Plus,
+  ShieldCheck,
+  CheckCircle2,
+  Clock,
   Edit,
   Trash2,
-  Clock,
-  ChevronRight,
-  Crown,
-  CheckCircle2,
-  Bookmark,
-  Heart,
+  X,
   Sparkles,
-  ShieldCheck,
-  ExternalLink,
+  Bookmark,
+  ThumbsUp,
+  Eye,
+  Wrench,
+  Check,
+  AlertCircle,
+  Video,
+  ArrowRight
 } from 'lucide-react';
-import { Article, PlumbingSpecialist } from '../types';
-import { ArticleEditorModal } from './ArticleEditorModal';
+import { Article, PlumbingSpecialist, CategoryId } from '../types';
+import { CATEGORIES } from '../data/initialData';
 import { useAuth } from '../context/AuthContext';
 
 interface CoursesViewProps {
@@ -44,40 +41,172 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
   isAdmin,
   onRefreshArticles = () => {},
   searchQuery = '',
-  onSearchQueryChange,
-  onOpenDonation,
   currentMaster,
   isVerifiedMaster,
-  onNavigateToCabinet,
 }) => {
   const { isFavorite, toggleFavorite } = useAuth();
-  const [filterType, setFilterType] = useState<'all' | 'video' | 'audio' | 'certificate' | 'my'>('all');
-  
-  // Admin / Master Article Editor modal state
-  const [isEditorModalOpen, setIsEditorModalOpen] = useState<boolean>(false);
-  const [articleToEdit, setArticleToEdit] = useState<Article | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
+  const [successToast, setSuccessToast] = useState<string | null>(null);
 
-  const handleOpenCreateCourse = () => {
-    // Preset adminSection to 'courses' for new course materials
-    setArticleToEdit({
-      adminSection: 'courses',
-      type: 'video',
-      authorMasterId: currentMaster?.id,
-      author: currentMaster ? currentMaster.name : undefined,
-      authorAddress: currentMaster?.city ? `г. ${currentMaster.city}, Мастерская СантехПро` : undefined,
-    } as Article);
-    setIsEditorModalOpen(true);
+  // Form state for adding a lifehack
+  const [tipTitle, setTipTitle] = useState('');
+  const [tipCategory, setTipCategory] = useState<CategoryId>('water');
+  const [tipDescription, setTipDescription] = useState('');
+  const [tipTools, setTipTools] = useState('');
+  const [tipAuthorName, setTipAuthorName] = useState(currentMaster?.name || '');
+  const [tipAuthorCity, setTipAuthorCity] = useState(currentMaster?.city || '');
+  const [tipContact, setTipContact] = useState(currentMaster?.phone || currentMaster?.telegram || '');
+  const [tipVideoUrl, setTipVideoUrl] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Demo IDs to explicitly exclude
+  const DEMO_IDS = new Set([
+    'art-0-course-ppr',
+    'art-course-pro-hydraulics',
+    'art-course-warm-floor',
+    'art-course-electric-boiler'
+  ]);
+
+  // Filter only real lifehacks & tips from masters (adminSection === 'courses')
+  const lifehacks = articles.filter((art) => {
+    // Only items belonging to tips/courses section
+    if (art.adminSection !== 'courses') return false;
+    // Exclude demo versions
+    if (DEMO_IDS.has(art.id)) return false;
+
+    // Moderation check: regular users only see approved lifehacks.
+    // The author (master) can see their own pending item, and admin sees all.
+    if (art.moderationStatus && art.moderationStatus !== 'approved' && !isAdmin) {
+      if (!currentMaster || art.authorMasterId !== currentMaster.id) {
+        return false;
+      }
+    }
+
+    if (selectedCategoryFilter !== 'all' && art.category !== selectedCategoryFilter) {
+      return false;
+    }
+
+    if (searchQuery.trim() !== '') {
+      const q = searchQuery.toLowerCase();
+      const matchesTitle = art.title.toLowerCase().includes(q);
+      const matchesDesc = (art.description || '').toLowerCase().includes(q);
+      const matchesAuthor = (art.author || '').toLowerCase().includes(q);
+      if (!matchesTitle && !matchesDesc && !matchesAuthor) return false;
+    }
+
+    return true;
+  });
+
+  const handleOpenAddModal = () => {
+    setTipTitle('');
+    setTipCategory('water');
+    setTipDescription('');
+    setTipTools('');
+    setTipAuthorName(currentMaster?.name || '');
+    setTipAuthorCity(currentMaster?.city || '');
+    setTipContact(currentMaster?.phone || currentMaster?.telegram || '');
+    setTipVideoUrl('');
+    setIsAddModalOpen(true);
   };
 
-  const handleOpenEditCourse = (art: Article) => {
-    setArticleToEdit(art);
-    setIsEditorModalOpen(true);
+  const handleSubmitLifehack = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!tipTitle.trim()) {
+      alert('Пожалуйста, укажите краткое название совета или лайфхака');
+      return;
+    }
+    if (!tipDescription.trim()) {
+      alert('Пожалуйста, опишите суть лайфхака или профессиональной хитрости');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const author = tipAuthorName.trim() || (currentMaster ? currentMaster.name : 'Мастер сантехник');
+      const authorAddress = tipAuthorCity.trim() ? `г. ${tipAuthorCity.trim()}` : undefined;
+      const tools = tipTools.split(',').map((t) => t.trim()).filter(Boolean);
+
+      const newTip: Partial<Article> = {
+        id: `tip-${Date.now()}`,
+        title: tipTitle.trim(),
+        category: tipCategory,
+        type: 'article',
+        adminSection: 'courses',
+        accessType: 'free',
+        difficulty: 'Новичок',
+        timeEst: '3 мин',
+        description: tipDescription.trim(),
+        author,
+        authorAddress,
+        authorMasterId: currentMaster?.id,
+        toolsRequired: tools.length > 0 ? tools : undefined,
+        videoUrl: tipVideoUrl.trim() || undefined,
+        views: 1,
+        likes: 0,
+        createdAt: new Date().toISOString().split('T')[0],
+        moderationStatus: isAdmin ? 'approved' : 'pending',
+        isPublished: Boolean(isAdmin),
+        steps: [
+          {
+            number: 1,
+            title: 'Суть совета',
+            text: tipDescription.trim(),
+            tip: tipTools.trim() ? `Необходимый инструмент/материалы: ${tipTools.trim()}` : undefined
+          }
+        ]
+      };
+
+      const res = await fetch('/api/articles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newTip)
+      });
+
+      if (res.ok) {
+        setIsAddModalOpen(false);
+        setSuccessToast(
+          isAdmin
+            ? 'Лайфхак успешно добавлен и опубликован!'
+            : 'Спасибо! Ваш лайфхак отправлен на модерацию администратору. После проверки он появится в разделе.'
+        );
+        setTimeout(() => setSuccessToast(null), 6000);
+        onRefreshArticles();
+      } else {
+        alert('Не удалось отправить совет на модерацию. Попробуйте еще раз.');
+      }
+    } catch (err) {
+      console.error('Failed to submit tip:', err);
+      alert('Ошибка при отправке совета на модерацию');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDeleteCourse = async (art: Article, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
+  const handleApprove = async (art: Article, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const res = await fetch(`/api/articles/${art.id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ moderationStatus: 'approved', isPublished: true })
+      });
+      if (res.ok) {
+        setSuccessToast(`Совет "${art.title}" одобрен и опубликован!`);
+        setTimeout(() => setSuccessToast(null), 4000);
+        onRefreshArticles();
+      } else {
+        alert('Не удалось одобрить совет');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Ошибка при одобрении');
+    }
+  };
+
+  const handleDelete = async (art: Article, e: React.MouseEvent) => {
+    e.stopPropagation();
     if (!confirm(`Вы действительно хотите удалить совет "${art.title}"?`)) return;
-
     try {
       const res = await fetch(`/api/articles/${art.id}`, { method: 'DELETE' });
       if (res.ok) {
@@ -91,460 +220,385 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
     }
   };
 
-  // Filter articles that belong to courses (or are video/audio training materials)
-  const coursesList = articles.filter((art) => {
-    // Only approved articles or system articles are visible to regular users, but master sees their own pending course
-    if (art.moderationStatus && art.moderationStatus !== 'approved' && !isAdmin) {
-      if (!currentMaster || art.authorMasterId !== currentMaster.id) {
-        return false;
-      }
-    }
-
-    const isCourse = art.adminSection === 'courses' || art.type === 'video' || Boolean(art.audioUrl);
-    if (!isCourse) return false;
-
-    if (filterType === 'video' && !(art.type === 'video' || Boolean(art.videoUrl) || Boolean(art.videoEmbed))) return false;
-    if (filterType === 'audio' && !art.audioUrl) return false;
-    if (filterType === 'certificate' && !art.certificate) return false;
-    if (filterType === 'my' && currentMaster && art.authorMasterId !== currentMaster.id) return false;
-
-    if (searchQuery.trim() !== '') {
-      const q = searchQuery.toLowerCase();
-      const matchesTitle = art.title.toLowerCase().includes(q);
-      const matchesDesc = art.description.toLowerCase().includes(q);
-      if (!matchesTitle && !matchesDesc) return false;
-    }
-
-    return true;
-  });
-
-  const myCoursesCount = currentMaster ? articles.filter((a) => a.authorMasterId === currentMaster.id && (a.adminSection === 'courses' || a.type === 'video')).length : 0;
+  const getCategoryName = (catId: CategoryId) => {
+    const cat = CATEGORIES.find((c) => c.id === catId);
+    return cat ? cat.name : 'Сантехника';
+  };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
-      {/* Header Bar */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
-        <div>
-          <h1 className="text-lg sm:text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
-            <Lightbulb className="w-5 h-5 text-amber-400" />
-            <span>Советы и опыт мастеров</span>
-            {isVerifiedMaster && (
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 hidden md:inline-flex items-center gap-1">
-                <ShieldCheck className="w-3 h-3 text-amber-400" />
-                <span>Авторский доступ</span>
-              </span>
-            )}
-          </h1>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Практические советы, профессиональные хитрости, лайфхаки и реальный опыт сантехников
-          </p>
+    <div className="space-y-4 sm:space-y-5 animate-in fade-in duration-300">
+      {/* Toast Notification */}
+      {successToast && (
+        <div className="p-3.5 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-200 text-xs flex items-center justify-between gap-2 shadow-lg animate-in slide-in-from-top duration-200">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{successToast}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSuccessToast(null)}
+            className="text-emerald-400 hover:text-emerald-200 p-1"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
+      )}
 
-        <div className="flex items-center space-x-2 shrink-0 self-start sm:self-auto flex-wrap gap-2">
-          {isAdmin && (
-            <button
-              type="button"
-              onClick={handleOpenCreateCourse}
-              className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs transition flex items-center justify-center space-x-1.5 shadow-md"
-            >
-              <Plus className="w-4 h-4 text-slate-950" />
-              <span>Добавить совет (Админ)</span>
-            </button>
-          )}
-
-          {isVerifiedMaster && (
-            <button
-              type="button"
-              onClick={handleOpenCreateCourse}
-              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 text-slate-950 font-black text-xs transition flex items-center justify-center space-x-1.5 shadow-md shadow-amber-500/20"
-            >
-              <Lightbulb className="w-4 h-4 text-slate-950" />
-              <span>Опубликовать совет / лайфхак</span>
-            </button>
-          )}
-
-          {!isVerifiedMaster && currentMaster && currentMaster.status === 'pending' && onNavigateToCabinet && (
-            <button
-              type="button"
-              onClick={onNavigateToCabinet}
-              className="px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-bold transition flex items-center space-x-1.5"
-            >
-              <Clock className="w-3.5 h-3.5 text-amber-400" />
-              <span>Верификация на проверке</span>
-            </button>
-          )}
-
-          {!isVerifiedMaster && !currentMaster && onNavigateToCabinet && (
-            <button
-              type="button"
-              onClick={onNavigateToCabinet}
-              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-semibold transition flex items-center space-x-1.5"
-            >
-              <Award className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden sm:inline">Для мастеров: делиться советами и опытом</span>
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Information Banner for verified masters and audience */}
-      <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900/90 to-slate-850 border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs shadow-sm">
+      {/* Минималистичный текстовый баннер */}
+      <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
         <div className="flex items-start sm:items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shrink-0">
-            <Lightbulb className="w-5 h-5" />
+          <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-400 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+            <Lightbulb className="w-4 h-4 text-amber-400" />
           </div>
           <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-extrabold text-white text-xs sm:text-sm">
-                Публикация советов и лайфхаков для проверенных мастеров
-              </span>
-              <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-bold text-[10px] border border-emerald-500/30">
-                ✓ VK Видео • RuTube • YouTube • Статьи
-              </span>
-            </div>
-            <p className="text-slate-400 text-[11px] sm:text-xs mt-0.5">
-              Специалисты после верификации могут делиться профессиональными хитростями, пошаговыми инструкциями, лайфхаками и видеосоветами. Материалы публикуются после предварительного одобрения администратором.
+            <p className="text-xs sm:text-sm font-semibold text-white leading-snug">
+              Мастера могут добавлять сюда свои лайфхаки и профессиональные секреты
+            </p>
+            <p className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-amber-400/80 shrink-0" />
+              <span>Публикация происходит после проверки и модерации администратором</span>
             </p>
           </div>
         </div>
 
-        {isVerifiedMaster && (
-          <button
-            type="button"
-            onClick={handleOpenCreateCourse}
-            className="shrink-0 px-3.5 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 font-bold text-xs flex items-center gap-1.5 transition whitespace-nowrap"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Предложить совет / лайфхак</span>
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={handleOpenAddModal}
+          className="shrink-0 px-3.5 py-1.5 sm:py-2 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-extrabold text-xs transition flex items-center gap-1.5 shadow-sm shadow-amber-500/10 cursor-pointer self-start sm:self-auto"
+        >
+          <Plus className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
+          <span>Добавить лайфхак</span>
+        </button>
       </div>
 
-      {/* Filter Badges */}
-      <div className="flex flex-wrap items-center gap-2 p-3 bg-slate-900 border border-slate-800 rounded-2xl">
-        <span className="text-xs text-slate-400 font-semibold mr-2">Фильтр:</span>
-
-        <button
-          type="button"
-          onClick={() => setFilterType('all')}
-          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${
-            filterType === 'all'
-              ? 'bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20'
-              : 'bg-slate-950 text-slate-300 hover:bg-slate-800 border border-slate-800'
-          }`}
-        >
-          Все советы ({articles.filter((a) => a.adminSection === 'courses' || a.type === 'video' || Boolean(a.audioUrl)).length})
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setFilterType('video')}
-          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
-            filterType === 'video'
-              ? 'bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20'
-              : 'bg-slate-950 text-slate-300 hover:bg-slate-800 border border-slate-800'
-          }`}
-        >
-          <PlayCircle className="w-3.5 h-3.5 text-rose-400" />
-          <span>Видеосоветы</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setFilterType('audio')}
-          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
-            filterType === 'audio'
-              ? 'bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20'
-              : 'bg-slate-950 text-slate-300 hover:bg-slate-800 border border-slate-800'
-          }`}
-        >
-          <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Аудиосоветы</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setFilterType('certificate')}
-          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
-            filterType === 'certificate'
-              ? 'bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20'
-              : 'bg-slate-950 text-slate-300 hover:bg-slate-800 border border-slate-800'
-          }`}
-        >
-          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-          <span>Лайфхаки и опыт</span>
-        </button>
-
-        {currentMaster && myCoursesCount > 0 && (
+      {/* Categories Filter (only shown if there are items to filter) */}
+      {lifehacks.length > 0 && (
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs scrollbar-none">
           <button
             type="button"
-            onClick={() => setFilterType('my')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
-              filterType === 'my'
-                ? 'bg-cyan-500 text-slate-950 font-black shadow-md shadow-cyan-500/20'
-                : 'bg-slate-950 text-cyan-300 hover:bg-slate-800 border border-cyan-500/30'
+            onClick={() => setSelectedCategoryFilter('all')}
+            className={`px-3 py-1 rounded-lg font-bold transition whitespace-nowrap ${
+              selectedCategoryFilter === 'all'
+                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                : 'text-slate-400 hover:text-slate-200 bg-slate-900/60 border border-slate-800'
             }`}
           >
-            <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Мои советы ({myCoursesCount})</span>
+            Все ({lifehacks.length})
           </button>
-        )}
-      </div>
-
-      {/* Courses Cards Grid */}
-      {coursesList.length === 0 ? (
-        <div className="p-8 text-center bg-slate-900 border border-slate-800 rounded-3xl space-y-3">
-          <Lightbulb className="w-12 h-12 text-amber-500/50 mx-auto" />
-          <h3 className="text-lg font-bold text-white">Советы по выбранному фильтру не найдены</h3>
-          <p className="text-xs text-slate-400 max-w-md mx-auto">
-            Нажмите "Все советы" или переключите фильтр выше.
-          </p>
-          <button
-            type="button"
-            onClick={() => setFilterType('all')}
-            className="px-4 py-2 rounded-xl bg-slate-800 text-xs font-bold text-slate-200 hover:bg-slate-700 cursor-pointer"
-          >
-            Показать все советы
-          </button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-          {coursesList.map((course) => (
-            <div
-              key={course.id}
-              onClick={() => onSelectArticle(course)}
-              className="group rounded-3xl bg-slate-900 border border-slate-800 hover:border-rose-500/50 transition duration-300 overflow-hidden cursor-pointer flex flex-col justify-between shadow-lg relative"
-            >
-              <div>
-                {/* Media Header / Cover */}
-                <div className="relative h-56 sm:h-64 overflow-hidden bg-slate-950 flex items-center justify-center border-b border-slate-800/80">
-                  {course.coverImage && course.coverImage.trim() && !course.coverImage.includes('images.unsplash.com') ? (
-                    <>
-                      <img
-                        src={course.coverImage}
-                        alt={course.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent" />
-                    </>
-                  ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center space-y-2.5 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-800/50 via-slate-900 to-slate-950">
-                      <div className="w-16 h-16 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shadow-inner group-hover:scale-110 transition duration-300">
-                        {course.videoUrl ? <PlayCircle className="w-8 h-8" /> : <Lightbulb className="w-8 h-8" />}
-                      </div>
-                      <span className="text-xs font-bold text-slate-300 group-hover:text-amber-300 transition">
-                        {course.category === 'water' ? 'Водоснабжение и трубы' : course.category === 'heating' ? 'Отопление и котлы' : 'Сантехнический совет'}
-                      </span>
-                      <span className="text-[11px] text-slate-500 font-medium">
-                        Полезные советы и реальный опыт мастера
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Top Badges */}
-                  <div className="absolute top-3 left-3 flex items-center space-x-2 flex-wrap gap-y-1 z-10">
-                    <span className="px-3 py-1 rounded-lg text-xs font-bold bg-amber-500 text-slate-950 shadow-lg flex items-center space-x-1">
-                      <Lightbulb className="w-3.5 h-3.5" />
-                      <span>СОВЕТ</span>
-                    </span>
-
-                    {course.moderationStatus === 'pending' ? (
-                      <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-500 text-slate-950 shadow-lg flex items-center space-x-1 animate-pulse">
-                        <Clock className="w-3.5 h-3.5" />
-                        <span>На модерации</span>
-                      </span>
-                    ) : course.moderationStatus === 'rejected' ? (
-                      <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-600 text-white shadow-lg flex items-center space-x-1">
-                        <span>Отклонен</span>
-                      </span>
-                    ) : (
-                      <span className="px-3 py-1 rounded-lg text-xs font-bold bg-emerald-500 text-slate-950 shadow-lg flex items-center space-x-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Бесплатно</span>
-                      </span>
-                    )}
-
-                    {course.certificate && (
-                      <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-400/20 text-amber-300 border border-amber-400/40 backdrop-blur-md flex items-center space-x-1">
-                        <Award className="w-3.5 h-3.5 text-amber-400" />
-                        <span>С сертификатом</span>
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Top Right: Bookmark + Admin Action Overlay */}
-                  <div className="absolute top-3 right-3 flex items-center space-x-1.5 z-20">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFavorite(course);
-                      }}
-                      title={isFavorite(course.id) ? 'В избранном' : 'Добавить в избранное'}
-                      className="p-2 rounded-xl bg-slate-950/80 backdrop-blur-md border border-slate-700 text-slate-300 hover:text-white transition shadow-lg"
-                    >
-                      <Bookmark className={`w-4 h-4 ${isFavorite(course.id) ? 'fill-cyan-400 text-cyan-400' : ''}`} />
-                    </button>
-
-                    {(isAdmin || (currentMaster && course.authorMasterId === currentMaster.id)) && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenEditCourse(course);
-                          }}
-                          className="px-2.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition shadow-lg flex items-center space-x-1"
-                          title="Редактировать курс"
-                        >
-                          <Edit className="w-3.5 h-3.5" />
-                          <span className="hidden sm:inline">Изменить</span>
-                        </button>
-                        {isAdmin && (
-                          <button
-                            type="button"
-                            onClick={(e) => handleDeleteCourse(course, e)}
-                            className="p-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition shadow-lg"
-                            title="Удалить курс"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </>
-                    )}
-                  </div>
-
-                  {/* Play / Media Indicators */}
-                  <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-xs text-white">
-                    <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
-                      {course.type === 'video' && (
-                        <span className="px-2.5 py-1 rounded-lg bg-slate-950/80 backdrop-blur-md border border-slate-700 text-rose-300 font-semibold flex items-center space-x-1">
-                          <PlayCircle className="w-3.5 h-3.5 text-rose-400" />
-                          <span>Видеоурок</span>
-                        </span>
-                      )}
-
-                      {(course.rutubeUrl || (course.videoUrl && course.videoUrl.includes('rutube'))) && (
-                        <span className="px-2 py-0.5 rounded-lg bg-blue-500/25 border border-blue-400/40 text-blue-300 font-bold text-[10px] flex items-center space-x-1 backdrop-blur-md">
-                          <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
-                          <span>RuTube</span>
-                        </span>
-                      )}
-
-                      {(course.vkVideoUrl || (course.videoUrl && (course.videoUrl.includes('vk.com') || course.videoUrl.includes('vkvideo.ru')))) && (
-                        <span className="px-2 py-0.5 rounded-lg bg-indigo-500/25 border border-indigo-400/40 text-indigo-300 font-bold text-[10px] flex items-center space-x-1 backdrop-blur-md">
-                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
-                          <span>VK Видео</span>
-                        </span>
-                      )}
-
-                      {(course.youtubeUrl || (course.videoUrl && (course.videoUrl.includes('youtube') || course.videoUrl.includes('youtu.be')))) && (
-                        <span className="px-2 py-0.5 rounded-lg bg-red-500/25 border border-red-400/40 text-red-300 font-bold text-[10px] flex items-center space-x-1 backdrop-blur-md">
-                          <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
-                          <span>YouTube</span>
-                        </span>
-                      )}
-
-                      {course.audioUrl && (
-                        <span className="px-2.5 py-1 rounded-lg bg-slate-950/80 backdrop-blur-md border border-slate-700 text-emerald-300 font-semibold flex items-center space-x-1">
-                          <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
-                          <span>Аудио</span>
-                        </span>
-                      )}
-
-                      {course.galleryImages && course.galleryImages.length > 0 && (
-                        <span className="px-2.5 py-1 rounded-lg bg-slate-950/80 backdrop-blur-md border border-slate-700 text-cyan-300 font-semibold flex items-center space-x-1">
-                          <ImageIcon className="w-3.5 h-3.5 text-cyan-400" />
-                          <span>{course.galleryImages.length} фото</span>
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center space-x-1 bg-slate-950/80 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-700 text-amber-400 font-bold">
-                      <Clock className="w-3.5 h-3.5" />
-                      <span>{course.timeEst}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Course Content Details */}
-                <div className="p-6 space-y-4">
-                  <div>
-                    <h3 className="text-lg font-bold text-white group-hover:text-rose-300 transition line-clamp-2 leading-tight">
-                      {course.title}
-                    </h3>
-                    <p className="text-xs text-slate-300 line-clamp-2 mt-2 leading-relaxed">
-                      {course.description}
-                    </p>
-                  </div>
-
-                  {/* Instructor & Address Section */}
-                  <div className="p-3.5 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-2 text-xs">
-                    <div className="flex items-center justify-between text-slate-300">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-semibold text-slate-200">
-                          Автор: {course.author && !course.author.includes('Смирнов') && !course.author.includes('Мастеровой') && !course.author.includes('Волков') && !course.author.includes('Кузнецов') && course.author !== 'Администратор Справочника' ? course.author : 'Достонджон Туйчиев'}
-                        </span>
-                        {course.authorMasterId && (
-                          <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold">
-                            ✓ Мастер
-                          </span>
-                        )}
-                      </div>
-                      {course.rating && (
-                        <span className="flex items-center space-x-1 text-amber-400 font-extrabold">
-                          <Star className="w-3.5 h-3.5 fill-current" />
-                          <span>{course.rating}</span>
-                        </span>
-                      )}
-                    </div>
-
-                    {course.authorAddress && (
-                      <div className="flex items-start space-x-1.5 text-slate-400 pt-1 border-t border-slate-800/60">
-                        <MapPin className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />
-                        <span className="line-clamp-1">{course.authorAddress}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Course Footer & Metrics */}
-              <div className="p-6 pt-0">
-                <div className="flex items-center justify-between text-xs text-slate-400 border-t border-slate-800 pt-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="flex items-center space-x-1 text-cyan-300 font-medium">
-                      <Users className="w-3.5 h-3.5 text-cyan-400" />
-                      <span>{course.studentsCount || course.views || 120} учащихся</span>
-                    </div>
-                  </div>
-
-                  <span className="px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-400 text-white font-extrabold text-xs transition shadow-md shadow-rose-500/20 flex items-center space-x-1.5">
-                    <span>Начать обучение</span>
-                    <ChevronRight className="w-4 h-4" />
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
+          {CATEGORIES.map((cat) => {
+            const count = lifehacks.filter((a) => a.category === cat.id).length;
+            if (count === 0 && selectedCategoryFilter !== cat.id) return null;
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setSelectedCategoryFilter(cat.id)}
+                className={`px-3 py-1 rounded-lg font-bold transition whitespace-nowrap ${
+                  selectedCategoryFilter === cat.id
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                    : 'text-slate-400 hover:text-slate-200 bg-slate-900/60 border border-slate-800'
+                }`}
+              >
+                {cat.name} {count > 0 && `(${count})`}
+              </button>
+            );
+          })}
         </div>
       )}
 
-      {isEditorModalOpen && (
-        <ArticleEditorModal
-          article={articleToEdit}
-          currentMaster={currentMaster}
-          isMasterSubmission={Boolean(currentMaster && !isAdmin)}
-          onClose={() => {
-            setIsEditorModalOpen(false);
-            setArticleToEdit(null);
-          }}
-          onSave={() => {
-            setIsEditorModalOpen(false);
-            setArticleToEdit(null);
-            onRefreshArticles();
-          }}
-        />
+      {/* Grid of Real Approved / Pending Lifehacks */}
+      {lifehacks.length === 0 ? (
+        <div className="py-12 px-4 text-center rounded-2xl bg-slate-900/50 border border-slate-800/80 flex flex-col items-center justify-center space-y-2">
+          <div className="w-10 h-10 rounded-xl bg-slate-800/60 border border-slate-700/60 text-slate-500 flex items-center justify-center mb-1">
+            <Lightbulb className="w-5 h-5 text-slate-400" />
+          </div>
+          <p className="text-sm font-semibold text-slate-300">Пока нет опубликованных лайфхаков</p>
+          <p className="text-xs text-slate-500 max-w-sm">
+            Мастера могут нажать кнопку выше и поделиться проверенной хитростью. Совет появится в каталоге после проверки администратором.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {lifehacks.map((tip) => {
+            const isAuthor = currentMaster && tip.authorMasterId === currentMaster.id;
+            const isPending = tip.moderationStatus === 'pending';
+
+            return (
+              <div
+                key={tip.id}
+                onClick={() => onSelectArticle(tip)}
+                className="group p-4 rounded-2xl bg-slate-900 border border-slate-800 hover:border-amber-500/40 transition duration-200 cursor-pointer flex flex-col justify-between shadow-sm relative"
+              >
+                <div>
+                  {/* Top Badges */}
+                  <div className="flex items-center justify-between gap-2 mb-2.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                        {getCategoryName(tip.category)}
+                      </span>
+
+                      {isPending ? (
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1 animate-pulse">
+                          <Clock className="w-3 h-3 text-amber-400" />
+                          <span>На модерации</span>
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                          <span>Проверено</span>
+                        </span>
+                      )}
+
+                      {tip.videoUrl && (
+                        <span className="px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-rose-500/15 text-rose-300 border border-rose-500/30 flex items-center gap-1">
+                          <Video className="w-3 h-3 text-rose-400" />
+                          <span>Видео</span>
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFavorite(tip);
+                        }}
+                        title={isFavorite(tip.id) ? 'В избранном' : 'В избранное'}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-white transition"
+                      >
+                        <Bookmark className={`w-3.5 h-3.5 ${isFavorite(tip.id) ? 'fill-amber-400 text-amber-400' : ''}`} />
+                      </button>
+
+                      {(isAdmin || isAuthor) && (
+                        <button
+                          type="button"
+                          onClick={(e) => handleDelete(tip, e)}
+                          title="Удалить"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 transition"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Title & Description */}
+                  <h3 className="text-sm font-bold text-white group-hover:text-amber-300 transition line-clamp-2 mb-1.5">
+                    {tip.title}
+                  </h3>
+
+                  <p className="text-xs text-slate-400 line-clamp-3 leading-relaxed mb-3">
+                    {tip.description}
+                  </p>
+                </div>
+
+                {/* Footer with Master & Actions */}
+                <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400 gap-2">
+                  <div className="flex items-center gap-1.5 truncate">
+                    <span className="font-semibold text-slate-300 truncate">
+                      {tip.author || 'Мастер'}
+                    </span>
+                    {tip.authorAddress && (
+                      <span className="text-slate-500 text-[10px] truncate">
+                        • {tip.authorAddress}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {isAdmin && isPending && (
+                      <button
+                        type="button"
+                        onClick={(e) => handleApprove(tip, e)}
+                        className="px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-[10px] transition flex items-center gap-1"
+                      >
+                        <Check className="w-3 h-3 text-slate-950" />
+                        <span>Одобрить</span>
+                      </button>
+                    )}
+
+                    <span className="text-amber-400 group-hover:translate-x-0.5 transition flex items-center gap-0.5 font-bold">
+                      <span>Читать</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Modal: Add Lifehack by Master (with moderation notice) */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative w-full max-w-xl max-h-[92vh] flex flex-col rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/90">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center">
+                  <Lightbulb className="w-4 h-4 text-amber-400" />
+                </div>
+                <div>
+                  <h2 className="text-sm sm:text-base font-extrabold text-white">
+                    Добавить совет / лайфхак
+                  </h2>
+                  <p className="text-[11px] text-slate-400">
+                    Поделитесь профессиональным опытом с коллегами
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsAddModalOpen(false)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Moderation Notice Banner */}
+            <div className="px-4 sm:px-5 py-3 bg-amber-500/10 border-b border-amber-500/20 flex items-start gap-2.5 text-xs text-amber-300">
+              <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold">Модерация перед публикацией: </span>
+                <span className="text-amber-200/90">
+                  Все добавленные советы и лайфхаки проходят обязательную проверку администратором перед тем, как появиться в общем списке.
+                </span>
+              </div>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSubmitLifehack} className="p-4 sm:p-5 overflow-y-auto space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">
+                  Название лайфхака или совета <span className="text-amber-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={tipTitle}
+                  onChange={(e) => setTipTitle(e.target.value)}
+                  placeholder="Например: Как аккуратно согнуть трубу PEX без залома"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">
+                  Категория <span className="text-amber-400">*</span>
+                </label>
+                <select
+                  value={tipCategory}
+                  onChange={(e) => setTipCategory(e.target.value as CategoryId)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-amber-500 transition text-xs"
+                >
+                  {CATEGORIES.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">
+                  Суть лайфхака / Тонкости работы <span className="text-amber-400">*</span>
+                </label>
+                <textarea
+                  required
+                  rows={4}
+                  value={tipDescription}
+                  onChange={(e) => setTipDescription(e.target.value)}
+                  placeholder="Опишите хитрость, пошаговые действия, чего делать нельзя и почему этот способ работает лучше..."
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition text-xs leading-relaxed"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">
+                  Используемый инструмент или материалы (по желанию)
+                </label>
+                <input
+                  type="text"
+                  value={tipTools}
+                  onChange={(e) => setTipTools(e.target.value)}
+                  placeholder="Например: Пружинный кондуктор, строительный фен, силиконовая смазка"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition text-xs"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">
+                    Имя мастера / Автора
+                  </label>
+                  <input
+                    type="text"
+                    value={tipAuthorName}
+                    onChange={(e) => setTipAuthorName(e.target.value)}
+                    placeholder="Например: Иван Сантехник"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">
+                    Город мастера
+                  </label>
+                  <input
+                    type="text"
+                    value={tipAuthorCity}
+                    onChange={(e) => setTipAuthorCity(e.target.value)}
+                    placeholder="Например: Москва, Находка..."
+                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition text-xs"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">
+                  Ссылка на видео или фото (VK Видео, RuTube, YouTube — по желанию)
+                </label>
+                <input
+                  type="url"
+                  value={tipVideoUrl}
+                  onChange={(e) => setTipVideoUrl(e.target.value)}
+                  placeholder="https://vk.com/video... или https://rutube.ru/video/..."
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition text-xs"
+                />
+              </div>
+
+              {/* Submit Buttons */}
+              <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition"
+                >
+                  Отмена
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 disabled:opacity-50 text-slate-950 font-bold text-xs transition flex items-center gap-1.5 shadow-md shadow-amber-500/10 cursor-pointer"
+                >
+                  {isSubmitting ? (
+                    <span>Отправка...</span>
+                  ) : (
+                    <>
+                      <ShieldCheck className="w-3.5 h-3.5 text-slate-950" />
+                      <span>{isAdmin ? 'Опубликовать (Админ)' : 'Отправить на модерацию'}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

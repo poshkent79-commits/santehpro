@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Users, Stethoscope, ShieldCheck, Wrench, Lightbulb, Calculator, User, MapPin, Heart, Mail, Crown, Sparkles } from 'lucide-react';
+import { BookOpen, Users, Stethoscope, ShieldCheck, Wrench, Lightbulb, Calculator, User, MapPin, Mail, Crown, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 interface NavbarProps {
@@ -63,24 +63,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* Upper Right: PRO+ Button (like S+ in Sajda) + City + Admin badge */}
-        <div className="flex items-center space-x-2 sm:space-x-3">
-          {/* Voluntary Support / Club Pill Button */}
-          {onOpenDonation && (
-            <button
-              type="button"
-              onClick={onOpenDonation}
-              className="relative group flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-gradient-to-r from-rose-500 via-pink-500 to-amber-500 text-white font-extrabold text-[11px] sm:text-xs shadow-sm shadow-rose-500/25 hover:shadow-rose-500/40 border border-rose-400/40 hover:scale-105 active:scale-95 transition cursor-pointer shrink-0"
-              title="Поддержать проект СантехПро (добровольный взнос через Робокассу)"
-            >
-              <Heart className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-white text-white shrink-0" />
-              <span className="text-white text-[11px] sm:text-xs font-bold">Поддержать</span>
-              <span className="hidden sm:inline text-rose-100 text-[9px] font-medium">• Клуб</span>
-            </button>
-          )}
-
-          {/* Upper Right: Admin badge if logged in */}
-          {isAdmin && (
+        {/* Upper Right: Admin badge if logged in */}
+        {isAdmin && (
+          <div className="flex items-center space-x-2 sm:space-x-3">
             <button
               onClick={() => setActiveTab('admin')}
               className="flex items-center space-x-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl text-xs font-semibold bg-amber-500 text-slate-950 hover:bg-amber-400 transition shadow-sm cursor-pointer shrink-0"
@@ -93,8 +78,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </span>
               )}
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Sub-Bar: Navigation Menu */}
@@ -157,7 +142,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>Вызов мастера</span>
             </button>
 
-            {/* 5. Диагностика & Подбор запчастей */}
+            {/* 5. Диагностика */}
             <button
               onClick={() => handleTabClick('diagnostic')}
               className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition ${
@@ -167,10 +152,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               }`}
             >
               <Stethoscope className="w-4 h-4 text-cyan-400" />
-              <span>Ремонт & Запчасти</span>
-              <span className="px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-amber-500/25 text-amber-300 border border-amber-500/40">
-                🔥 Бойлеры
-              </span>
+              <span>Диагностика</span>
             </button>
 
             {/* 6. Панель пользователя (с человечком) */}
@@ -198,17 +180,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </button>
 
-            {onOpenDonation && (
-              <button
-                type="button"
-                onClick={onOpenDonation}
-                className="ml-auto hidden xl:flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-rose-500/15 to-amber-500/15 hover:from-rose-500/25 hover:to-amber-500/25 text-rose-300 hover:text-white border border-rose-500/30 hover:border-rose-400 text-xs font-bold transition shadow-sm cursor-pointer"
-                title="Поддержать проект добровольным донатом"
-              >
-                <Heart className="w-3.5 h-3.5 fill-rose-400 text-rose-400" />
-                <span>Поддержать проект</span>
-              </button>
-            )}
 
             {isAdmin && (
               <button

@@ -36,17 +36,21 @@ export interface HeatingRoom {
 interface UnderfloorHeatingCalculatorProps {
   onSaveEstimate?: (est: SavedEstimate) => void;
   onOpenSpecialists?: () => void;
+  onOpenSavedEstimates?: () => void;
 }
 
 export const UnderfloorHeatingCalculator: React.FC<UnderfloorHeatingCalculatorProps> = ({
   onSaveEstimate,
   onOpenSpecialists,
+  onOpenSavedEstimates,
 }) => {
   // Main mode: Water floor or Electric floor
   const [floorType, setFloorType] = useState<'water' | 'electric'>('water');
 
-  // Pipe selection for water floor
-  const [pipeBrand, setPipeBrand] = useState<'pexa_16' | 'pert_16' | 'pexa_20'>('pexa_16');
+  // Pipe selection for water floor: Material and Diameter
+  const [pipeMaterial, setPipeMaterial] = useState<'pex' | 'pert' | 'multilayer'>('pex'); // 'pex' = сшитый полиэтилен, 'pert' = PE-RT, 'multilayer' = металлопластик
+  const [pipeDiameter, setPipeDiameter] = useState<16 | 20>(16); // 16 мм или 20 мм
+
   const [insulationType, setInsulationType] = useState<'boss_mats' | 'epps_tacker'>('boss_mats');
   const [cabinetType, setCabinetType] = useState<'built_in' | 'wall_mounted'>('built_in');
   const [includeMixingUnit, setIncludeMixingUnit] = useState<boolean>(true);
@@ -142,8 +146,8 @@ export const UnderfloorHeatingCalculator: React.FC<UnderfloorHeatingCalculatorPr
       const transitPipes = room.transitDistance * 2;
       const totalRawPipe = (basePipeLength + transitPipes) * 1.1;
 
-      // Норматив: максимальная длина 1 контура 16 мм = 75 м
-      const maxLoopLength = 75;
+      // Норматив гидравлики: для трубы 16 мм максимум 75-80 м; для 20 мм - до 100-110 м
+      const maxLoopLength = pipeDiameter === 20 ? 100 : 75;
       const loopsCount = Math.max(1, Math.ceil(totalRawPipe / maxLoopLength));
       const lengthPerLoop = Math.round(totalRawPipe / loopsCount);
       const totalPipe = lengthPerLoop * loopsCount;
@@ -158,7 +162,7 @@ export const UnderfloorHeatingCalculator: React.FC<UnderfloorHeatingCalculatorPr
         perimeter,
       };
     });
-  }, [rooms]);
+  }, [rooms, pipeDiameter]);
 
   const totalGrossArea = useMemo(() => rooms.reduce((acc, r) => acc + r.totalArea, 0), [rooms]);
   const totalNetArea = useMemo(() => calculatedRooms.reduce((acc, r) => acc + r.netHeatedArea, 0), [calculatedRooms]);
@@ -167,15 +171,57 @@ export const UnderfloorHeatingCalculator: React.FC<UnderfloorHeatingCalculatorPr
   const totalPerimeter = useMemo(() => calculatedRooms.reduce((acc, r) => acc + r.perimeter, 0), [calculatedRooms]);
 
   const pipeInfo = useMemo(() => {
-    switch (pipeBrand) {
-      case 'pexa_16':
-        return { name: 'Труба из сшитого полиэтилена PE-Xa 16х2.0 мм EVOH (Stout / Rehau)', pricePerMeter: 125 };
-      case 'pert_16':
-        return { name: 'Труба термостойкая PE-RT Type II 16х2.0 мм (Valtec / Uni-Fitt)', pricePerMeter: 85 };
-      case 'pexa_20':
-        return { name: 'Труба увеличенного диаметра PE-Xa 20х2.0 мм (Stout / Rehau Rautherm S)', pricePerMeter: 165 };
+    if (pipeMaterial === 'multilayer') {
+      if (pipeDiameter === 16) {
+        return {
+          materialName: 'Металлопластик',
+          diameter: 16,
+          name: 'Металлопластиковая труба для тёплого пола PE-RT/AL/PE-RT 16х2.0 мм',
+          pricePerMeter: 110,
+        };
+      } else {
+        return {
+          materialName: 'Металлопластик',
+          diameter: 20,
+          name: 'Металлопластиковая труба увеличенного сечения PE-RT/AL/PE-RT 20х2.0 мм',
+          pricePerMeter: 155,
+        };
+      }
+    } else if (pipeMaterial === 'pert') {
+      if (pipeDiameter === 16) {
+        return {
+          materialName: 'Термостойкий полиэтилен PE-RT',
+          diameter: 16,
+          name: 'Труба из термостойкого полиэтилена PE-RT Type II с кислородным барьером EVOH 16х2.0 мм',
+          pricePerMeter: 85,
+        };
+      } else {
+        return {
+          materialName: 'Термостойкий полиэтилен PE-RT',
+          diameter: 20,
+          name: 'Труба термостойкая PE-RT Type II увеличенная EVOH 20х2.0 мм',
+          pricePerMeter: 120,
+        };
+      }
+    } else {
+      // pex (сшитый полиэтилен)
+      if (pipeDiameter === 16) {
+        return {
+          materialName: 'Сшитый полиэтилен PE-Xa',
+          diameter: 16,
+          name: 'Труба из сшитого полиэтилена PE-Xa 16х2.0 мм EVOH с кислородным слоем',
+          pricePerMeter: 125,
+        };
+      } else {
+        return {
+          materialName: 'Сшитый полиэтилен PE-Xa',
+          diameter: 20,
+          name: 'Труба из сшитого полиэтилена увеличенного расхода PE-Xa 20х2.0 мм EVOH',
+          pricePerMeter: 165,
+        };
+      }
     }
-  }, [pipeBrand]);
+  }, [pipeMaterial, pipeDiameter]);
 
   // Water Floor Specs
   const waterSpecification = useMemo(() => {
@@ -199,8 +245,8 @@ export const UnderfloorHeatingCalculator: React.FC<UnderfloorHeatingCalculatorPr
       unit: 'м',
       unitPrice: pipeInfo.pricePerMeter,
       totalPrice: pipeCost,
-      note: `Рассчитано на ${totalLoopsCount} контуров с учетом транзитов и запаса 10%`,
-      badge: `${totalLoopsCount} петель`,
+      note: `Рассчитано на ${totalLoopsCount} контуров (макс. ${pipeDiameter === 20 ? 100 : 75} м на петлю) с транзитами и запасом 10%`,
+      badge: `${totalLoopsCount} петель • Ø${pipeDiameter} мм`,
     });
 
     // 2. Коллекторная группа с расходомерами
@@ -219,15 +265,16 @@ export const UnderfloorHeatingCalculator: React.FC<UnderfloorHeatingCalculatorPr
 
     // Евроконусы
     const euroconesCount = totalLoopsCount * 2;
+    const euroconePrice = pipeDiameter === 20 ? 320 : 260;
     items.push({
       category: 'Коллекторная группа',
-      name: `Концовки коллекторные евроконус 3/4" под трубу 16х2.0 / 20х2.0 мм`,
+      name: `Концовки коллекторные евроконус 3/4" под трубу ${pipeDiameter}х2.0 мм (${pipeMaterial === 'multilayer' ? 'под металлопластик' : 'под сшитый полиэтилен'})`,
       quantity: `${euroconesCount}`,
       unit: 'шт',
-      unitPrice: 260,
-      totalPrice: euroconesCount * 260,
+      unitPrice: euroconePrice,
+      totalPrice: euroconesCount * euroconePrice,
       note: 'По 2 шт на каждый контур (подача и обратка)',
-      badge: `${euroconesCount} шт`,
+      badge: `${euroconesCount} шт • Ø${pipeDiameter}`,
     });
 
     // 3. Смесительный узел
@@ -527,8 +574,8 @@ export const UnderfloorHeatingCalculator: React.FC<UnderfloorHeatingCalculatorPr
       createdAt: new Date().toISOString(),
       pipeLength: totalPipesLength,
       selectedPoints: [],
-      pipeType: pipeBrand === 'pert_16' ? 'pex_16' : 'pex_20',
-      pipeMaterial: 'pex',
+      pipeType: pipeDiameter === 16 ? (pipeMaterial === 'multilayer' ? 'multilayer_16' : 'pex_16') : (pipeMaterial === 'multilayer' ? 'multilayer_20' : 'pex_20'),
+      pipeMaterial: pipeMaterial === 'multilayer' ? 'multilayer' : 'pex',
       wiringScheme: 'collector',
       reserveMargin: 10,
       includePressureReducers: true,
@@ -685,42 +732,6 @@ export const UnderfloorHeatingCalculator: React.FC<UnderfloorHeatingCalculatorPr
         </div>
       )}
 
-      {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-950 to-amber-950 border border-slate-800 p-5 sm:p-7 shadow-2xl">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold mb-3">
-              <Flame className="w-3.5 h-3.5" />
-              <span>Профессиональный гидравлический расчет</span>
-            </div>
-            <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight">
-              Инженерный калькулятор тёплого пола
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
-              Точный расчет метража трубы, количества контуров (с контролем длины петли до 75 м), подбор коллектора с расходомерами, смесительного узла, утеплителя и всех компонентов пирога пола.
-            </p>
-          </div>
-
-          <div className="shrink-0 flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleSaveToEstimates}
-              className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer border border-slate-700 shadow-md"
-            >
-              <Save className="w-4 h-4" />
-              <span>В мои сметы</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsExportModalOpen(true)}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs transition flex items-center space-x-1.5 cursor-pointer shadow-lg shadow-amber-950/40"
-            >
-              <Download className="w-4 h-4" />
-              <span>Смета / PDF</span>
-            </button>
-          </div>
-        </div>
-      </div>
 
       {/* Mode Switcher: Water Floor vs Electric Floor */}
       <div className="flex p-1.5 rounded-2xl bg-slate-900 border border-slate-800 max-w-md">
@@ -904,20 +915,95 @@ export const UnderfloorHeatingCalculator: React.FC<UnderfloorHeatingCalculatorPr
                 <span>Оборудование и комплектующие водяного пола</span>
               </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-bold text-slate-300 mb-1.5 block">
-                    Труба для контуров
-                  </label>
-                  <select
-                    value={pipeBrand}
-                    onChange={(e) => setPipeBrand(e.target.value as any)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs font-bold outline-none focus:border-amber-400 transition"
-                  >
-                    <option value="pexa_16">PE-Xa 16х2.0 EVOH (Stout / Rehau) — 125 ₽/м</option>
-                    <option value="pert_16">PE-RT 16х2.0 Type II (Valtec) — 85 ₽/м</option>
-                    <option value="pexa_20">PE-Xa 20х2.0 увеличенная — 165 ₽/м</option>
-                  </select>
+              <div className="space-y-4">
+                {/* 1. Выбор материала и диаметра трубы */}
+                <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-slate-800/80 pb-2">
+                    <span className="text-xs font-black text-white flex items-center space-x-1.5">
+                      <span className="text-amber-400">📏</span>
+                      <span>Труба контуров: Материал и Диаметр</span>
+                    </span>
+                    <span className="text-[11px] font-bold text-amber-400">
+                      {pipeInfo.pricePerMeter} ₽/м
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Выбор материала: Сшитый полиэтилен / Металлопластик */}
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-300 mb-1.5 block">
+                        Материал трубы:
+                      </label>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setPipeMaterial('pex')}
+                          className={`p-2 rounded-xl border text-xs font-bold text-center transition cursor-pointer flex flex-col items-center justify-center space-y-0.5 ${
+                            pipeMaterial === 'pex' || pipeMaterial === 'pert'
+                              ? 'bg-amber-500/20 border-amber-500 text-amber-300 shadow-sm'
+                              : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          <span className="font-black">Сшитый полиэтилен</span>
+                          <span className="text-[10px] text-slate-400 font-normal">PE-Xa / PE-RT</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setPipeMaterial('multilayer')}
+                          className={`p-2 rounded-xl border text-xs font-bold text-center transition cursor-pointer flex flex-col items-center justify-center space-y-0.5 ${
+                            pipeMaterial === 'multilayer'
+                              ? 'bg-amber-500/20 border-amber-500 text-amber-300 shadow-sm'
+                              : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          <span className="font-black">Металлопластик</span>
+                          <span className="text-[10px] text-slate-400 font-normal">PEX-AL-PEX</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Выбор диаметра: 16 мм или 20 мм */}
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-300 mb-1.5 block">
+                        Диаметр трубы:
+                      </label>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setPipeDiameter(16)}
+                          className={`p-2 rounded-xl border text-xs font-bold text-center transition cursor-pointer flex flex-col items-center justify-center space-y-0.5 ${
+                            pipeDiameter === 16
+                              ? 'bg-amber-500/20 border-amber-500 text-amber-300 shadow-sm'
+                              : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          <span className="font-black text-sm">Ø 16 мм</span>
+                          <span className="text-[10px] text-slate-400 font-normal">контур до 75 м</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setPipeDiameter(20)}
+                          className={`p-2 rounded-xl border text-xs font-bold text-center transition cursor-pointer flex flex-col items-center justify-center space-y-0.5 ${
+                            pipeDiameter === 20
+                              ? 'bg-amber-500/20 border-amber-500 text-amber-300 shadow-sm'
+                              : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          <span className="font-black text-sm">Ø 20 мм</span>
+                          <span className="text-[10px] text-slate-400 font-normal">контур до 100 м</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 text-[11px] text-slate-300 flex items-center justify-between">
+                    <span className="text-slate-400">Выбрано для спецификации:</span>
+                    <span className="font-bold text-white text-right">
+                      {pipeInfo.name}
+                    </span>
+                  </div>
                 </div>
 
                 <div>
@@ -1368,6 +1454,30 @@ export const UnderfloorHeatingCalculator: React.FC<UnderfloorHeatingCalculatorPr
 
             {/* Actions */}
             <div className="space-y-2 pt-2">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={handleSaveToEstimates}
+                  className="py-3 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs flex items-center justify-center space-x-1.5 transition border border-slate-700 cursor-pointer shadow-md"
+                  title="Сохранить эту смету в локальную память"
+                >
+                  <Save className="w-4 h-4 text-amber-400" />
+                  <span>В мои сметы</span>
+                </button>
+
+                {onOpenSavedEstimates && (
+                  <button
+                    type="button"
+                    onClick={onOpenSavedEstimates}
+                    className="py-3 px-3 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 font-bold text-xs flex items-center justify-center space-x-1.5 transition border border-cyan-500/30 cursor-pointer shadow-md"
+                    title="Открыть список сохранённых смет"
+                  >
+                    <FileText className="w-4 h-4 text-cyan-400" />
+                    <span>Мои сметы</span>
+                  </button>
+                )}
+              </div>
+
               <button
                 type="button"
                 onClick={() => setIsExportModalOpen(true)}

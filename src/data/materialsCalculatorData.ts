@@ -473,7 +473,7 @@ export const POPULAR_ADDITIONS: PopularAddition[] = [
   },
   {
     id: 'add_pressure_reducer',
-    name: 'Редуктор давления мембранный 1/2" со шкалой настройки (Caleffi/Stout)',
+    name: 'Редуктор давления мембранный 1/2" со шкалой настройки (DZR латунь)',
     category: 'Безопасность',
     unit: 'шт',
     price: 3600,
@@ -481,7 +481,7 @@ export const POPULAR_ADDITIONS: PopularAddition[] = [
   },
   {
     id: 'add_leak_valve',
-    name: 'Система защиты от протечек с радиодатчиками и кранами 1/2" (Нептун/Аквасторож)',
+    name: 'Система защиты от протечек с радиодатчиками и кранами 1/2" (220V/12V)',
     category: 'Автоматика',
     unit: 'компл',
     price: 18500,
@@ -497,7 +497,7 @@ export const POPULAR_ADDITIONS: PopularAddition[] = [
   },
   {
     id: 'add_installation_frame',
-    name: 'Монтажный элемент (инсталляция) для подвесного унитаза (Geberit/Tece)',
+    name: 'Монтажный элемент (инсталляция) для подвесного унитаза (высота 112 см)',
     category: 'Санфаянс',
     unit: 'компл',
     price: 17900,
