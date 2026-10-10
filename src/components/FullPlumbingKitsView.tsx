@@ -28,7 +28,6 @@ import {
   FileText,
   Download,
   Eye,
-  ShoppingCart,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -673,21 +672,6 @@ export const FullPlumbingKitsView: React.FC<FullPlumbingKitsViewProps> = ({
               </div>
             </div>
 
-            {/* Быстрый экспресс-лист закупок */}
-            <div className="pt-4 sm:pt-4">
-              <button
-                type="button"
-                onClick={() => setIsProcurementModalOpen(true)}
-                className="px-4 sm:px-5 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black text-xs sm:text-sm transition-all flex items-center gap-2.5 shadow-xl shadow-emerald-500/25 hover:shadow-emerald-500/40 border border-emerald-400/60 cursor-pointer active:scale-95 group hover:scale-[1.02]"
-                title="Быстрый экспресс-лист закупок: готовые комплекты и подбор фитингов в 1 тап"
-              >
-                <ShoppingCart className="w-4 h-4 text-slate-950 group-hover:scale-110 transition-transform stroke-[2.5]" />
-                <span className="tracking-tight">Список закупок</span>
-                <span className="hidden sm:inline-block px-1.5 py-0.5 rounded-md bg-slate-950/20 text-slate-950 text-[10px] font-extrabold uppercase">
-                  Экспресс
-                </span>
-              </button>
-            </div>
           </div>
 
           {/* Top Actions: + Своя позиция, Сбросить */}
