@@ -15,7 +15,7 @@ import { ProtectedSectionGuard, ProtectedSectionType } from './components/Protec
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Article, PlumbingSpecialist, ServiceCallRequest, CommunityQuestion } from './types';
 import { INITIAL_ARTICLES, INITIAL_SPECIALISTS, INITIAL_SERVICE_REQUESTS, INITIAL_QUESTIONS } from './data/initialData';
-import { Wrench, ShieldCheck, Scale, CheckCircle2, X, MapPin, Check, Search, ArrowRight, Share2, Heart, Bell, HelpCircle, Mail } from 'lucide-react';
+import { Wrench, ShieldCheck, Scale, CheckCircle2, X, MapPin, Check, Search, ArrowRight, Share2, Heart, Bell, HelpCircle, Mail, Users } from 'lucide-react';
 import { LegalTermsModal } from './components/LegalTermsModal';
 import { SupportFeedbackModal } from './components/SupportFeedbackModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -31,6 +31,7 @@ import { ClientContractModal } from './components/ClientContractModal';
 import { MasterPlumbingEstimate, PlumbingContract } from './types';
 import { DonationModal } from './components/DonationModal';
 import { ProSubscriptionModal } from './components/ProSubscriptionModal';
+import { PromoVideoStudioModal } from './components/PromoVideoStudioModal';
 import { triggerNativeShare } from './utils/shareApp';
 import { playIncomingRequestSound, sendBrowserNotification } from './utils/notificationSound';
 
@@ -997,6 +998,26 @@ function AppContent() {
   const [newMasterOrderToast, setNewMasterOrderToast] = useState<ServiceCallRequest | null>(null);
   const knownMasterOrderIdsRef = React.useRef<Set<string> | null>(null);
 
+  // Real-time alert for newly registered specialists (for Admin / moderator)
+  const [newSpecialistToast, setNewSpecialistToast] = useState<PlumbingSpecialist | null>(null);
+  const knownSpecialistIdsRef = React.useRef<Set<string> | null>(null);
+
+  useEffect(() => {
+    const currentSpecialistIds = new Set(specialists.map((s) => s.id));
+    if (knownSpecialistIdsRef.current !== null) {
+      const newSpecs = specialists.filter((s) => !knownSpecialistIdsRef.current!.has(s.id));
+      if (newSpecs.length > 0) {
+        const latest = newSpecs[0];
+        setNewSpecialistToast(latest);
+        playIncomingRequestSound();
+        sendBrowserNotification('СантехПро: Зарегистрирован новый мастер!', {
+          body: `${latest.name || 'Мастер'} (${latest.city || 'Город не указан'}) • Опыт: ${latest.experienceYears || 0} лет. Требуется модерация анкеты.`,
+        });
+      }
+    }
+    knownSpecialistIdsRef.current = currentSpecialistIds;
+  }, [specialists]);
+
   useEffect(() => {
     if (!userMasterSpecialist) {
       knownMasterOrderIdsRef.current = null;
@@ -1607,6 +1628,63 @@ function AppContent() {
                     className="px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition cursor-pointer shadow-sm"
                   >
                     Открыть в кабинете
+                  </button>
+                  <button
+                    onClick={() => {
+                      playIncomingRequestSound(true);
+                    }}
+                    className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition cursor-pointer border border-slate-700"
+                    title="Повторить звук"
+                  >
+                    🔊
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast alert for newly registered specialist (for Admin / general overview) */}
+      {newSpecialistToast && (
+        <div className="fixed bottom-6 left-4 sm:left-6 z-50 max-w-sm sm:max-w-md w-full shadow-2xl transition-all">
+          <div className="bg-slate-900/95 backdrop-blur-md border-2 border-amber-500 rounded-2xl p-4 text-white shadow-2xl">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/30">
+                <Users className="w-5 h-5 animate-pulse text-amber-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-black tracking-wider text-amber-400 uppercase">
+                    ⚡ Новый мастер в системе!
+                  </span>
+                  <button
+                    onClick={() => setNewSpecialistToast(null)}
+                    className="text-slate-400 hover:text-white text-xs cursor-pointer p-1"
+                    title="Закрыть"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <p className="text-sm font-bold text-white truncate mt-0.5">
+                  {newSpecialistToast.name || 'Мастер'} • г. {newSpecialistToast.city || 'Не указан'}
+                </p>
+                <p className="text-xs text-slate-300 line-clamp-2 mt-1">
+                  {newSpecialistToast.services?.slice(0, 3).join(', ') || 'Сантехнические работы'} • Опыт: {newSpecialistToast.experienceYears || 1} г.
+                </p>
+                <div className="mt-3 flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setNewSpecialistToast(null);
+                      if (isAdmin) {
+                        setActiveTab('admin');
+                      } else {
+                        setActiveTab('specialists');
+                      }
+                    }}
+                    className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition cursor-pointer shadow-sm"
+                  >
+                    {isAdmin ? 'Проверить в Админке' : 'Посмотреть в Каталоге'}
                   </button>
                   <button
                     onClick={() => {

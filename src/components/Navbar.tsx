@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Users, Stethoscope, ShieldCheck, Wrench, Lightbulb, Calculator, User, MapPin, Mail, Crown, Sparkles } from 'lucide-react';
+import { BookOpen, Users, Stethoscope, ShieldCheck, Wrench, Lightbulb, Calculator, User, MapPin, Mail, Crown, Sparkles, Film } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 interface NavbarProps {
@@ -16,6 +16,7 @@ interface NavbarProps {
   onOpenDonation?: () => void;
   onOpenSupport?: () => void;
   onOpenProSubscription?: () => void;
+  onOpenPromoStudio?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -30,6 +31,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenDonation,
   onOpenSupport,
   onOpenProSubscription,
+  onOpenPromoStudio,
 }) => {
   const { currentUser, openAuthModal } = useAuth();
 
@@ -63,9 +65,22 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* Upper Right: Admin badge if logged in */}
-        {isAdmin && (
-          <div className="flex items-center space-x-2 sm:space-x-3">
+        {/* Upper Right: Promo AI Video + Admin badge */}
+        <div className="flex items-center space-x-2 sm:space-x-3">
+          {onOpenPromoStudio && (
+            <button
+              type="button"
+              onClick={onOpenPromoStudio}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-rose-500 via-pink-500 to-indigo-600 hover:from-rose-400 hover:to-indigo-500 text-white shadow-md shadow-rose-500/25 transition cursor-pointer shrink-0"
+              title="Открыть студию продвижения и AI-видео"
+            >
+              <Film className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">AI-Промо видео</span>
+              <span className="sm:hidden">Промо</span>
+            </button>
+          )}
+
+          {isAdmin && (
             <button
               onClick={() => setActiveTab('admin')}
               className="flex items-center space-x-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl text-xs font-semibold bg-amber-500 text-slate-950 hover:bg-amber-400 transition shadow-sm cursor-pointer shrink-0"
@@ -78,8 +93,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </span>
               )}
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Sub-Bar: Navigation Menu */}

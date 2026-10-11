@@ -135,6 +135,7 @@ class RealtimeClient {
   }
 
   private emit(eventType: string, data: RealtimePayload) {
+    // 1. Direct exact match listeners
     const specific = this.listeners.get(eventType);
     if (specific) {
       specific.forEach((cb) => {
@@ -146,7 +147,23 @@ class RealtimeClient {
       });
     }
 
-    // Also notify wildcard if not already '*'
+    // 2. Prefix wildcard listeners (e.g. 'specialist:*', 'service_request:*', 'article:*')
+    this.listeners.forEach((callbacks, pattern) => {
+      if (pattern !== eventType && pattern !== '*' && pattern.endsWith(':*')) {
+        const prefix = pattern.slice(0, -2);
+        if (eventType.startsWith(prefix + ':')) {
+          callbacks.forEach((cb) => {
+            try {
+              cb(data);
+            } catch (e) {
+              console.error('[WebSocket] Prefix listener error:', e);
+            }
+          });
+        }
+      }
+    });
+
+    // 3. Global wildcard '*'
     if (eventType !== '*') {
       const wild = this.listeners.get('*');
       if (wild) {
