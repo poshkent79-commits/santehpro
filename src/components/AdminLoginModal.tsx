@@ -257,7 +257,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
               </div>
               <h2 className="text-2xl font-bold text-white">Вход Администратора</h2>
               <p className="text-xs text-slate-400">
-                Шаг 1 из 2: Введите мастер-пароль доступа
+                Введите мастер-пароль для прямого доступа к панели управления
               </p>
             </div>
 
@@ -309,12 +309,12 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
                   {isLoading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Проверка пароля и отправка кода...</span>
+                      <span>Вход в систему...</span>
                     </>
                   ) : (
                     <>
                       <KeyRound className="w-4 h-4" />
-                      <span>Продолжить (запросить код)</span>
+                      <span>Войти в панель управления</span>
                     </>
                   )}
                 </button>
@@ -323,7 +323,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
 
             <div className="mt-6 pt-4 border-t border-slate-800/80 text-center">
               <p className="text-[11px] text-slate-500">
-                🔒 Защита 2FA: одноразовый код отправляется на почту <span className="text-slate-400 font-mono">santehpro.info@yandex.ru</span>.
+                🔒 Прямой доступ к панели администратора «СантехПро» по мастер-паролю.
               </p>
             </div>
           </>

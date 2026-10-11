@@ -1558,42 +1558,32 @@ app.post('/api/admin/login', async (req, res) => {
     const isSuperAdminPhoneCheck = phone && isSuperAdminPhone(phone);
 
     if (isDirectPasswordValid || ((isSuperAdminEmailCheck || isSuperAdminPhoneCheck) && password && password.length >= 6)) {
-      // Password is VALID! Generate 6-digit one-time code (OTP)
-      const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-      const pendingToken = `adm-otp-${Date.now()}-${crypto.randomBytes(16).toString('hex')}`;
-      const targetAdminEmail = 'santehpro.info@yandex.ru';
+      // Password is VALID! Reset failed attempts
+      record.failedAttempts = 0;
+      record.lockedUntil = undefined;
 
-      pendingAdminOtpLogins.set(pendingToken, {
-        code: otpCode,
-        expiresAt: now + (10 * 60 * 1000), // Valid for 10 minutes
-        attempts: 0,
-        clientIp,
+      // Issue permanent 24-hour admin session token directly
+      const adminSessionToken = `adm-${Date.now()}-${crypto.randomBytes(24).toString('hex')}`;
+      const targetAdminEmail = 'santehpro.info@yandex.ru';
+      activeAdminSessions.set(adminSessionToken, {
         email: targetAdminEmail,
+        createdAt: now,
+        expiresAt: now + (24 * 60 * 60 * 1000), // 24-hour session
       });
 
-      // Send OTP to santehpro.info@yandex.ru
-      let mailResult: { success: boolean; delivered: boolean; error?: string } = { success: false, delivered: false };
-      try {
-        mailResult = await sendAdminLoginOtpEmail({
-          to: targetAdminEmail,
-          code: otpCode,
-          clientIp,
-          expiresInMinutes: 10,
-        });
-      } catch (mailErr: any) {
-        console.error('[ADMIN 2FA] Error dispatching OTP email:', mailErr);
-        mailResult = { success: false, delivered: false, error: mailErr?.message || 'Ошибка отправки' };
-      }
+      console.log(`[ADMIN LOGIN SUCCESS] Admin logged in directly with master password from IP ${clientIp}`);
 
       return res.json({
         success: true,
-        requireOtp: true,
-        pendingToken,
-        targetEmail: targetAdminEmail,
-        maskedEmail: 's***o@yandex.ru',
-        expiresInSeconds: 600,
-        delivered: mailResult.delivered,
-        warning: !mailResult.delivered ? mailResult.error : undefined,
+        requireOtp: false,
+        token: adminSessionToken,
+        role: 'admin',
+        user: {
+          uid: 'usr-admin-poshkent',
+          email: targetAdminEmail,
+          name: 'Главный Администратор',
+          role: 'admin',
+        },
       });
     }
 

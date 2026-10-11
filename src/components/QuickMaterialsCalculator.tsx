@@ -220,6 +220,17 @@ export const QuickMaterialsCalculator: React.FC<QuickMaterialsCalculatorProps> =
     });
   }, [searchQuery, selectedCategoryKey, isFavorite]);
 
+  // Progressive list limit for silky-smooth 60fps rendering across 700+ positions
+  const [displayLimit, setDisplayLimit] = useState<number>(48);
+
+  useEffect(() => {
+    setDisplayLimit(48);
+  }, [searchQuery, selectedCategoryKey]);
+
+  const visibleItems = useMemo(() => {
+    return filteredItems.slice(0, displayLimit);
+  }, [filteredItems, displayLimit]);
+
   // Add or increment item with smart auto quantity & meterage
   const handleAddItem = (item: QuickCatalogItem, delta?: number) => {
     const auto = getAutoQuantityAndUnit(item);
@@ -555,8 +566,9 @@ export const QuickMaterialsCalculator: React.FC<QuickMaterialsCalculatorProps> =
 
       {/* Каталог материалов сразу под поиском */}
       {filteredItems.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {filteredItems.map((item) => {
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {visibleItems.map((item) => {
             const currentQty = selectedMap.get(item.id) || 0;
             const isAdded = currentQty > 0;
             const auto = getAutoQuantityAndUnit(item);
@@ -715,6 +727,32 @@ export const QuickMaterialsCalculator: React.FC<QuickMaterialsCalculatorProps> =
             );
           })}
         </div>
+
+        {filteredItems.length > visibleItems.length && (
+          <div className="mt-4 p-4 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+            <div className="text-xs text-slate-400">
+              Показано <span className="font-bold text-amber-400 font-mono">{visibleItems.length}</span> из{' '}
+              <span className="font-bold text-white font-mono">{filteredItems.length}</span> доступных позиций сантехники
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={() => setDisplayLimit((prev) => prev + 48)}
+                className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-xs transition shadow-md shadow-amber-500/20 cursor-pointer"
+              >
+                Показать ещё 48 позиций ↓
+              </button>
+              <button
+                type="button"
+                onClick={() => setDisplayLimit(filteredItems.length)}
+                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition border border-slate-700 cursor-pointer whitespace-nowrap"
+              >
+                Все ({filteredItems.length})
+              </button>
+            </div>
+          </div>
+        )}
+      </>
       ) : selectedCategoryKey === 'favorites' ? (
         /* Empty State (Favorites is empty) */
         <div className="p-8 sm:p-12 rounded-3xl bg-slate-900 border border-slate-800 text-center space-y-4">

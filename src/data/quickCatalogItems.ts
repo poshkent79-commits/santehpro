@@ -44,30 +44,49 @@ export const CATEGORY_TABS: { key: string; label: string; icon: string; desc: st
 export const QUICK_TAG_SUGGESTIONS = [
   'Труба 20',
   'Труба 16',
+  'Труба 25',
+  'Ниппель',
+  'Муфта',
+  'Уголок',
+  'Тройник',
+  'Футорка',
+  'Американка',
+  'Водорозетка',
   'Кран 1/2',
+  'Кран 3/4',
+  'Редуктор',
+  'Фильтр',
+  'Канализация 50',
+  'Канализация 110',
   'Лен',
   'Анаэроб',
+  'Хомут',
   'Смеситель',
   'Сифон',
   'Трап',
   'Инсталляция',
-  'Канализация 110',
-  'Медь',
-  'Пресс',
-  'Аксиал',
-  'Редуктор',
-  'Хомут',
-  'Энергофлекс',
+  'Унитаз',
+  'Подводка',
+  'Паяльник',
   'Теплый пол',
-  'FAR',
-  'Bugatti',
-  'Rehau',
-  'Stout',
   'Valtec',
-  'Geberit'
+  'Stout',
+  'Rehau',
+  'Geberit',
+  'FAR',
+  'Viega',
+  'Alcaplast'
 ];
 
-export const QUICK_CATALOG_ITEMS: QuickCatalogItem[] = [
+import { EXTENDED_QUICK_CATALOG_ITEMS } from './quickCatalogAdditions';
+import { ALL_PLUMBING_CATALOG_ITEMS } from './allPlumbingCatalogItems';
+import {
+  MATERIAL_SPECIFIC_ITEMS,
+  BUILDING_EQUIPMENT_ITEMS,
+  SystemFittingItem
+} from './installationMaterialsData';
+
+const BASE_QUICK_CATALOG_ITEMS: QuickCatalogItem[] = [
   // =========================================================================
   // 1. ТРУБЫ И СОПУТСТВУЮЩИЕ МАТЕРИАЛЫ (PIPES & INSULATION)
   // =========================================================================
@@ -2786,3 +2805,101 @@ export const QUICK_CATALOG_ITEMS: QuickCatalogItem[] = [
     tags: ['гидроаккумулятор', 'reflex', '12 л', 'бойлер', 'гвс']
   }
 ];
+
+function convertSystemItemToQuickCatalog(item: SystemFittingItem): QuickCatalogItem {
+  let catKey: CatalogCategoryKey = 'fittings';
+  let catTitle = 'Фитинги и соединения';
+
+  const nameLow = (item.name || '').toLowerCase();
+  const catLow = (item.category || '').toLowerCase();
+
+  if (catLow === 'pipes' || nameLow.includes('труба') || nameLow.includes('изоляц') || nameLow.includes('утеплител')) {
+    catKey = 'pipes_insulation';
+    catTitle = 'Трубы и изоляция';
+  } else if (catLow === 'valves' || nameLow.includes('кран') || nameLow.includes('клапан') || nameLow.includes('редуктор') || nameLow.includes('вентиль') || nameLow.includes('манометр')) {
+    catKey = 'valves_taps';
+    catTitle = 'Краны и арматура';
+  } else if (catLow === 'collectors' || nameLow.includes('коллектор') || nameLow.includes('шкаф') || nameLow.includes('смесительный узел') || nameLow.includes('гребенк') || nameLow.includes('разделитель')) {
+    catKey = 'collectors';
+    catTitle = 'Коллекторы и узлы';
+  } else if (item.isTool || catLow === 'tools' || nameLow.includes('паяльник') || nameLow.includes('ножниц') || nameLow.includes('ключ') || nameLow.includes('калибратор') || nameLow.includes('клещи') || nameLow.includes('опрессовщик') || nameLow.includes('резак')) {
+    catKey = 'tools';
+    catTitle = 'Монтажный инструмент';
+  } else if (nameLow.includes('лен') || nameLow.includes('герметик') || nameLow.includes('паста') || nameLow.includes('хомут') || nameLow.includes('клипс') || nameLow.includes('скоб') || nameLow.includes('перфолент') || nameLow.includes('нить') || nameLow.includes('фум') || nameLow.includes('дюбель') || nameLow.includes('шпильк')) {
+    catKey = 'supplies';
+    catTitle = 'Расходники, лён и крепёж';
+  } else if (nameLow.includes('фильтр') || nameLow.includes('грязевик') || nameLow.includes('протечк') || nameLow.includes('нептун') || nameLow.includes('аквасторож')) {
+    catKey = 'leak_filters';
+    catTitle = 'Фильтры и защита';
+  } else if (nameLow.includes('инсталляц') || nameLow.includes('унитаз') || nameLow.includes('смесител') || nameLow.includes('трап') || nameLow.includes('сифон') || nameLow.includes('подводк') || nameLow.includes('ванн') || nameLow.includes('раковин') || nameLow.includes('лейк') || nameLow.includes('душ')) {
+    catKey = 'fixtures';
+    catTitle = 'Сантехника и приборы';
+  } else if (nameLow.includes('насос') || nameLow.includes('гидроаккумулятор') || nameLow.includes('бак')) {
+    catKey = 'pumps_tanks';
+    catTitle = 'Насосы и баки';
+  }
+
+  const unitMapped: 'м' | 'шт' | 'компл' | 'упак' | 'рулон' =
+    item.unit === 'м' ? 'м' : item.unit === 'компл' ? 'компл' : item.unit === 'упак' ? 'упак' : item.unit === 'рулон' ? 'рулон' : 'шт';
+
+  return {
+    id: `inst_${item.id}`,
+    name: item.name,
+    category: catTitle,
+    categoryKey: catKey,
+    brand: item.materialCode ? item.materialCode.toUpperCase() : undefined,
+    spec: item.description,
+    unit: unitMapped,
+    price: item.pricePerUnit || 120,
+    popular: item.isEssential,
+    tags: [
+      item.materialCode?.toLowerCase() || '',
+      item.category || '',
+      ...item.name.toLowerCase().split(/\s+/).slice(0, 4)
+    ].filter(Boolean)
+  };
+}
+
+const convertedInstallationItems: QuickCatalogItem[] = [];
+
+if (typeof MATERIAL_SPECIFIC_ITEMS === 'object' && MATERIAL_SPECIFIC_ITEMS !== null) {
+  Object.values(MATERIAL_SPECIFIC_ITEMS).forEach((itemsList) => {
+    if (Array.isArray(itemsList)) {
+      itemsList.forEach((it) => {
+        convertedInstallationItems.push(convertSystemItemToQuickCatalog(it));
+      });
+    }
+  });
+}
+
+if (typeof BUILDING_EQUIPMENT_ITEMS === 'object' && BUILDING_EQUIPMENT_ITEMS !== null) {
+  Object.values(BUILDING_EQUIPMENT_ITEMS).forEach((itemsList) => {
+    if (Array.isArray(itemsList)) {
+      itemsList.forEach((it) => {
+        convertedInstallationItems.push(convertSystemItemToQuickCatalog(it));
+      });
+    }
+  });
+}
+
+// Assemble full master catalog without duplicate IDs
+const seenIds = new Set<string>();
+const masterList: QuickCatalogItem[] = [];
+
+function addUniqueItems(items: QuickCatalogItem[]) {
+  if (!Array.isArray(items)) return;
+  for (const item of items) {
+    if (item && item.id && !seenIds.has(item.id)) {
+      seenIds.add(item.id);
+      masterList.push(item);
+    }
+  }
+}
+
+// Merge in priority order: specialized all-plumbing library first, then base, extended, and converted
+addUniqueItems(ALL_PLUMBING_CATALOG_ITEMS);
+addUniqueItems(BASE_QUICK_CATALOG_ITEMS);
+addUniqueItems(EXTENDED_QUICK_CATALOG_ITEMS);
+addUniqueItems(convertedInstallationItems);
+
+export const QUICK_CATALOG_ITEMS: QuickCatalogItem[] = masterList;

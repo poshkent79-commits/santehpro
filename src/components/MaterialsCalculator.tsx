@@ -147,7 +147,7 @@ export const MaterialsCalculator: React.FC<MaterialsCalculatorProps> = ({
   const [estimateNameInput, setEstimateNameInput] = useState<string>('');
   const [savedSearchQuery, setSavedSearchQuery] = useState<string>('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [materialsMode, setMaterialsMode] = useState<'kits' | 'underfloor_heating' | 'quick_calc'>('kits');
+  const [materialsMode, setMaterialsMode] = useState<'kits' | 'underfloor_heating' | 'quick_calc'>('quick_calc');
   const topModesScrollRef = React.useRef<HTMLDivElement>(null);
   
   // Favorites hook
@@ -937,7 +937,21 @@ export const MaterialsCalculator: React.FC<MaterialsCalculatorProps> = ({
               ref={topModesScrollRef}
               className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth py-0.5 px-0.5 flex-1"
             >
-              {/* 1. Комплектация объектов (как в Screenshot_20261010_194255_Gallery.jpg) */}
+              {/* 1. Быстрый расчёт (первый по умолчанию) */}
+              <button
+                type="button"
+                onClick={() => setMaterialsMode('quick_calc')}
+                className={`px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl font-black text-xs sm:text-sm whitespace-nowrap shrink-0 transition-all cursor-pointer flex items-center space-x-2 active:scale-95 ${
+                  materialsMode === 'quick_calc'
+                    ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/25 ring-1 ring-amber-400'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent'
+                }`}
+              >
+                <span className="text-base sm:text-lg">⚡</span>
+                <span>Быстрый расчёт</span>
+              </button>
+
+              {/* 2. Комплектация объектов */}
               <button
                 type="button"
                 onClick={() => setMaterialsMode('kits')}
@@ -951,7 +965,7 @@ export const MaterialsCalculator: React.FC<MaterialsCalculatorProps> = ({
                 <span>Комплектация объектов</span>
               </button>
 
-              {/* 2. Тёплый пол */}
+              {/* 3. Тёплый пол */}
               <button
                 type="button"
                 onClick={() => setMaterialsMode('underfloor_heating')}
@@ -963,20 +977,6 @@ export const MaterialsCalculator: React.FC<MaterialsCalculatorProps> = ({
               >
                 <span className="text-base sm:text-lg">♨️</span>
                 <span>Тёплый пол</span>
-              </button>
-
-              {/* 3. Быстрый расчёт */}
-              <button
-                type="button"
-                onClick={() => setMaterialsMode('quick_calc')}
-                className={`px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl font-black text-xs sm:text-sm whitespace-nowrap shrink-0 transition-all cursor-pointer flex items-center space-x-2 active:scale-95 ${
-                  materialsMode === 'quick_calc'
-                    ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/25 ring-1 ring-amber-400'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent'
-                }`}
-              >
-                <span className="text-base sm:text-lg">⚡</span>
-                <span>Быстрый расчёт</span>
               </button>
             </div>
           </div>
