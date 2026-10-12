@@ -204,9 +204,9 @@ export const LegalTermsModal: React.FC<LegalTermsModalProps> = ({
         {/* Clean Footer Bar */}
         <div className="p-3.5 sm:p-4 border-t border-slate-800 bg-slate-950/90 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
           <div className="text-xs text-slate-400 text-center sm:text-left">
-            <span>Редакция 3.0 от 26 сентября 2026 года • Самозанятый Туйчиев Д. Н. • E-mail:{' '}
-              <a href="mailto:santehpro.info@yandex.ru" className="text-cyan-400 hover:underline">
-                santehpro.info@yandex.ru
+            <span>Редакция 3.3 от 11 октября 2026 года • Самозанятый Туйчиев Д. Н. • E-mail:{' '}
+              <a href="mailto:support@santehpro.info" className="text-cyan-400 hover:underline">
+                support@santehpro.info
               </a>
             </span>
           </div>

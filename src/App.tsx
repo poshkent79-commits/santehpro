@@ -203,6 +203,7 @@ function AppContent() {
   useEffect(() => {
     const superAdminEmails = [
       'poshkent79@gmail.com',
+      'support@santehpro.info',
       'santehpro.info@yandex.ru',
       'admin@santehpro.ru',
       'admin@santehpro.info',
@@ -223,6 +224,7 @@ function AppContent() {
       const profile = e.detail;
       const superAdminEmails = [
         'poshkent79@gmail.com',
+        'support@santehpro.info',
         'santehpro.info@yandex.ru',
         'admin@santehpro.ru',
         'admin@santehpro.info',
@@ -275,6 +277,7 @@ function AppContent() {
 
     const isOwner = Boolean(
       curEmail === 'poshkent79@gmail.com' ||
+      curEmail === 'support@santehpro.info' ||
       curEmail === 'santehpro.info@yandex.ru' ||
       curEmail === 'admin@santehpro.ru' ||
       curEmail === 'admin@santehpro.info' ||
@@ -884,6 +887,7 @@ function AppContent() {
 
     const isOwner = Boolean(
       curEmail === 'poshkent79@gmail.com' ||
+      curEmail === 'support@santehpro.info' ||
       curEmail === 'santehpro.info@yandex.ru' ||
       curEmail === 'admin@santehpro.ru' ||
       curEmail === 'admin@santehpro.info' ||
@@ -998,14 +1002,23 @@ function AppContent() {
   const [newMasterOrderToast, setNewMasterOrderToast] = useState<ServiceCallRequest | null>(null);
   const knownMasterOrderIdsRef = React.useRef<Set<string> | null>(null);
 
-  // Real-time alert for newly registered specialists (for Admin / moderator)
+  // Real-time alert for newly registered specialists (EXCLUSIVELY for Admin / moderator)
   const [newSpecialistToast, setNewSpecialistToast] = useState<PlumbingSpecialist | null>(null);
   const knownSpecialistIdsRef = React.useRef<Set<string> | null>(null);
 
   useEffect(() => {
+    // Strictly restricted to administrators: regular users do not see new master registration alerts
+    if (!isAdmin) {
+      if (newSpecialistToast) setNewSpecialistToast(null);
+      knownSpecialistIdsRef.current = null;
+      return;
+    }
+
     const currentSpecialistIds = new Set(specialists.map((s) => s.id));
     if (knownSpecialistIdsRef.current !== null) {
-      const newSpecs = specialists.filter((s) => !knownSpecialistIdsRef.current!.has(s.id));
+      const newSpecs = specialists.filter(
+        (s) => !knownSpecialistIdsRef.current!.has(s.id) && !s.name?.toLowerCase().includes('тест') && s.id !== 'spec-1791528499308'
+      );
       if (newSpecs.length > 0) {
         const latest = newSpecs[0];
         setNewSpecialistToast(latest);
@@ -1016,7 +1029,7 @@ function AppContent() {
       }
     }
     knownSpecialistIdsRef.current = currentSpecialistIds;
-  }, [specialists]);
+  }, [specialists, isAdmin]);
 
   useEffect(() => {
     if (!userMasterSpecialist) {
@@ -1496,7 +1509,7 @@ function AppContent() {
                 className="font-mono text-cyan-400 hover:text-cyan-300 font-semibold underline underline-offset-2 transition cursor-pointer"
                 title="Написать обращение в поддержку"
               >
-                santehpro.info@yandex.ru
+                support@santehpro.info
               </button>
             </div>
           </div>
@@ -1645,8 +1658,8 @@ function AppContent() {
         </div>
       )}
 
-      {/* Toast alert for newly registered specialist (for Admin / general overview) */}
-      {newSpecialistToast && (
+      {/* Toast alert for newly registered specialist (EXCLUSIVELY for Admin) */}
+      {isAdmin && newSpecialistToast && (
         <div className="fixed bottom-6 left-4 sm:left-6 z-50 max-w-sm sm:max-w-md w-full shadow-2xl transition-all">
           <div className="bg-slate-900/95 backdrop-blur-md border-2 border-amber-500 rounded-2xl p-4 text-white shadow-2xl">
             <div className="flex items-start gap-3">

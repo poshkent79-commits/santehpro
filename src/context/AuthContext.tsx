@@ -59,6 +59,7 @@ const AUTH_STORAGE_KEY = 'santehpro_auth_user';
 const GUEST_FAVORITES_KEY = 'santehpro_guest_favorites';
 const SUPER_ADMIN_EMAILS = [
   'poshkent79@gmail.com',
+  'support@santehpro.info',
   'santehpro.info@yandex.ru',
   'admin@santehpro.ru',
   'admin@santehpro.info',

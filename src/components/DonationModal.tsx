@@ -312,17 +312,17 @@ export const DonationModal: React.FC<DonationModalProps> = ({
                   Служба поддержки и связи:
                 </div>
                 <a
-                  href="mailto:santehpro.info@yandex.ru"
+                  href="mailto:support@santehpro.info"
                   className="font-semibold text-slate-200 hover:text-cyan-300 transition truncate block font-mono"
                 >
-                  santehpro.info@yandex.ru
+                  support@santehpro.info
                 </a>
               </div>
             </div>
             <div className="flex items-center space-x-2 w-full sm:w-auto shrink-0">
               <button
                 type="button"
-                onClick={() => handleCopy('santehpro.info@yandex.ru', 'email')}
+                onClick={() => handleCopy('support@santehpro.info', 'email')}
                 className="flex-1 sm:flex-none px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center justify-center space-x-1.5 transition cursor-pointer border border-slate-700"
                 title="Скопировать e-mail"
               >

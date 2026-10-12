@@ -87,6 +87,7 @@ import { YooKassaSymbol } from './common/PaymentLogos';
 import { SocialPostGeneratorModal } from './admin/SocialPostGeneratorModal';
 import { compressImageFile } from '../utils/imageCompressor';
 import { useTimeWebSync } from '../services/timewebSyncClient';
+import { ALL_ENGINEERING_SERVICES } from '../data/engineeringServices';
 
 interface AdminPanelProps {
   articles: Article[];
@@ -3506,15 +3507,69 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase">Оказываемые услуги (через запятую)</label>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Оказываемые услуги (через запятую)</label>
+                  {specServices.trim() && (
+                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+                      Выбрано: {specServices.split(',').map(s => s.trim()).filter(Boolean).length}
+                    </span>
+                  )}
+                </div>
                 <input
                   type="text"
                   value={specServices}
                   onChange={(e) => setSpecServices(e.target.value)}
-                  placeholder="Монтаж водопровода, Ремонт смесителей..."
+                  placeholder="Монтаж водопровода, Ремонт смесителей, Разводка труб..."
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:border-amber-500 focus:outline-none"
                 />
+
+                {/* Quick Service Selection Chips for Admin Moderation */}
+                <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-1.5">
+                  <div className="flex items-center justify-between text-[10px] text-slate-400">
+                    <span className="font-semibold text-amber-400/90">Быстрый подбор специализаций мастера:</span>
+                    {specServices.trim() && (
+                      <button
+                        type="button"
+                        onClick={() => setSpecServices('')}
+                        className="text-rose-400 hover:underline cursor-pointer"
+                      >
+                        Очистить
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1 max-h-36 overflow-y-auto pr-1">
+                    {ALL_ENGINEERING_SERVICES.map((serv, idx) => {
+                      const currentList = specServices.split(',').map((s) => s.trim()).filter(Boolean);
+                      const isAdded = currentList.some((s) => s.toLowerCase() === serv.name.toLowerCase());
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            if (isAdded) {
+                              const filtered = currentList.filter((s) => s.toLowerCase() !== serv.name.toLowerCase());
+                              setSpecServices(filtered.join(', '));
+                            } else {
+                              const updated = [...currentList, serv.name];
+                              setSpecServices(updated.join(', '));
+                            }
+                          }}
+                          className={`px-2 py-0.5 rounded-lg text-[10px] font-medium transition cursor-pointer flex items-center gap-1 ${
+                            isAdded
+                              ? 'bg-amber-500/25 text-amber-300 border border-amber-500/50 font-bold'
+                              : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800 hover:border-slate-700'
+                          }`}
+                        >
+                          <span>{serv.name}</span>
+                          <span className={isAdded ? 'text-amber-300 font-bold' : 'text-slate-500'}>
+                            {isAdded ? '✓' : '+'}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-1">

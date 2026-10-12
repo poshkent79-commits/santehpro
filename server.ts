@@ -1094,7 +1094,7 @@ app.get('/api/admin/smtp', (_req, res) => {
 // POST /api/admin/smtp - save configuration
 app.post('/api/admin/smtp', (req, res) => {
   try {
-    const { host, port, secure, user, pass, fromName, fromEmail, enabled } = req.body;
+    const { host, port, secure, user, pass, fromName, fromEmail, adminAlertEmail, enabled } = req.body;
     saveSmtpSettings({
       host,
       port: Number(port) || 465,
@@ -1103,6 +1103,7 @@ app.post('/api/admin/smtp', (req, res) => {
       pass,
       fromName,
       fromEmail,
+      adminAlertEmail,
       enabled: enabled !== undefined ? Boolean(enabled) : true,
     });
     res.json({ success: true, message: 'Настройки почты успешно сохранены', status: getSmtpStatus() });
@@ -1911,8 +1912,8 @@ function deduplicateSpecialistsList(list: PlumbingSpecialist[]): PlumbingSpecial
   for (const s of list) {
     if (!s || !s.id || s.status === 'deleted') continue;
 
-    // Filter out old demo mock specialists
-    if (['spec-2', 'spec-3', 'spec-4', 'spec-5'].includes(s.id)) continue;
+    // Filter out old demo mock and test specialists
+    if (['spec-2', 'spec-3', 'spec-4', 'spec-5', 'spec-1791528499308'].includes(s.id) || s.name?.toLowerCase().includes('тест')) continue;
 
     const cleanPhone = (s.phone || '').replace(/\D/g, '').slice(-10);
     const cleanEmail = (s.email || '').trim().toLowerCase();
@@ -2439,7 +2440,7 @@ app.post('/api/admin/clean-demo-data', async (_req, res) => {
     // 1. Clean and deduplicate specialists
     const allSpecs = await getDbSpecialists();
     const realSpecs = deduplicateSpecialistsList(
-      allSpecs.filter(s => !['spec-2', 'spec-3', 'spec-4', 'spec-5'].includes(s.id))
+      allSpecs.filter(s => !['spec-2', 'spec-3', 'spec-4', 'spec-5', 'spec-1791528499308'].includes(s.id) && !s.name?.toLowerCase().includes('тест'))
     );
     specialistsStore = realSpecs;
     saveCachedSpecialists(realSpecs);
@@ -5572,7 +5573,7 @@ async function start() {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Публичная оферта о добровольном пожертвовании на развитие проекта — СантехПро</title>
-  <meta name="description" content="Публичная оферта о заключении договора добровольного пожертвования на развитие открытого проекта «СантехПро». Прием платежей через Robokassa, банковские карты, СБП.">
+  <meta name="description" content="Публичная оферта о заключении договора добровольного пожертвования на развитие открытого проекта «СантехПро». Прием платежей через ЮKassa и Robokassa, банковские карты, СБП.">
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1e293b; background: #f8fafc; padding: 24px 16px; margin: 0; }
     .container { max-width: 840px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 36px 28px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
@@ -5591,14 +5592,14 @@ async function start() {
 </head>
 <body>
   <div class="container">
-    <div class="badge">Редакция 3.1 от 1 октября 2026 года • ст. 435, 437, 582 ГК РФ</div>
+    <div class="badge">Редакция 3.3 от 11 октября 2026 года • ст. 435, 437, 582 ГК РФ</div>
     <h1>Публичная оферта о заключении договора добровольного пожертвования на развитие открытого проекта «СантехПро»</h1>
     
     <div class="box">
       <strong>Получатель пожертвования:</strong> Самозанятый Туйчиев Достонджон Нортожович<br>
       <strong>ИНН:</strong> 250900981804<br>
       <strong>Адрес регистрации:</strong> РФ, Приморский край, г. Находка, ул. Озерный бульвар, д. 7, кв. 52<br>
-      <strong>Служба поддержки:</strong> <a href="mailto:santehpro.info@gmail.com">santehpro.info@gmail.com</a> | Официальный сайт: <a href="https://santehpro.info">https://santehpro.info</a>
+      <strong>Служба поддержки:</strong> <a href="mailto:support@santehpro.info">support@santehpro.info</a> | Официальный сайт: <a href="https://santehpro.info">https://santehpro.info</a>
     </div>
 
     <div class="highlight-box">
@@ -5606,7 +5607,7 @@ async function start() {
     </div>
 
     <h2>1. Общие положения и предмет оферты</h2>
-    <p>1.1. Настоящий документ представляет собой официальное публичное предложение (публичную оферту в соответствии со ст. 435 и ч. 2 ст. 437 Гражданского кодекса РФ) Получателя пожертвования — Самозанятого Туйчиева Достонджона Нортожовича заключить Договор добровольного пожертвования на общеполезные цели поддержки, сопровождения и развития открытого просветительского онлайн-проекта «СантехПро».</p>
+    <p>1.1. Настоящий документ представляет собой официальное публичное предложение (публичную оферту в соответствии со ст. 435 и ч. 2 ст. 437 Гражданского кодекса РФ) Получателя пожертвования — Самозанятого Туйчиева Достонджона Нортожович заключить Договор добровольного пожертвования на общеполезные цели поддержки, сопровождения и развития открытого просветительского онлайн-проекта «СантехПро».</p>
     <p>1.2. Предметом настоящего договора является добровольное и безвозмездное перечисление Пользователем (Жертвователем) денежных средств в пользу Получателя пожертвования для использования исключительно по целевому назначению:
       <ul>
         <li>Оплата аренды серверов, вычислительных мощностей, доменных имен и базы данных проекта;</li>
@@ -5620,10 +5621,11 @@ async function start() {
     <p>2.2. Договор добровольного пожертвования считается заключенным в письменной форме с момента успешного подтверждения транзакции авторизованным платежным сервисом либо с момента поступления средств на счет Получателя.</p>
     <p>2.3. Доступные способы внесения добровольного пожертвования:
       <ul>
-        <li><strong>Через уполномоченный платежный сервис (агрегатор платежей) Robokassa (Робокасса):</strong>
+        <li><strong>Через уполномоченные платежные сервисы (агрегаторы платежей) ЮKassa (ООО НКО «ЮМани») и Robokassa (Робокасса):</strong>
           <ul>
             <li>Банковскими картами национальных и международных платежных систем «Мир», Visa, MasterCard;</li>
-            <li>Электронными средствами платежа и платежными сервисами (SberPay, Mir Pay, ЮMoney и др.).</li>
+            <li>Системой быстрых платежей (СБП) по QR-коду и кнопке мгновенной оплаты;</li>
+            <li>Электронными кошельками и платежными сервисами (ЮMoney, SberPay, Mir Pay, Т-Пей и др.).</li>
           </ul>
         </li>
         <li><strong>Прямой перевод по официальным банковским реквизитам Получателя:</strong>
@@ -5635,7 +5637,7 @@ async function start() {
     </p>
 
     <h2>3. Безопасность платежей и конфиденциальность</h2>
-    <p>3.1. Перечисление пожертвований через платежный сервис Robokassa осуществляется в защищенном режиме с использованием шифрования по протоколу HTTPS и международного стандарта безопасности индустрии платежных карт PCI DSS.</p>
+    <p>3.1. Перечисление пожертвований через платежные сервисы ЮKassa и Robokassa осуществляется в защищенном режиме с использованием шифрования по протоколу HTTPS и международного стандарта безопасности индустрии платежных карт PCI DSS.</p>
     <p>3.2. Сервис «СантехПро» не собирает, не запрашивает и не сохраняет данные банковских карт Жертвователя (включая номера карт, сроки действия и CVV/CVC коды).</p>
     <p>3.3. Обработка персональных данных (имя, email для отправки чека) осуществляется в строгом соответствии с Федеральным законом РФ № 152-ФЗ «О персональных данных».</p>
 
@@ -5653,9 +5655,9 @@ async function start() {
       <div>Получатель: <span>Самозанятый Туйчиев Достонджон Нортожович</span></div>
       <div>ИНН: <span>250900981804</span></div>
       <div>Адрес: <span>692900, РФ, Приморский край, г. Находка, ул. Озерный бульвар, д. 7, кв. 52</span></div>
-      <div>Платежный шлюз: <span>Robokassa (банковские карты, Mir Pay, SberPay)</span></div>
+      <div>Платежные шлюзы: <span>ЮKassa (ООО НКО «ЮМани») и Robokassa (банковские карты, СБП, Mir Pay, SberPay, ЮMoney, Т-Пей)</span></div>
       <div>Карта «Мир»: <span>2200 7020 1270 2739 (Т-Банк, Достонджон Т.)</span></div>
-      <div>Электронная почта: <span>santehpro.info@gmail.com</span></div>
+      <div>Электронная почта: <span>support@santehpro.info</span></div>
       <div>Официальный сайт: <span>https://santehpro.info</span></div>
     </div>
 
@@ -5799,6 +5801,49 @@ ${publishedArticles
       res.status(500).send('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>');
     }
   });
+
+  // Google Digital Asset Links for Android TWA / PWABuilder / Play Market (hides system URL bar)
+  app.get('/.well-known/assetlinks.json', (_req, res) => {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'public, max-age=300');
+
+    const publicAssetLinks = path.join(process.cwd(), 'public', '.well-known', 'assetlinks.json');
+    const dataAssetLinks = path.join(process.cwd(), '.data', 'assetlinks.json');
+
+    const targetFile = fs.existsSync(publicAssetLinks) ? publicAssetLinks : (fs.existsSync(dataAssetLinks) ? dataAssetLinks : null);
+    if (targetFile) {
+      try {
+        const content = fs.readFileSync(targetFile, 'utf-8');
+        return res.send(content);
+      } catch (e) {
+        console.error('Error reading assetlinks.json:', e);
+      }
+    }
+
+    // Default template if file doesn't exist yet
+    return res.json([
+      {
+        relation: ["delegate_permission/common.handle_all_urls"],
+        target: {
+          namespace: "android_app",
+          package_name: "info.santehpro.twa",
+          sha256_cert_fingerprints: []
+        }
+      }
+    ]);
+  });
+
+  // Serve .well-known directory with dotfiles allowed
+  app.use('/.well-known', express.static(path.join(process.cwd(), 'public', '.well-known'), {
+    dotfiles: 'allow',
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.json')) {
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      }
+      res.setHeader('Access-Control-Allow-Origin', '*');
+    }
+  }));
 
   app.use(express.static(path.join(process.cwd(), 'public')));
 

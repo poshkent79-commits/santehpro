@@ -29,6 +29,7 @@ interface SmtpStatus {
   hasPassword: boolean;
   fromName: string | null;
   fromEmail: string | null;
+  adminAlertEmail: string | null;
   recentLogs?: Array<{
     id: string;
     timestamp: string;
@@ -58,8 +59,9 @@ export const SmtpSettingsTab: React.FC = () => {
   const [pass, setPass] = useState('');
   const [fromName, setFromName] = useState('Сервис СантехПро');
   const [fromEmail, setFromEmail] = useState('');
+  const [adminAlertEmail, setAdminAlertEmail] = useState('support@santehpro.info');
   const [enabled, setEnabled] = useState(true);
-  const [testEmail, setTestEmail] = useState('');
+  const [testEmail, setTestEmail] = useState('support@santehpro.info');
   const [copyTimewebNotice, setCopyTimewebNotice] = useState(false);
 
   const fetchStatus = async () => {
@@ -75,10 +77,15 @@ export const SmtpSettingsTab: React.FC = () => {
       if (data.secure !== undefined) setSecure(data.secure);
       if (data.user) {
         setUser(data.user);
-        if (!testEmail) setTestEmail(data.user);
       }
       if (data.fromName) setFromName(data.fromName);
       if (data.fromEmail) setFromEmail(data.fromEmail);
+      if (data.adminAlertEmail) {
+        setAdminAlertEmail(data.adminAlertEmail);
+        setTestEmail(data.adminAlertEmail);
+      } else if (!testEmail) {
+        setTestEmail(data.user || 'support@santehpro.info');
+      }
       if (data.enabled !== undefined) setEnabled(data.enabled);
     } catch (err: any) {
       setNotification({ type: 'error', message: err.message || 'Не удалось загрузить настройки SMTP' });
@@ -91,8 +98,26 @@ export const SmtpSettingsTab: React.FC = () => {
     fetchStatus();
   }, []);
 
-  const handleApplyPreset = (preset: 'yandex' | 'mailru' | 'gmail587' | 'gmail465' | 'gmail') => {
-    if (preset === 'yandex') {
+  const handleApplyPreset = (preset: 'timeweb' | 'beget' | 'regru' | 'yandex' | 'mailru' | 'gmail587' | 'gmail465') => {
+    if (preset === 'timeweb') {
+      setHost('smtp.timeweb.ru');
+      setPort(465);
+      setSecure(true);
+      if (!user) setUser('support@santehpro.info');
+      if (!fromEmail) setFromEmail('support@santehpro.info');
+    } else if (preset === 'beget') {
+      setHost('smtp.beget.com');
+      setPort(465);
+      setSecure(true);
+      if (!user) setUser('support@santehpro.info');
+      if (!fromEmail) setFromEmail('support@santehpro.info');
+    } else if (preset === 'regru') {
+      setHost('mail.hosting.reg.ru');
+      setPort(465);
+      setSecure(true);
+      if (!user) setUser('support@santehpro.info');
+      if (!fromEmail) setFromEmail('support@santehpro.info');
+    } else if (preset === 'yandex') {
       setHost('smtp.yandex.ru');
       setPort(465);
       setSecure(true);
@@ -102,7 +127,7 @@ export const SmtpSettingsTab: React.FC = () => {
       setPort(465);
       setSecure(true);
       if (!fromEmail && user) setFromEmail(user);
-    } else if (preset === 'gmail587' || preset === 'gmail') {
+    } else if (preset === 'gmail587') {
       setHost('smtp.gmail.com');
       setPort(587);
       setSecure(false);
@@ -115,7 +140,25 @@ export const SmtpSettingsTab: React.FC = () => {
     }
     setNotification({
       type: 'success',
-      message: `Применены настройки для ${preset.toUpperCase()}. Введите ваш логин и пароль приложения и нажмите «Сохранить».`,
+      message: `Применены параметры для ${preset.toUpperCase()}. Введите логин и пароль почтового ящика на хостинге и сохраните настройки.`,
+    });
+    setTimeout(() => setNotification(null), 4000);
+  };
+
+  const handleSetupCorporateAddress = () => {
+    setUser('support@santehpro.info');
+    setFromEmail('support@santehpro.info');
+    setFromName('Сервис СантехПро');
+    setAdminAlertEmail('support@santehpro.info');
+    setTestEmail('support@santehpro.info');
+    if (!host) {
+      setHost('smtp.timeweb.ru');
+      setPort(465);
+      setSecure(true);
+    }
+    setNotification({
+      type: 'success',
+      message: 'Корпоративный адрес support@santehpro.info подставлен во все поля отправителя и уведомлений!',
     });
     setTimeout(() => setNotification(null), 4000);
   };
@@ -136,7 +179,8 @@ export const SmtpSettingsTab: React.FC = () => {
           user: user.trim(),
           pass: pass ? pass.trim() : undefined, // if empty and already configured, keep existing
           fromName: fromName.trim(),
-          fromEmail: fromEmail.trim() || user.trim(),
+          fromEmail: fromEmail.trim() || user.trim() || 'support@santehpro.info',
+          adminAlertEmail: adminAlertEmail.trim() || 'support@santehpro.info',
           enabled,
         }),
       });
@@ -178,7 +222,8 @@ export const SmtpSettingsTab: React.FC = () => {
             user: user.trim(),
             pass: pass.trim() ? pass.trim() : undefined,
             fromName: fromName.trim(),
-            fromEmail: fromEmail.trim() || user.trim(),
+            fromEmail: fromEmail.trim() || user.trim() || 'support@santehpro.info',
+            adminAlertEmail: adminAlertEmail.trim() || 'support@santehpro.info',
           },
         }),
       });
@@ -318,20 +363,72 @@ export const SmtpSettingsTab: React.FC = () => {
         </div>
       </div>
 
+      {/* CORPORATE EMAIL FAST SETUP BANNER */}
+      <div className="p-5 rounded-2xl bg-gradient-to-r from-sky-950/60 via-slate-900/90 to-blue-950/60 border border-sky-500/40 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center space-x-2 text-sky-300 font-bold text-sm">
+            <Mail className="w-4 h-4 text-sky-400 shrink-0" />
+            <span>Корпоративная почта: support@santehpro.info</span>
+            <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">
+              Официальный адрес
+            </span>
+          </div>
+          <p className="text-xs text-slate-300 leading-relaxed max-w-2xl">
+            Единая точка входа для платформы: используется для отправки кодов сброса паролей пользователям и приёма всех уведомлений администратору (заявки новых мастеров, повторная модерация, тикеты поддержки).
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleSetupCorporateAddress}
+          className="px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs shadow-lg shadow-sky-500/25 transition flex items-center justify-center space-x-2 shrink-0 cursor-pointer"
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>Подставить support@santehpro.info</span>
+        </button>
+      </div>
+
       {/* QUICK PRESETS */}
-      <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800">
-        <div className="text-xs font-bold text-slate-300 mb-3 flex items-center space-x-1.5">
-          <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-          <span>Быстрая настройка провайдера (в 1 клик):</span>
+      <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-3">
+        <div className="text-xs font-bold text-slate-300 flex items-center space-x-1.5">
+          <Server className="w-3.5 h-3.5 text-cyan-400" />
+          <span>Быстрая настройка почтового сервера хостинга (в 1 клик):</span>
         </div>
         <div className="flex flex-wrap gap-2.5">
+          <button
+            type="button"
+            onClick={() => handleApplyPreset('timeweb')}
+            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 hover:border-cyan-500/50 transition flex items-center space-x-2"
+          >
+            <span className="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
+            <span>Хостинг Timeweb (smtp.timeweb.ru:465)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleApplyPreset('beget')}
+            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 hover:border-emerald-500/50 transition flex items-center space-x-2"
+          >
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+            <span>Хостинг Beget (smtp.beget.com:465)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleApplyPreset('regru')}
+            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 hover:border-indigo-500/50 transition flex items-center space-x-2"
+          >
+            <span className="w-2.5 h-2.5 rounded-full bg-indigo-400"></span>
+            <span>Хостинг Reg.ru (mail.hosting.reg.ru:465)</span>
+          </button>
+
           <button
             type="button"
             onClick={() => handleApplyPreset('yandex')}
             className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 hover:border-yellow-500/50 transition flex items-center space-x-2"
           >
             <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
-            <span>Яндекс Почта (smtp.yandex.ru:465) — Рекомендуется для РФ</span>
+            <span>Яндекс 360 / Яндекс Домен (smtp.yandex.ru:465)</span>
           </button>
 
           <button
@@ -340,25 +437,16 @@ export const SmtpSettingsTab: React.FC = () => {
             className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 hover:border-blue-500/50 transition flex items-center space-x-2"
           >
             <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-            <span>Mail.ru (smtp.mail.ru:465)</span>
+            <span>VK WorkMail / Mail.ru (smtp.mail.ru:465)</span>
           </button>
 
           <button
             type="button"
             onClick={() => handleApplyPreset('gmail587')}
-            className="px-3.5 py-2 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/50 text-xs font-semibold text-emerald-300 border border-emerald-500/40 transition flex items-center space-x-2"
-          >
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
-            <span>Gmail (Порт 587 STARTTLS — для Timeweb VPS)</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleApplyPreset('gmail465')}
             className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-400 border border-slate-700 transition flex items-center space-x-2"
           >
             <span className="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
-            <span>Gmail (Порт 465 SSL)</span>
+            <span>Gmail (smtp.gmail.com:587)</span>
           </button>
         </div>
       </div>
@@ -560,11 +648,38 @@ export const SmtpSettingsTab: React.FC = () => {
             </label>
             <input
               type="email"
-              placeholder={user || 'noreply@santechpro.ru'}
+              placeholder={user || 'support@santehpro.info'}
               value={fromEmail}
               onChange={(e) => setFromEmail(e.target.value)}
               className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition"
             />
+          </div>
+
+          {/* Admin Alert Recipient Email */}
+          <div className="md:col-span-2">
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-semibold text-slate-300">
+                Email для системных уведомлений администратора <span className="text-sky-400">*</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => setAdminAlertEmail('support@santehpro.info')}
+                className="text-[11px] text-sky-400 hover:text-sky-300 underline font-medium cursor-pointer"
+              >
+                Использовать support@santehpro.info
+              </button>
+            </div>
+            <input
+              type="email"
+              required
+              placeholder="support@santehpro.info"
+              value={adminAlertEmail}
+              onChange={(e) => setAdminAlertEmail(e.target.value)}
+              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:border-sky-500 focus:ring-1 focus:ring-sky-500 outline-none transition"
+            />
+            <p className="text-[11px] text-slate-400 mt-1.5">
+              Сюда моментально поступают все заявки новых мастеров на модерацию, уведомления об изменении анкет и обращения в службу заботы.
+            </p>
           </div>
         </div>
 
@@ -613,7 +728,7 @@ export const SmtpSettingsTab: React.FC = () => {
         <div className="flex flex-col sm:flex-row gap-3">
           <input
             type="email"
-            placeholder="Адрес для тестового письма (например, santehpro.info@yandex.ru)"
+            placeholder="Адрес для тестового письма (например, support@santehpro.info)"
             value={testEmail}
             onChange={(e) => setTestEmail(e.target.value)}
             className="flex-1 px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition"

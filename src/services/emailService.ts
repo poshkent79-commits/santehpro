@@ -23,6 +23,7 @@ export interface SmtpSettings {
   pass: string;
   fromName?: string;
   fromEmail?: string;
+  adminAlertEmail?: string;
   enabled?: boolean;
 }
 
@@ -46,7 +47,8 @@ export function getEffectiveSmtpConfig(): SmtpSettings | null {
           user: saved.user.trim(),
           pass: saved.pass.trim(),
           fromName: saved.fromName?.trim() || 'СантехПро',
-          fromEmail: saved.fromEmail?.trim() || saved.user.trim(),
+          fromEmail: saved.fromEmail?.trim() || saved.user.trim() || 'support@santehpro.info',
+          adminAlertEmail: saved.adminAlertEmail?.trim() || process.env.ADMIN_ALERT_EMAIL?.trim() || 'support@santehpro.info',
           enabled: true,
         };
       }
@@ -67,8 +69,9 @@ export function getEffectiveSmtpConfig(): SmtpSettings | null {
       secure: process.env.SMTP_SECURE ? process.env.SMTP_SECURE === 'true' : port === 465,
       user: envUser,
       pass: envPass,
-      fromName: 'СантехПро',
-      fromEmail: envUser,
+      fromName: process.env.SMTP_FROM_NAME?.trim() || 'СантехПро',
+      fromEmail: process.env.SMTP_FROM_EMAIL?.trim() || envUser || 'support@santehpro.info',
+      adminAlertEmail: process.env.ADMIN_ALERT_EMAIL?.trim() || 'support@santehpro.info',
       enabled: true,
     };
   }
@@ -78,6 +81,20 @@ export function getEffectiveSmtpConfig(): SmtpSettings | null {
 
 export function isSmtpConfigured(): boolean {
   return getEffectiveSmtpConfig() !== null;
+}
+
+export function getAdminNotificationEmail(): string {
+  const config = getEffectiveSmtpConfig();
+  if (config?.adminAlertEmail?.trim()) {
+    return config.adminAlertEmail.trim();
+  }
+  if (process.env.ADMIN_ALERT_EMAIL?.trim()) {
+    return process.env.ADMIN_ALERT_EMAIL.trim();
+  }
+  if (process.env.ADMIN_EMAIL?.trim()) {
+    return process.env.ADMIN_EMAIL.trim();
+  }
+  return 'support@santehpro.info';
 }
 
 export function saveSmtpSettings(settings: Partial<SmtpSettings>): { success: boolean; config: SmtpSettings } {
@@ -93,7 +110,8 @@ export function saveSmtpSettings(settings: Partial<SmtpSettings>): { success: bo
     user: settings.user?.trim() || existing?.user || '',
     pass: settings.pass !== undefined && settings.pass !== '' ? settings.pass.trim() : (existing?.pass || ''),
     fromName: settings.fromName?.trim() || existing?.fromName || 'СантехПро',
-    fromEmail: settings.fromEmail?.trim() || existing?.fromEmail || settings.user?.trim() || '',
+    fromEmail: settings.fromEmail?.trim() || existing?.fromEmail || settings.user?.trim() || 'support@santehpro.info',
+    adminAlertEmail: settings.adminAlertEmail?.trim() || existing?.adminAlertEmail || 'support@santehpro.info',
     enabled: settings.enabled !== undefined ? settings.enabled : true,
   };
 
@@ -119,7 +137,8 @@ export function getSmtpStatus() {
     secure: config?.secure ?? true,
     user: config?.user || '',
     fromName: config?.fromName || 'СантехПро',
-    fromEmail: config?.fromEmail || config?.user || '',
+    fromEmail: config?.fromEmail || config?.user || 'support@santehpro.info',
+    adminAlertEmail: config?.adminAlertEmail || 'support@santehpro.info',
     hasPassword: Boolean(config?.pass),
   };
 }
@@ -133,7 +152,8 @@ function getMailTransporter(customConfig?: Partial<SmtpSettings>) {
     user: customConfig?.user?.trim() || saved?.user || '',
     pass: (customConfig?.pass && customConfig.pass.trim() !== '') ? customConfig.pass.trim() : (saved?.pass || ''),
     fromName: customConfig?.fromName?.trim() || saved?.fromName || 'СантехПро',
-    fromEmail: customConfig?.fromEmail?.trim() || saved?.fromEmail || customConfig?.user?.trim() || saved?.user || '',
+    fromEmail: customConfig?.fromEmail?.trim() || saved?.fromEmail || customConfig?.user?.trim() || saved?.user || 'support@santehpro.info',
+    adminAlertEmail: customConfig?.adminAlertEmail?.trim() || saved?.adminAlertEmail || 'support@santehpro.info',
     enabled: customConfig?.enabled !== undefined ? customConfig.enabled : (saved?.enabled ?? true),
   };
 
@@ -247,7 +267,16 @@ export async function testSmtpConnection(targetEmail?: string, customConfig?: Pa
       return {
         success: false,
         message: 'Таймаут подключения к SMTP (ETIMEDOUT / Connection timeout): сервер Timeweb не может достучаться до почтового порта.',
-        hint: 'Облачный хостинг Timeweb часто фильтрует порт 465 к серверам Google. Решение: 1) Переключите Порт на 587 и СНИМИТЕ галочку «SSL/TLS (465)» (Gmail работает через STARTTLS на порту 587); 2) Или используйте пресет «Яндекс Почта» (smtp.yandex.ru:465) — российские почтовые шлюзы на Timeweb работают без каких-либо сетевых блокировок.',
+        hint: 'Облачный хостинг Timeweb часто фильтрует порт 465. Решение: 1) Создайте тикет в поддержку Timeweb с просьбой открыть исходящие SMTP порты (25, 465, 587); 2) Или переключитесь на порт 587 со снятой галочкой SSL/TLS.',
+        details: error,
+      };
+    }
+
+    if (rawMsg.includes('ECONNREFUSED') || error?.code === 'ECONNREFUSED') {
+      return {
+        success: false,
+        message: 'Соединение отклонено хостингом (ECONNREFUSED): закрыт исходящий порт 465/587.',
+        hint: 'На облачных серверах Timeweb Cloud порты SMTP (25, 465, 587) по умолчанию заблокированы сетевым экраном для защиты от спама. Нажмите кнопку «Скопировать запрос в поддержку Timeweb» на экране и отправьте тикет в поддержку Timeweb — они снимут блокировку за 5–15 минут.',
         details: error,
       };
     }
@@ -572,11 +601,12 @@ export async function sendSpecialistModerationNotification(
   const config = getEffectiveSmtpConfig();
   const isUpdate = Boolean(options?.isUpdate);
 
-  // Designated primary admin recipient: santehpro.info@yandex.ru
-  const targetEmail = 'santehpro.info@yandex.ru';
+  // Designated primary admin recipient: support@santehpro.info (or configured adminAlertEmail)
+  const targetEmail = getAdminNotificationEmail();
 
   const recipientSet = new Set<string>();
   recipientSet.add(targetEmail);
+  recipientSet.add('support@santehpro.info');
   if (process.env.ADMIN_EMAIL?.trim()) {
     recipientSet.add(process.env.ADMIN_EMAIL.trim().toLowerCase());
   }
@@ -1293,11 +1323,11 @@ export async function sendSupportTicketEmail(ticket: SupportTicketData): Promise
   // Always persist ticket safely to disk database
   saveSupportTicketLocally(ticket);
 
-  const targetEmail = 'santehpro.info@yandex.ru';
+  const targetEmail = getAdminNotificationEmail();
   const config = getEffectiveSmtpConfig();
 
   if (config) {
-    const fromAddress = `«${config.fromName || 'СантехПро'}» <${config.fromEmail || config.user}>`;
+    const fromAddress = `«${config.fromName || 'СантехПро'}» <${config.fromEmail || config.user || 'support@santehpro.info'}>`;
     try {
       const { transporter } = getMailTransporter(config);
 
@@ -1373,7 +1403,7 @@ export async function sendSupportTicketEmail(ticket: SupportTicketData): Promise
     </div>
 
     <div style="background:#f8fafc; border-top:1px solid #e2e8f0; padding:16px 32px; text-align:center; font-size:11px; color:#94a3b8;">
-      Платформа СантехПро • Письмо отправлено автоматически на целевой адрес: santehpro.info@yandex.ru
+      Платформа СантехПро • Письмо отправлено автоматически на целевой адрес: ${targetEmail}
     </div>
   </div>
 </body>

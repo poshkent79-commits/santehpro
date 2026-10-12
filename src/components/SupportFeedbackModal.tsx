@@ -198,7 +198,7 @@ export const SupportFeedbackModal: React.FC<SupportFeedbackModalProps> = ({
               <p className="text-xs text-sky-100 flex items-center gap-1.5 font-medium">
                 <span>Обращения поступают на:</span>
                 <span className="font-mono bg-sky-950/40 px-1.5 py-0.5 rounded text-white font-semibold">
-                  santehpro.info@yandex.ru
+                  support@santehpro.info
                 </span>
               </p>
             </div>
@@ -225,7 +225,7 @@ export const SupportFeedbackModal: React.FC<SupportFeedbackModalProps> = ({
                   Обращение успешно отправлено!
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-300 max-w-sm mx-auto leading-relaxed">
-                  Ваше сообщение и прикреплённые файлы переданы на адрес <strong className="text-cyan-300">santehpro.info@yandex.ru</strong>.
+                  Ваше сообщение и прикреплённые файлы переданы на адрес <strong className="text-cyan-300">support@santehpro.info</strong>.
                 </p>
                 <p className="text-xs text-slate-400">
                   Мы внимательно изучим обращение и свяжемся с вами по электронной почте <strong className="text-white">{email}</strong>.
@@ -424,7 +424,7 @@ export const SupportFeedbackModal: React.FC<SupportFeedbackModalProps> = ({
 
               <div className="flex items-center justify-center gap-1.5 text-[10px] text-slate-500 pt-1">
                 <ShieldCheck className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                <span>Все обращения отправляются напрямую на santehpro.info@yandex.ru</span>
+                <span>Все обращения отправляются напрямую на support@santehpro.info</span>
               </div>
             </form>
           )}

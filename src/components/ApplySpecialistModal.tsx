@@ -36,7 +36,7 @@ import { SpecialistVerificationDoc } from '../types';
 import { LegalTermsModal } from './LegalTermsModal';
 import { PLATFORM_LEGAL_DETAILS } from '../data/legalTerms';
 import { useAuth } from '../context/AuthContext';
-import { ALL_ENGINEERING_SERVICES } from '../data/engineeringServices';
+import { ALL_ENGINEERING_SERVICES, ENGINEERING_SERVICE_GROUPS } from '../data/engineeringServices';
 import { PlumbingSpecialist } from '../types';
 
 interface ApplySpecialistModalProps {
@@ -101,6 +101,8 @@ export const ApplySpecialistModal: React.FC<ApplySpecialistModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [compressing, setCompressing] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [serviceGroupFilter, setServiceGroupFilter] = useState<string>('all');
+  const [serviceSearchTerm, setServiceSearchTerm] = useState<string>('');
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -626,51 +628,144 @@ export const ApplySpecialistModal: React.FC<ApplySpecialistModalProps> = ({
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Выполняемые услуги (через запятую)</label>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-200">
+                    Выполняемые услуги сантехника (через запятую)
+                  </label>
+                  {formData.services.trim() && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-bold">
+                      Выбрано: {formData.services.split(',').map((s) => s.trim()).filter(Boolean).length}
+                    </span>
+                  )}
+                </div>
+
                 <input
                   type="text"
                   value={formData.services}
                   onChange={(e) => setFormData({ ...formData, services: e.target.value })}
-                  placeholder="Монтаж тепловых насосов, разводка труб Rehau, инсталляции..."
+                  placeholder="Замена смесителей, Устранение протечек, Разводка труб PEX..."
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:border-cyan-500 focus:outline-none"
                 />
 
-                {/* Quick Preset Chips for Master Application */}
-                <div className="mt-2 space-y-1">
-                  <span className="text-[10px] text-slate-400 block">Быстрый выбор популярных специализаций (нажмите для добавления):</span>
-                  <div className="flex flex-wrap gap-1 max-h-28 overflow-y-auto pr-1">
-                    {ALL_ENGINEERING_SERVICES.slice(0, 14).map((serv, idx) => {
-                      const currentList = formData.services.split(',').map((s) => s.trim()).filter(Boolean);
-                      const isAdded = currentList.some((s) => s.toLowerCase() === serv.name.toLowerCase());
+                {/* Extended Services Picker */}
+                <div className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2.5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <span className="text-[11px] font-bold text-amber-400 flex items-center gap-1.5">
+                      <span>⚡</span>
+                      <span>Быстрый выбор специализаций (нажмите для добавления):</span>
+                    </span>
+
+                    {/* Quick Search */}
+                    <div className="relative w-full sm:w-48">
+                      <input
+                        type="text"
+                        value={serviceSearchTerm}
+                        onChange={(e) => setServiceSearchTerm(e.target.value)}
+                        placeholder="Поиск услуги..."
+                        className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-[11px] text-white placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
+                      />
+                      {serviceSearchTerm && (
+                        <button
+                          type="button"
+                          onClick={() => setServiceSearchTerm('')}
+                          className="absolute right-1.5 top-1 text-slate-400 hover:text-white text-[10px] px-1 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Category Pills */}
+                  <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setServiceGroupFilter('all')}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition whitespace-nowrap cursor-pointer shrink-0 ${
+                        serviceGroupFilter === 'all'
+                          ? 'bg-cyan-500 text-slate-950 font-black'
+                          : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                      }`}
+                    >
+                      Все услуги ({ALL_ENGINEERING_SERVICES.length})
+                    </button>
+
+                    {ENGINEERING_SERVICE_GROUPS.map((grp) => {
+                      const isActive = serviceGroupFilter === grp.id;
                       return (
                         <button
-                          key={idx}
+                          key={grp.id}
                           type="button"
-                          onClick={() => {
-                            if (isAdded) {
-                              const filtered = currentList.filter((s) => s.toLowerCase() !== serv.name.toLowerCase());
-                              setFormData({ ...formData, services: filtered.join(', ') });
-                            } else {
-                              const updated = [...currentList, serv.name];
-                              setFormData({ ...formData, services: updated.join(', ') });
-                            }
-                          }}
-                          className={`px-2 py-0.5 rounded-lg text-[10px] font-medium transition cursor-pointer flex items-center gap-1 ${
-                            isAdded
-                              ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                              : serv.isHeatPump
-                              ? 'bg-cyan-950/40 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-900/40'
-                              : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800 hover:border-slate-700'
+                          onClick={() => setServiceGroupFilter(grp.id)}
+                          className={`px-2 py-1 rounded-lg text-[10px] font-bold transition whitespace-nowrap cursor-pointer shrink-0 ${
+                            isActive
+                              ? 'bg-cyan-500 text-slate-950 font-black'
+                              : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
                           }`}
                         >
-                          {serv.isHeatPump && <span>⚡</span>}
-                          <span>{serv.name}</span>
-                          {isAdded ? <span>✓</span> : <span>+</span>}
+                          {grp.name}
                         </button>
                       );
                     })}
                   </div>
+
+                  {/* Filtered Services Badges */}
+                  <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto pr-1">
+                    {ALL_ENGINEERING_SERVICES
+                      .filter((serv) => {
+                        const matchesGroup = serviceGroupFilter === 'all' || serv.categoryId === serviceGroupFilter;
+                        const q = serviceSearchTerm.trim().toLowerCase();
+                        const matchesSearch = !q ||
+                          serv.name.toLowerCase().includes(q) ||
+                          (serv.description && serv.description.toLowerCase().includes(q));
+                        return matchesGroup && matchesSearch;
+                      })
+                      .map((serv, idx) => {
+                        const currentList = formData.services.split(',').map((s) => s.trim()).filter(Boolean);
+                        const isAdded = currentList.some((s) => s.toLowerCase() === serv.name.toLowerCase());
+
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => {
+                              if (isAdded) {
+                                const filtered = currentList.filter((s) => s.toLowerCase() !== serv.name.toLowerCase());
+                                setFormData({ ...formData, services: filtered.join(', ') });
+                              } else {
+                                const updated = [...currentList, serv.name];
+                                setFormData({ ...formData, services: updated.join(', ') });
+                              }
+                            }}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition cursor-pointer flex items-center gap-1.5 text-left ${
+                              isAdded
+                                ? 'bg-cyan-500/25 text-cyan-300 border border-cyan-400 ring-1 ring-cyan-400/30 font-bold'
+                                : 'bg-slate-900 text-slate-300 hover:text-white border border-slate-800 hover:border-slate-700 hover:bg-slate-850'
+                            }`}
+                            title={serv.description || serv.name}
+                          >
+                            <span>{serv.name}</span>
+                            <span className={`text-[10px] font-black ${isAdded ? 'text-cyan-300' : 'text-slate-500'}`}>
+                              {isAdded ? '✓' : '+'}
+                            </span>
+                          </button>
+                        );
+                      })}
+                  </div>
+
+                  {formData.services.trim() && (
+                    <div className="flex items-center justify-between pt-1 border-t border-slate-900 text-[10px] text-slate-400">
+                      <span>Кликайте по позициям выше, чтобы добавлять или удалять их из вашей анкеты</span>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, services: '' })}
+                        className="text-rose-400 hover:underline cursor-pointer"
+                      >
+                        Очистить все услуги
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
