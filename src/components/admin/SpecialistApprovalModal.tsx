@@ -10,6 +10,7 @@ import {
   Info
 } from 'lucide-react';
 import { PlumbingSpecialist } from '../../types';
+import { getSpecialistAvatar } from '../../utils/imageFallbacks';
 
 interface SpecialistApprovalModalProps {
   isOpen: boolean;
@@ -84,8 +85,11 @@ export const SpecialistApprovalModal: React.FC<SpecialistApprovalModalProps> = (
           {/* Candidate Snapshot */}
           <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 flex items-center space-x-3.5">
             <img
-              src={specialist.photo || 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=250&q=80'}
+              src={getSpecialistAvatar(specialist.photo, specialist.name)}
               alt={specialist.name}
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = getSpecialistAvatar('', specialist?.name);
+              }}
               className="w-12 h-12 rounded-xl object-cover border border-emerald-500/30 shrink-0 bg-slate-900"
             />
             <div className="min-w-0 flex-1">

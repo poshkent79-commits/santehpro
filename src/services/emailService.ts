@@ -191,7 +191,28 @@ function getMailTransporter(customConfig?: Partial<SmtpSettings>) {
 /**
  * Tests connection and optionally sends a verification email
  */
-export async function testSmtpConnection(targetEmail?: string, customConfig?: Partial<SmtpSettings>): Promise<{ success: boolean; message: string; details?: any; hint?: string }> {
+/**
+ * Tests connection and optionally sends a verification email
+ */
+export async function testSmtpConnection(
+  targetEmail?: string,
+  customConfig?: Partial<SmtpSettings>
+): Promise<{
+  success: boolean;
+  message: string;
+  details?: any;
+  hint?: string;
+  provider?: string;
+  solutionUrl?: string;
+  solutionUrlLabel?: string;
+  additionalUrl?: string;
+  additionalUrlLabel?: string;
+  steps?: string[];
+}> {
+  const saved = getEffectiveSmtpConfig();
+  const currentHost = customConfig?.host?.trim() || saved?.host || '';
+  const currentUser = customConfig?.user?.trim() || saved?.user || '';
+
   try {
     const { transporter, config } = getMailTransporter(customConfig);
     await transporter.verify();
@@ -242,32 +263,167 @@ export async function testSmtpConnection(targetEmail?: string, customConfig?: Pa
   } catch (error: any) {
     const rawMsg = error?.message || String(error);
     const responseMsg = error?.response || '';
+    const errCode = error?.code || '';
+    const responseCode = error?.responseCode || 0;
     saveEmailToLocalAudit(targetEmail || 'unknown', 'TEST-FAIL', `test_fail: ${rawMsg}`);
 
-    // Detect Google BadCredentials
-    if (rawMsg.includes('BadCredentials') || responseMsg.includes('535-5.7.8') || rawMsg.includes('Username and Password not accepted')) {
+    // Missing required credentials
+    if (rawMsg.includes('Не заполнены обязательные параметры') || rawMsg.includes('Missing credentials')) {
       return {
         success: false,
-        message: 'Google отклонил вход (BadCredentials). Обычный пароль от аккаунта Google НЕ подходит для отправки почты по соображениям безопасности Google.',
-        hint: 'Для Gmail требуется создать 16-значный «Пароль приложения» в настройках вашего Google Аккаунта (Раздел «Безопасность» -> «Двухэтапная аутентификация» -> «Пароли приложений»).',
+        message: 'Не заполнены обязательные параметры подключения.',
+        hint: 'Введите хост, логин (полный e-mail) и пароль приложения в форме настроек, затем повторите проверку.',
         details: error,
       };
     }
 
-    if (rawMsg.includes('Missing credentials')) {
+    // Check for SMTP 535 / Authentication failure
+    const isAuthError =
+      responseCode === 535 ||
+      errCode === 'EAUTH' ||
+      rawMsg.includes('535') ||
+      responseMsg.includes('535') ||
+      rawMsg.toLowerCase().includes('incorrect authentication data') ||
+      rawMsg.toLowerCase().includes('authentication failed') ||
+      rawMsg.toLowerCase().includes('badcredentials') ||
+      rawMsg.toLowerCase().includes('username and password not accepted') ||
+      rawMsg.toLowerCase().includes('invalid credentials') ||
+      rawMsg.toLowerCase().includes('auth failed');
+
+    if (isAuthError) {
+      const hostLower = currentHost.toLowerCase();
+      const userLower = currentUser.toLowerCase();
+
+      // 1. YANDEX
+      if (hostLower.includes('yandex') || userLower.includes('@yandex') || userLower.includes('@ya.ru')) {
+        return {
+          success: false,
+          provider: 'yandex',
+          message: 'Ошибка авторизации Яндекс (код 535 — Incorrect authentication data). Обычный пароль от аккаунта Яндекс НЕ подходит для SMTP!',
+          hint: 'Яндекс блокирует обычный пароль от почты для защиты аккаунта. Требуется создать специальный «Пароль приложения» в Яндекс ID и включить протокол IMAP/SMTP в настройках почты.',
+          solutionUrl: 'https://id.yandex.ru/security/app-passwords',
+          solutionUrlLabel: '1. Создать пароль приложения в Яндекс ID',
+          additionalUrl: 'https://mail.yandex.ru/#setup/client',
+          additionalUrlLabel: '2. Включить IMAP/SMTP в Яндекс Почте',
+          steps: [
+            '1. Перейдите по ссылке id.yandex.ru/security/app-passwords (раздел «Пароли приложений»).',
+            '2. Нажмите «Создать новый пароль» → выберите тип «Почта» → укажите название (например, СантехПро).',
+            '3. Скопируйте полученный 16-значный пароль и вставьте его в поле «Пароль приложения».',
+            '4. Откройте mail.yandex.ru → Шестерёнка (Настройки) → «Все настройки» → «Почтовые программы» и поставьте галочку «С сервера по протоколу IMAP» (без неё Яндекс не разрешает отправку).',
+            '5. Убедитесь, что в поле «Логин» указан ПОЛНЫЙ адрес ящика (например, poshkent79@yandex.ru или support@santehpro.info), а хост: smtp.yandex.ru, порт: 465 (с галочкой SSL).',
+          ],
+          details: error,
+        };
+      }
+
+      // 2. MAIL.RU / VK WORKMAIL
+      if (
+        hostLower.includes('mail.ru') ||
+        hostLower.includes('inbox.ru') ||
+        userLower.includes('@mail.ru') ||
+        userLower.includes('@inbox.ru') ||
+        userLower.includes('@bk.ru') ||
+        userLower.includes('@list.ru')
+      ) {
+        return {
+          success: false,
+          provider: 'mailru',
+          message: 'Ошибка авторизации Mail.ru (код 535 — Incorrect authentication data). Обычный пароль от аккаунта Mail.ru запрещён для внешних программ!',
+          hint: 'Mail.ru требует создать отдельный «Пароль для внешних приложений» в личном кабинете безопасности.',
+          solutionUrl: 'https://account.mail.ru/security/mailer-passwords',
+          solutionUrlLabel: 'Создать пароль для внешних приложений Mail.ru',
+          steps: [
+            '1. Перейдите по адресу account.mail.ru/security/mailer-passwords.',
+            '2. Нажмите «Добавить пароль для внешнего приложения» → назовите «СантехПро».',
+            '3. Скопируйте созданный пароль и вставьте его в форму настроек.',
+            '4. Убедитесь, что в поле «Логин» указан ПОЛНЫЙ email ящика с доменом (например, poshkent79@mail.ru).',
+            '5. Хост: smtp.mail.ru, порт: 465, галочка SSL включена.',
+          ],
+          details: error,
+        };
+      }
+
+      // 3. GOOGLE / GMAIL
+      if (hostLower.includes('gmail') || hostLower.includes('google') || userLower.includes('@gmail.com')) {
+        return {
+          success: false,
+          provider: 'gmail',
+          message: 'Google отклонил вход (BadCredentials / 535). Обычный пароль от аккаунта Google заблокирован политиками безопасности!',
+          hint: 'Для Gmail требуется создать 16-значный «Пароль приложения» в настройках Google Аккаунта (включив двухэтапную аутентификацию).',
+          solutionUrl: 'https://myaccount.google.com/apppasswords',
+          solutionUrlLabel: 'Создать 16-значный пароль приложений в Google',
+          steps: [
+            '1. Убедитесь, что в Google Аккаунте включена 2-этапная аутентификация.',
+            '2. Откройте myaccount.google.com/apppasswords.',
+            '3. Создайте пароль для приложения «Почта» (назовите «СантехПро»).',
+            '4. Вставьте полученный 16-значный код (без пробелов) в поле «Пароль приложения».',
+            '5. Для порта 465 включите галочку SSL. Если используете порт 587 — снимите галочку SSL.',
+          ],
+          details: error,
+        };
+      }
+
+      // 4. TIMEWEB
+      if (hostLower.includes('timeweb')) {
+        return {
+          success: false,
+          provider: 'timeweb',
+          message: 'Ошибка авторизации Timeweb (код 535 — Incorrect authentication data). Неверный логин или пароль ящика!',
+          hint: 'В Timeweb логин — это ПОЛНЫЙ адрес ящика (например, support@santehpro.info), а пароль — пароль конкретного ящика из панели Timeweb, а не пароль от аккаунта хостинга!',
+          solutionUrl: 'https://timeweb.cloud',
+          solutionUrlLabel: 'Перейти в панель Timeweb (Почтовые ящики)',
+          steps: [
+            '1. Откройте панель Timeweb → раздел «Почта» → «Почтовые ящики».',
+            '2. Проверьте адрес созданного ящика (например, support@santehpro.info).',
+            '3. Если пароль не помните — нажмите напротив ящика «Сменить пароль» и задайте новый.',
+            '4. Вставьте этот пароль в поле «Пароль приложения», а в поле «Логин» укажите полный адрес ящика.',
+            '5. Сервер: smtp.timeweb.ru, Порт: 465, Галочка SSL/TLS: включена.',
+          ],
+          details: error,
+        };
+      }
+
+      // 5. BEGET
+      if (hostLower.includes('beget')) {
+        return {
+          success: false,
+          provider: 'beget',
+          message: 'Ошибка авторизации Beget (код 535 — Incorrect authentication data).',
+          hint: 'Логином должен быть полный почтовый адрес. Пароль — пароль ящика из раздела «Почта» в панели Beget.',
+          solutionUrl: 'https://cp.beget.com/mail',
+          solutionUrlLabel: 'Перейти в панель управления Beget',
+          steps: [
+            '1. Откройте cp.beget.com → раздел «Почта».',
+            '2. Укажите полный почтовый ящик в качестве логина.',
+            '3. Введите пароль ящика (хост smtp.beget.com:465, SSL включен).',
+          ],
+          details: error,
+        };
+      }
+
+      // Generic 535
       return {
         success: false,
-        message: 'Не передан пароль для авторизации на почтовом сервере.',
-        hint: 'Введите пароль приложения в поле формы и нажмите «Сохранить настройки SMTP».',
+        provider: 'generic',
+        message: 'Ошибка авторизации почтового сервера (код 535 — Incorrect authentication data).',
+        hint: 'Почтовый сервер отклонил логин или пароль. Публичные почтовые службы (Яндекс, Mail.ru, Google, Rambler) требуют создания отдельного «Пароля приложения» в настройках безопасности.',
+        steps: [
+          '1. Проверьте правильность логина — почти всегда требуется ПОЛНЫЙ email (например, user@yandex.ru или support@domain.ru).',
+          '2. Если вы используете Яндекс: создайте пароль на id.yandex.ru/security/app-passwords и включите IMAP в настройках почты.',
+          '3. Если используете Mail.ru: создайте пароль на account.mail.ru/security/mailer-passwords.',
+          '4. Если используете Google: создайте пароль на myaccount.google.com/apppasswords.',
+          '5. Убедитесь, что пароль скопирован без лишних пробелов в начале или конце.',
+        ],
         details: error,
       };
     }
 
+    // Network / Firewall / Timeout issues
     if (rawMsg.includes('ETIMEDOUT') || error?.code === 'ETIMEDOUT' || rawMsg.includes('Connection timeout')) {
       return {
         success: false,
-        message: 'Таймаут подключения к SMTP (ETIMEDOUT / Connection timeout): сервер Timeweb не может достучаться до почтового порта.',
-        hint: 'Облачный хостинг Timeweb часто фильтрует порт 465. Решение: 1) Создайте тикет в поддержку Timeweb с просьбой открыть исходящие SMTP порты (25, 465, 587); 2) Или переключитесь на порт 587 со снятой галочкой SSL/TLS.',
+        message: 'Таймаут подключения к SMTP (ETIMEDOUT / Connection timeout): сервер не может достучаться до почтового порта.',
+        hint: 'Облачный хостинг часто фильтрует порт 465. Решение: 1) Создайте тикет в поддержку хостинга с просьбой открыть исходящие SMTP порты (25, 465, 587); 2) Или переключитесь на порт 587 со снятой галочкой SSL/TLS.',
         details: error,
       };
     }
@@ -276,7 +432,16 @@ export async function testSmtpConnection(targetEmail?: string, customConfig?: Pa
       return {
         success: false,
         message: 'Соединение отклонено хостингом (ECONNREFUSED): закрыт исходящий порт 465/587.',
-        hint: 'На облачных серверах Timeweb Cloud порты SMTP (25, 465, 587) по умолчанию заблокированы сетевым экраном для защиты от спама. Нажмите кнопку «Скопировать запрос в поддержку Timeweb» на экране и отправьте тикет в поддержку Timeweb — они снимут блокировку за 5–15 минут.',
+        hint: 'На облачных серверах порты SMTP (25, 465, 587) по умолчанию заблокированы сетевым экраном хостинга для защиты от спама. Создайте запрос в поддержку хостинга для снятия блокировки портов.',
+        details: error,
+      };
+    }
+
+    if (rawMsg.includes('ENOTFOUND') || error?.code === 'ENOTFOUND') {
+      return {
+        success: false,
+        message: `Не удалось разрешить адрес сервера SMTP (ENOTFOUND): хост «${currentHost}» не найден.`,
+        hint: 'Проверьте правильность написания хоста (например, smtp.yandex.ru, smtp.mail.ru, smtp.timeweb.ru, smtp.gmail.com).',
         details: error,
       };
     }
@@ -284,6 +449,7 @@ export async function testSmtpConnection(targetEmail?: string, customConfig?: Pa
     return {
       success: false,
       message: `Ошибка подключения к SMTP: ${rawMsg}`,
+      hint: 'Проверьте корректность адреса сервера, порта и соответствие типа шифрования SSL/TLS.',
       details: error,
     };
   }

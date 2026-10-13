@@ -64,6 +64,10 @@ export async function getDbMasterWorks(params?: {
     return res;
   };
 
+  if (inMemoryMasterWorks.length === 0) {
+    inMemoryMasterWorks = getCachedMasterWorks();
+  }
+
   if (!isSqlConfigured()) {
     return filterList(inMemoryMasterWorks);
   }

@@ -29,6 +29,7 @@ import { getDbMasterWorks, createDbMasterWork, updateDbMasterWork, deleteDbMaste
 import { getDbSavedEstimates, createDbSavedEstimate, deleteDbSavedEstimate, getDbSavedEstimateById, updateDbSavedEstimate } from './src/db/estimates.ts';
 import { getDbArticles, createDbArticle, updateDbArticle, deleteDbArticle, getCachedArticles, saveCachedArticles } from './src/db/articles.ts';
 import { getDbMediaFiles, getDbMediaFileById, createDbMediaFile, updateDbMediaFile, deleteDbMediaFile } from './src/db/mediaFiles.ts';
+import { watermarkPhoto, watermarkImageBuffer } from './src/utils/serverWatermark.ts';
 import {
   getOrCreateUser,
   getUsers,
@@ -194,9 +195,26 @@ app.get('/api/geo/my-location', (req, res) => {
 
 // Cloud Media Storage directory & direct streaming support (HTTP Byte-Ranges / CDN)
 const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+const dataUploadsDir = path.join(process.cwd(), '.data', 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
+if (!fs.existsSync(dataUploadsDir)) {
+  fs.mkdirSync(dataUploadsDir, { recursive: true });
+}
+
+// Fallback resolver for /uploads to check both public/uploads and .data/uploads
+app.use('/uploads', (req, res, next) => {
+  const relPath = req.path.replace(/^\//, '');
+  const p1 = path.join(uploadsDir, relPath);
+  const p2 = path.join(dataUploadsDir, relPath);
+  if (fs.existsSync(p1)) {
+    return res.sendFile(p1);
+  } else if (fs.existsSync(p2)) {
+    return res.sendFile(p2);
+  }
+  next();
+});
 
 // Serve /uploads directly with streaming support (Accept-Ranges) and 1-year immutable browser/CDN cache
 app.use('/uploads', express.static(uploadsDir, {
@@ -944,9 +962,22 @@ app.post('/api/upload', async (req, res) => {
     const uniqueId = `${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
     const outputFileName = `${cleanName}-${uniqueId}.${ext}`;
     const filePath = path.join(uploadsDir, outputFileName);
+    const dataFilePath = path.join(dataUploadsDir, outputFileName);
 
-    // Write file to cloud uploads directory
-    await fs.promises.writeFile(filePath, buffer);
+    let finalBuffer: Buffer = buffer;
+    if (isImage && (req.body.watermark === true || req.body.watermark === 'true')) {
+      try {
+        finalBuffer = Buffer.from(await watermarkImageBuffer(buffer, ext === 'webp' ? 'webp' : 'jpeg'));
+      } catch (err) {
+        console.warn('Failed to apply watermark during upload:', err);
+      }
+    }
+
+    // Write file to both public and persisted cloud uploads directory
+    await fs.promises.writeFile(filePath, finalBuffer);
+    try {
+      await fs.promises.writeFile(dataFilePath, finalBuffer);
+    } catch {}
 
     let optimizationRatio = '-45% (Cloud Compressed)';
     if (isImage) {
@@ -3032,20 +3063,44 @@ app.delete('/api/master-works/:id', async (req, res) => {
   }
 });
 
-// PUT Moderate Master Work (Admin approve or reject)
+// PUT Moderate Master Work (Admin approve or reject with automatic watermarking)
 app.put('/api/master-works/:id/status', async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, moderationComment } = req.body;
+    const { status, moderationComment, applyWatermark = true } = req.body;
 
     if (status !== 'approved' && status !== 'rejected' && status !== 'pending') {
       return res.status(400).json({ error: 'Недопустимый статус модерации' });
     }
 
-    const updated = await updateDbMasterWork(id, {
+    let watermarkedPhotos: string[] | undefined = undefined;
+
+    // When admin approves a work, watermark all attached photos (up to 15) with official "СантехПро" stamp
+    if (status === 'approved' && (applyWatermark === true || applyWatermark === 'true')) {
+      try {
+        const allWorks = await getDbMasterWorks({ includeAll: true });
+        const currentWork = allWorks.find((w) => w.id === id);
+        if (currentWork && Array.isArray(currentWork.photos) && currentWork.photos.length > 0) {
+          watermarkedPhotos = await Promise.all(
+            currentWork.photos.slice(0, 15).map((photoUrl) =>
+              watermarkPhoto(photoUrl, [uploadsDir, dataUploadsDir])
+            )
+          );
+        }
+      } catch (wmErr) {
+        console.warn('Failed to apply watermarks during approval:', wmErr);
+      }
+    }
+
+    const updates: Partial<MasterWork> = {
       status,
       moderationComment: moderationComment || undefined,
-    });
+    };
+    if (watermarkedPhotos && watermarkedPhotos.length > 0) {
+      updates.photos = watermarkedPhotos;
+    }
+
+    const updated = await updateDbMasterWork(id, updates);
 
     if (!updated) {
       return res.status(404).json({ error: 'Работа не найдена' });
@@ -3054,7 +3109,7 @@ app.put('/api/master-works/:id/status', async (req, res) => {
     res.json({
       success: true,
       message: status === 'approved'
-        ? 'Работа успешно одобрена и опубликована в общем портфолио мастера!'
+        ? 'Работа успешно одобрена, фирменный водяной знак «СантехПро» нанесён на фотографии и работа опубликована в общем портфолио мастера!'
         : 'Работа отклонена.',
       work: updated,
     });

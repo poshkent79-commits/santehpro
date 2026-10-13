@@ -86,6 +86,7 @@ import { YooKassaSettingsTab } from './admin/YooKassaSettingsTab';
 import { YooKassaSymbol } from './common/PaymentLogos';
 import { SocialPostGeneratorModal } from './admin/SocialPostGeneratorModal';
 import { compressImageFile } from '../utils/imageCompressor';
+import { getSpecialistAvatar } from '../utils/imageFallbacks';
 import { useTimeWebSync } from '../services/timewebSyncClient';
 import { ALL_ENGINEERING_SERVICES } from '../data/engineeringServices';
 
@@ -2663,10 +2664,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         <div className="flex items-start space-x-4">
                           <div className="relative group shrink-0">
                             <img
-                              src={spec.photo}
+                              src={getSpecialistAvatar(spec.photo, spec.name)}
                               alt={spec.name}
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = getSpecialistAvatar('', spec.name);
+                              }}
                               className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-amber-500/40 shadow-md bg-slate-900 cursor-pointer"
-                              onClick={() => setInspectingPhoto({ url: spec.photo, name: spec.name })}
+                              onClick={() => setInspectingPhoto({ url: getSpecialistAvatar(spec.photo, spec.name), name: spec.name })}
                               title="Нажмите, чтобы увеличить главное фото"
                             />
                             <button
@@ -2880,7 +2884,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex flex-col justify-between space-y-3"
                 >
                   <div className="flex items-start space-x-3">
-                    <img src={spec.photo} alt={spec.name} className="w-12 h-12 rounded-xl object-cover border border-slate-800 shrink-0" />
+                    <img
+                      src={getSpecialistAvatar(spec.photo, spec.name)}
+                      alt={spec.name}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = getSpecialistAvatar('', spec.name);
+                      }}
+                      className="w-12 h-12 rounded-xl object-cover border border-slate-800 shrink-0 bg-slate-900"
+                    />
                     <div className="space-y-0.5 min-w-0">
                       <div className="flex items-center space-x-1.5 flex-wrap">
                         <span className="font-bold text-white text-sm truncate">{spec.name}</span>

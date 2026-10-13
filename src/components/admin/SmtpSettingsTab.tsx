@@ -16,6 +16,12 @@ import {
   Sparkles,
   ExternalLink,
   Copy,
+  ListChecks,
+  BookOpen,
+  ChevronDown,
+  ChevronUp,
+  Info,
+  ShieldAlert,
 } from 'lucide-react';
 
 interface SmtpStatus {
@@ -49,7 +55,22 @@ export const SmtpSettingsTab: React.FC = () => {
   const [testing, setTesting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [testResult, setTestResult] = useState<{ success: boolean; message: string; details?: any; hint?: string } | null>(null);
+  const [testResult, setTestResult] = useState<{
+    success: boolean;
+    message: string;
+    details?: any;
+    hint?: string;
+    provider?: string;
+    solutionUrl?: string;
+    solutionUrlLabel?: string;
+    additionalUrl?: string;
+    additionalUrlLabel?: string;
+    steps?: string[];
+  } | null>(null);
+
+  // Guide accordion & selected tab
+  const [showGuide, setShowGuide] = useState(false);
+  const [guideTab, setGuideTab] = useState<'yandex' | 'mailru' | 'gmail' | 'timeweb' | 'beget'>('yandex');
 
   // Form state
   const [host, setHost] = useState('');
@@ -205,6 +226,14 @@ export const SmtpSettingsTab: React.FC = () => {
       return;
     }
 
+    if (!pass.trim() && !status?.hasPassword) {
+      setNotification({
+        type: 'error',
+        message: 'Пожалуйста, введите пароль приложения в поле «Пароль приложения» перед отправкой тестового письма.',
+      });
+      return;
+    }
+
     try {
       setTesting(true);
       setTestResult(null);
@@ -235,6 +264,12 @@ export const SmtpSettingsTab: React.FC = () => {
           message: data.message || 'Ошибка отправки тестового письма',
           details: data.details,
           hint: data.hint,
+          provider: data.provider,
+          solutionUrl: data.solutionUrl,
+          solutionUrlLabel: data.solutionUrlLabel,
+          additionalUrl: data.additionalUrl,
+          additionalUrlLabel: data.additionalUrlLabel,
+          steps: data.steps,
         });
       } else {
         setTestResult({
@@ -490,26 +525,236 @@ export const SmtpSettingsTab: React.FC = () => {
         </div>
       </div>
 
-      {/* HOW-TO GUIDE BANNER */}
-      <div className="p-4 rounded-2xl bg-blue-950/30 border border-blue-800/40 text-xs text-blue-200 space-y-2">
-        <div className="flex items-center space-x-2 font-bold text-white">
-          <HelpCircle className="w-4 h-4 text-cyan-400" />
-          <span>Важно: используйте «Пароль приложения», а не обычный пароль от почты!</span>
-        </div>
-        <p className="text-slate-300 leading-relaxed">
-          Современные почтовые службы (Яндекс, Mail.ru, Google) в целях безопасности блокируют вход сторонних программ по обычному паролю. Создайте специальный пароль приложения в личном кабинете вашего почтового сервиса:
-        </p>
-        <ul className="list-disc list-inside space-y-1 text-slate-400 pl-1">
-          <li>
-            <strong className="text-slate-200">Яндекс:</strong> Яндекс ID → Безопасность → «Пароли приложений» → выберите тип «Почта».
-          </li>
-          <li>
-            <strong className="text-slate-200">Mail.ru:</strong> Пароль и безопасность → «Пароли для внешних приложений» → «Добавить».
-          </li>
-          <li>
-            <strong className="text-slate-200">Gmail:</strong> Управление аккаунтом Google → Безопасность → 2-этапная аутентификация → «Пароли приложений».
-          </li>
-        </ul>
+      {/* INTERACTIVE STEP-BY-STEP EMAIL SETUP & ERROR 535 GUIDE */}
+      <div className="rounded-2xl bg-slate-900/80 border border-slate-800 overflow-hidden shadow-xl">
+        <button
+          type="button"
+          onClick={() => setShowGuide(!showGuide)}
+          className="w-full p-4 sm:p-5 flex items-center justify-between text-left hover:bg-slate-800/40 transition cursor-pointer"
+        >
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 shadow-inner">
+              <BookOpen className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-sm font-bold text-white flex items-center space-x-2">
+                <span>Инструкция: как получить «Пароль приложения» и исправить «Ошибку при подключении» (535)</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  Важно
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Пошаговые действия для Яндекс Почты, Mail.ru, Gmail и Timeweb — разбор причин ошибки авторизации.
+              </p>
+            </div>
+          </div>
+          <div className="text-slate-400 pl-3">
+            {showGuide ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+          </div>
+        </button>
+
+        {showGuide && (
+          <div className="p-4 sm:p-6 border-t border-slate-800 bg-slate-950/60 space-y-5 animate-in fade-in">
+            {/* Tabs */}
+            <div className="flex flex-wrap gap-2 border-b border-slate-800 pb-3">
+              {[
+                { id: 'yandex', label: 'Яндекс Почта / Яндекс 360' },
+                { id: 'mailru', label: 'VK / Mail.ru' },
+                { id: 'gmail', label: 'Google / Gmail' },
+                { id: 'timeweb', label: 'Хостинг Timeweb' },
+                { id: 'beget', label: 'Beget / Reg.ru' },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setGuideTab(tab.id as any)}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition border ${
+                    guideTab === tab.id
+                      ? 'bg-slate-800 text-white border-cyan-500 shadow-sm'
+                      : 'bg-slate-900/60 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab: Yandex */}
+            {guideTab === 'yandex' && (
+              <div className="space-y-4 text-xs">
+                <div className="p-3.5 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-yellow-200 leading-relaxed">
+                  <strong>Почему возникает «Ошибка 535 — Incorrect authentication data» в Яндекс?</strong><br />
+                  Яндекс полностью запретил авторизацию по обычному паролю от аккаунта для внешних программ. Чтобы почта отправлялась, нужно выполнить 2 простых шага:
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2.5">
+                    <div className="font-bold text-white flex items-center space-x-2">
+                      <span className="w-5 h-5 rounded-full bg-yellow-500 text-slate-950 font-black text-xs flex items-center justify-center">1</span>
+                      <span>Создать пароль приложения в Яндекс ID</span>
+                    </div>
+                    <p className="text-slate-300 leading-relaxed text-[11px]">
+                      Перейдите в Яндекс ID в раздел паролей приложений. Выберите тип <strong>«Почта»</strong>, введите любое имя (например, <em>СантехПро</em>) и нажмите «Создать».
+                    </p>
+                    <a
+                      href="https://id.yandex.ru/security/app-passwords"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-bold text-xs transition"
+                    >
+                      <span>Открыть id.yandex.ru/security/app-passwords</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2.5">
+                    <div className="font-bold text-white flex items-center space-x-2">
+                      <span className="w-5 h-5 rounded-full bg-yellow-500 text-slate-950 font-black text-xs flex items-center justify-center">2</span>
+                      <span>Разрешить доступ по IMAP в Яндекс Почте</span>
+                    </div>
+                    <p className="text-slate-300 leading-relaxed text-[11px]">
+                      Без этой галочки Яндекс блокирует подключение даже с паролем приложения! Откройте mail.yandex.ru → Шестерёнка → Все настройки → Почтовые программы → поставьте галочку <strong>«С сервера по протоколу IMAP»</strong>.
+                    </p>
+                    <a
+                      href="https://mail.yandex.ru/#setup/client"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs transition"
+                    >
+                      <span>Настройки почтовых программ Яндекс</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 text-[11px] text-slate-300 space-y-1">
+                  <div className="font-semibold text-slate-200">Параметры для ввода в форму:</div>
+                  <div>• <strong>Хост:</strong> <code>smtp.yandex.ru</code> | <strong>Порт:</strong> <code>465</code> (галочка SSL включена)</div>
+                  <div>• <strong>Логин:</strong> обязательно ПОЛНЫЙ email (например, <code>poshkent79@yandex.ru</code> или <code>support@santehpro.info</code>)</div>
+                  <div>• <strong>Пароль:</strong> 16-значный пароль приложения из Шага 1</div>
+                </div>
+              </div>
+            )}
+
+            {/* Tab: Mail.ru */}
+            {guideTab === 'mailru' && (
+              <div className="space-y-4 text-xs">
+                <div className="p-3.5 bg-blue-500/10 border border-blue-500/30 rounded-xl text-blue-200 leading-relaxed">
+                  <strong>Для Mail.ru (VK WorkMail / @mail.ru / @bk.ru / @inbox.ru):</strong><br />
+                  Mail.ru не позволяет использовать основной пароль от ящика для SMTP.
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-3">
+                  <div className="font-bold text-white flex items-center space-x-2">
+                    <span className="w-5 h-5 rounded-full bg-blue-500 text-white font-black text-xs flex items-center justify-center">1</span>
+                    <span>Создать «Пароль для внешних приложений»</span>
+                  </div>
+                  <p className="text-slate-300 leading-relaxed text-[11px]">
+                    Перейдите в личный кабинет Mail.ru → раздел «Пароль и безопасность» → «Пароли для внешних приложений». Нажмите «Добавить», введите имя <em>СантехПро</em> и скопируйте созданный пароль.
+                  </p>
+                  <a
+                    href="https://account.mail.ru/security/mailer-passwords"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition"
+                  >
+                    <span>Открыть account.mail.ru/security/mailer-passwords</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+
+                <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 text-[11px] text-slate-300 space-y-1">
+                  <div>• <strong>Хост:</strong> <code>smtp.mail.ru</code> | <strong>Порт:</strong> <code>465</code> (SSL включен)</div>
+                  <div>• <strong>Логин:</strong> полный адрес (с <code>@mail.ru</code>, <code>@bk.ru</code> и т.д.)</div>
+                </div>
+              </div>
+            )}
+
+            {/* Tab: Gmail */}
+            {guideTab === 'gmail' && (
+              <div className="space-y-4 text-xs">
+                <div className="p-3.5 bg-red-500/10 border border-red-500/30 rounded-xl text-red-200 leading-relaxed">
+                  <strong>Для Google / Gmail:</strong><br />
+                  Google блокирует обычные пароли и требует 2-этапную аутентификацию + 16-значный «Пароль приложений».
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-3">
+                  <div className="font-bold text-white flex items-center space-x-2">
+                    <span className="w-5 h-5 rounded-full bg-red-500 text-white font-black text-xs flex items-center justify-center">1</span>
+                    <span>Получить 16-значный пароль приложений</span>
+                  </div>
+                  <p className="text-slate-300 leading-relaxed text-[11px]">
+                    Убедитесь, что в Google включена двухэтапная аутентификация. Затем перейдите по ссылке ниже, выберите приложение «Почта» и скопируйте пароль из 16 букв (без пробелов).
+                  </p>
+                  <a
+                    href="https://myaccount.google.com/apppasswords"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold text-xs transition"
+                  >
+                    <span>Открыть myaccount.google.com/apppasswords</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+
+                <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 text-[11px] text-slate-300 space-y-1">
+                  <div>• <strong>Хост:</strong> <code>smtp.gmail.com</code> | <strong>Порт:</strong> <code>465</code> (SSL) или <code>587</code> (без SSL)</div>
+                  <div>• <strong>Логин:</strong> ваш адрес <code>...@gmail.com</code></div>
+                </div>
+              </div>
+            )}
+
+            {/* Tab: Timeweb */}
+            {guideTab === 'timeweb' && (
+              <div className="space-y-4 text-xs">
+                <div className="p-3.5 bg-cyan-500/10 border border-cyan-500/30 rounded-xl text-cyan-200 leading-relaxed">
+                  <strong>Для хостинга Timeweb:</strong><br />
+                  Пароль — это пароль ящика из панели Timeweb («Почта» → «Почтовые ящики»), а не пароль от входа в личный кабинет Timeweb!
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-3">
+                  <div className="font-bold text-white flex items-center space-x-2">
+                    <span className="w-5 h-5 rounded-full bg-cyan-500 text-slate-950 font-black text-xs flex items-center justify-center">1</span>
+                    <span>Проверить почтовый ящик в панели Timeweb</span>
+                  </div>
+                  <p className="text-slate-300 leading-relaxed text-[11px]">
+                    Войдите в панель Timeweb → «Почта» → проверьте созданный ящик (например, <code>support@santehpro.info</code>). Если не помните пароль ящика, нажмите «Сменить пароль».
+                  </p>
+                  <a
+                    href="https://timeweb.cloud"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition"
+                  >
+                    <span>Панель управления Timeweb</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+
+                <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 text-[11px] text-slate-300 space-y-1">
+                  <div>• <strong>Хост:</strong> <code>smtp.timeweb.ru</code> | <strong>Порт:</strong> <code>465</code> (SSL включен)</div>
+                  <div>• <strong>Логин:</strong> полный адрес ящика (например, <code>support@santehpro.info</code>)</div>
+                </div>
+              </div>
+            )}
+
+            {/* Tab: Beget */}
+            {guideTab === 'beget' && (
+              <div className="space-y-4 text-xs">
+                <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-3">
+                  <div className="font-bold text-white">Для хостинга Beget / Reg.ru:</div>
+                  <p className="text-slate-300 leading-relaxed text-[11px]">
+                    Создайте почтовый ящик в панели управления хостингом (раздел «Почта»). Логином является полный email ящика, паролем — пароль, заданный при создании ящика.
+                  </p>
+                  <div className="text-[11px] text-slate-400 space-y-1">
+                    <div>• <strong>Beget:</strong> <code>smtp.beget.com:465</code> (SSL)</div>
+                    <div>• <strong>Reg.ru:</strong> <code>mail.hosting.reg.ru:465</code> (SSL)</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* MAIN CONFIGURATION FORM */}
@@ -608,19 +853,107 @@ export const SmtpSettingsTab: React.FC = () => {
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
+            {/* Dynamic Provider Password Helpers */}
+            {(host.includes('yandex') || user.includes('yandex') || user.includes('@ya.ru')) && (
+              <div className="mt-2.5 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-xs text-yellow-200 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="space-y-1">
+                    <strong className="text-yellow-300 font-semibold block flex items-center space-x-1.5">
+                      <ShieldAlert className="w-4 h-4 text-yellow-400" />
+                      <span>Для Яндекс Почты / Яндекс 360 требуется «Пароль приложения» (ошибка 535)</span>
+                    </strong>
+                    <p className="text-[11px] text-slate-300 leading-relaxed">
+                      Обычный пароль от входа в Яндекс отклоняется SMTP-сервером (код 535). Выпустите 16-значный пароль типа «Почта» в Яндекс ID и включите IMAP в настройках почтового ящика.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 pt-0.5">
+                  <a
+                    href="https://id.yandex.ru/security/app-passwords"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-2.5 py-1.5 rounded-lg bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-bold text-[11px] inline-flex items-center space-x-1 transition shadow-sm"
+                  >
+                    <span>1. Создать пароль в Яндекс ID</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                  <a
+                    href="https://mail.yandex.ru/#setup/client"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-[11px] inline-flex items-center space-x-1 transition"
+                  >
+                    <span>2. Включить IMAP в Почте</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {(host.includes('mail.ru') || user.includes('mail.ru') || user.includes('@inbox.ru') || user.includes('@bk.ru') || user.includes('@list.ru')) && (
+              <div className="mt-2.5 p-3 bg-blue-500/10 border border-blue-500/30 rounded-xl text-xs text-blue-200 space-y-2">
+                <div className="space-y-1">
+                  <strong className="text-blue-300 font-semibold block flex items-center space-x-1.5">
+                    <ShieldAlert className="w-4 h-4 text-blue-400" />
+                    <span>Для Mail.ru требуется «Пароль для внешних приложений»</span>
+                  </strong>
+                  <p className="text-[11px] text-slate-300 leading-relaxed">
+                    Mail.ru запрещает отправку по обычному паролю. Создайте пароль для внешнего приложения в настройках безопасности.
+                  </p>
+                </div>
+                <a
+                  href="https://account.mail.ru/security/mailer-passwords"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-[11px] inline-flex items-center space-x-1 transition shadow-sm"
+                >
+                  <span>Создать пароль в Mail.ru</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            )}
+
             {(host.includes('gmail') || user.includes('gmail')) && (
-              <div className="mt-2 p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-[11px] text-amber-200/90 flex items-start justify-between gap-2">
-                <div>
-                  <strong className="text-amber-300 font-semibold block mb-0.5">⚠️ Внимание для пользователей Gmail:</strong>
-                  Google блокирует обычный пароль от аккаунта. Требуется <strong>16-значный «Пароль приложений»</strong> (формата <code>abcd efgh ijkl mnop</code>).
+              <div className="mt-2.5 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-200 space-y-2">
+                <div className="space-y-1">
+                  <strong className="text-amber-300 font-semibold block flex items-center space-x-1.5">
+                    <ShieldAlert className="w-4 h-4 text-amber-400" />
+                    <span>Для Gmail требуется 16-значный «Пароль приложений»</span>
+                  </strong>
+                  <p className="text-[11px] text-slate-300 leading-relaxed">
+                    Google блокирует обычный пароль аккаунта. Включите 2-этапную аутентификацию и сгенерируйте пароль приложений.
+                  </p>
                 </div>
                 <a
                   href="https://myaccount.google.com/apppasswords"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="shrink-0 px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 text-[10px] font-bold inline-flex items-center space-x-1 transition"
+                  className="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[11px] inline-flex items-center space-x-1 transition shadow-sm"
                 >
-                  <span>Получить</span>
+                  <span>Создать пароль в Google</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            )}
+
+            {host.includes('timeweb') && (
+              <div className="mt-2.5 p-3 bg-cyan-500/10 border border-cyan-500/30 rounded-xl text-xs text-cyan-200 space-y-2">
+                <div className="space-y-1">
+                  <strong className="text-cyan-300 font-semibold block flex items-center space-x-1.5">
+                    <Info className="w-4 h-4 text-cyan-400" />
+                    <span>Для Timeweb: используйте пароль почтового ящика</span>
+                  </strong>
+                  <p className="text-[11px] text-slate-300 leading-relaxed">
+                    Логин должен быть полным адресом (например, <code>support@santehpro.info</code>), а пароль — паролем ящика из панели Timeweb («Почта» → «Почтовые ящики»), а не от входа в личный кабинет Timeweb.
+                  </p>
+                </div>
+                <a
+                  href="https://timeweb.cloud"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2.5 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-[11px] inline-flex items-center space-x-1 transition shadow-sm"
+                >
+                  <span>Панель управления Timeweb</span>
                   <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
@@ -756,46 +1089,110 @@ export const SmtpSettingsTab: React.FC = () => {
         {/* Test Result Display */}
         {testResult && (
           <div
-            className={`p-4 rounded-xl text-xs space-y-2 animate-in fade-in ${
+            className={`p-4 sm:p-5 rounded-2xl text-xs space-y-3.5 animate-in fade-in ${
               testResult.success
                 ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-200'
                 : 'bg-rose-500/10 border border-rose-500/30 text-rose-200'
             }`}
           >
-            <div className="flex items-center space-x-2 font-bold text-sm">
+            <div className="flex items-start space-x-2.5 font-bold text-sm">
               {testResult.success ? (
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
               ) : (
-                <AlertCircle className="w-4 h-4 text-rose-400" />
+                <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
               )}
-              <span>{testResult.message}</span>
+              <div className="flex-1">
+                <span className="block leading-snug">{testResult.message}</span>
+              </div>
             </div>
 
             {testResult.hint && (
-              <div className="mt-2 p-3 bg-slate-950/90 rounded-xl border border-amber-500/40 text-amber-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="space-y-1">
-                  <div className="font-bold text-amber-300 flex items-center space-x-1.5">
-                    <HelpCircle className="w-4 h-4" />
-                    <span>Подсказка по решению:</span>
-                  </div>
-                  <p className="text-slate-300">{testResult.hint}</p>
+              <div className="p-3.5 bg-slate-950/90 rounded-xl border border-amber-500/40 text-amber-200 text-xs space-y-2.5">
+                <div className="font-bold text-amber-300 flex items-center space-x-1.5">
+                  <HelpCircle className="w-4 h-4 shrink-0" />
+                  <span>Причина ошибки и быстрое решение:</span>
                 </div>
-                <a
-                  href="https://myaccount.google.com/apppasswords"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="shrink-0 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs inline-flex items-center space-x-1.5 transition"
+                <p className="text-slate-300 leading-relaxed text-[11px] sm:text-xs">{testResult.hint}</p>
+
+                {(testResult.solutionUrl || testResult.additionalUrl) && (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {testResult.solutionUrl && (
+                      <a
+                        href={testResult.solutionUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs inline-flex items-center space-x-1.5 transition shadow"
+                      >
+                        <span>{testResult.solutionUrlLabel || 'Создать пароль приложения'}</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                    {testResult.additionalUrl && (
+                      <a
+                        href={testResult.additionalUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs inline-flex items-center space-x-1.5 transition"
+                      >
+                        <span>{testResult.additionalUrlLabel || 'Настройки почтовых программ'}</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {testResult.steps && testResult.steps.length > 0 && (
+              <div className="p-3.5 bg-slate-950/90 rounded-xl border border-slate-800 text-slate-300 text-xs space-y-2.5">
+                <div className="font-bold text-sky-400 flex items-center space-x-1.5">
+                  <ListChecks className="w-4 h-4 shrink-0" />
+                  <span>Пошаговая инструкция для устранения ошибки авторизации (535):</span>
+                </div>
+                <div className="space-y-2 pl-0.5">
+                  {testResult.steps.map((st, i) => (
+                    <div key={i} className="text-slate-300 leading-relaxed text-[11px] sm:text-xs flex items-start space-x-2">
+                      <span className="w-4 h-4 rounded-full bg-sky-500/20 text-sky-400 text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                        {i + 1}
+                      </span>
+                      <span>{st.replace(/^\d+\.\s*/, '')}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {!testResult.success && !showGuide && (
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowGuide(true);
+                    if (host.includes('yandex') || user.includes('yandex') || user.includes('@ya.ru')) {
+                      setGuideTab('yandex');
+                    } else if (host.includes('mail.ru') || user.includes('mail.ru')) {
+                      setGuideTab('mailru');
+                    } else if (host.includes('timeweb')) {
+                      setGuideTab('timeweb');
+                    } else if (host.includes('gmail')) {
+                      setGuideTab('gmail');
+                    }
+                  }}
+                  className="text-xs text-cyan-400 hover:text-cyan-300 underline font-semibold flex items-center space-x-1 cursor-pointer"
                 >
-                  <span>Создать пароль в Google</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>Открыть полную пошаговую инструкцию по настройке для вашего сервиса</span>
+                </button>
               </div>
             )}
 
             {testResult.details && (
-              <pre className="mt-2 p-3 bg-slate-950/80 rounded-lg text-[11px] font-mono overflow-x-auto text-slate-300 border border-slate-800">
-                {JSON.stringify(testResult.details, null, 2)}
-              </pre>
+              <div className="space-y-1 pt-1">
+                <div className="text-[11px] text-slate-400 font-medium">Технические подробности ответа сервера:</div>
+                <pre className="p-3 bg-slate-950/80 rounded-lg text-[10px] font-mono overflow-x-auto text-slate-300 border border-slate-800">
+                  {JSON.stringify(testResult.details, null, 2)}
+                </pre>
+              </div>
             )}
           </div>
         )}

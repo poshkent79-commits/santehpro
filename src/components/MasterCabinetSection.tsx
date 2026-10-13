@@ -64,6 +64,7 @@ import {
 import { PlumbingSpecialist, MasterWork, ServiceCallRequest, Article, MasterPlumbingEstimate } from '../types';
 import { WorkGalleryModal } from './WorkGalleryModal';
 import { compressImageFile } from '../utils/imageCompressor';
+import { DEFAULT_WORK_PHOTO, DEFAULT_SPECIALIST_AVATAR, getSpecialistAvatar } from '../utils/imageFallbacks';
 import { MasterEstimatesTab } from './MasterEstimatesTab';
 import { MasterEstimateBuilderModal } from './MasterEstimateBuilderModal';
 import { MasterContractsTab } from './MasterContractsTab';
@@ -316,13 +317,13 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
   // Delete/reset profile photo
   const handleDeleteProfilePhoto = async () => {
     if (!confirm('Вы действительно хотите удалить фото профиля?')) return;
-    const defaultPhoto = 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=300&q=80';
+    const defaultPhoto = DEFAULT_SPECIALIST_AVATAR;
     setMasterPhoto(defaultPhoto);
     try {
       await fetch(`/api/specialists/${specialist.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ photo: defaultPhoto }),
+        body: JSON.stringify({ photo: '' }),
       });
       setServicesSuccessMsg('Фото профиля удалено.');
       setTimeout(() => setServicesSuccessMsg(''), 4000);
@@ -678,9 +679,10 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
     setFormError('');
   };
 
-  // Add Photo URL
-  const MAX_WORK_PHOTOS = 10;
+  // Add Photo URL (up to 15 photos per work)
+  const MAX_WORK_PHOTOS = 15;
   const [isUploadingWorkPhotos, setIsUploadingWorkPhotos] = useState(false);
+  const [watermarkEnabled, setWatermarkEnabled] = useState(true);
   const [photoCompressStats, setPhotoCompressStats] = useState<{ [url: string]: string }>({});
 
   const handleAddPhotoUrl = () => {
@@ -694,7 +696,7 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
     setFormError('');
   };
 
-  // File Upload with automatic compression without quality loss
+  // File Upload with automatic compression without quality loss and official watermark
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -719,11 +721,15 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
           continue;
         }
 
-        // Automatic lossless-quality compression via HTML5 Canvas
-        const compressed = await compressImageFile(file, 1600, 0.84);
+        // Automatic lossless-quality compression via HTML5 Canvas with optional official watermark
+        const compressed = await compressImageFile(file, 1600, 0.86, {
+          watermark: watermarkEnabled,
+          watermarkText: 'СантехПро',
+          watermarkSubtitle: 'Проверено',
+        });
         const statLabel = compressed.savedPercent > 0 
-          ? `${compressed.compressedSizeFormatted} (-${compressed.savedPercent}%)`
-          : compressed.compressedSizeFormatted;
+          ? `${compressed.compressedSizeFormatted} (-${compressed.savedPercent}%)${watermarkEnabled ? ' • Знак СантехПро' : ''}`
+          : `${compressed.compressedSizeFormatted}${watermarkEnabled ? ' • Знак СантехПро' : ''}`;
 
         try {
           const uploadRes = await fetch('/api/upload', {
@@ -734,6 +740,7 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
               fileData: compressed.base64,
               fileType: 'photo',
               category: workCategory,
+              watermark: watermarkEnabled,
             }),
           });
           if (uploadRes.ok) {
@@ -1004,9 +1011,12 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
           <div className="flex items-center gap-4">
             <div className="relative shrink-0 w-16 h-16 sm:w-20 sm:h-20 aspect-square">
               <img
-                src={specialist.photo}
+                src={getSpecialistAvatar(masterPhoto || specialist.photo, specialist.name)}
                 alt={specialist.name}
-                className="w-16 h-16 sm:w-20 sm:h-20 aspect-square rounded-2xl object-cover border-2 border-blue-400 shadow-md shrink-0 block"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = getSpecialistAvatar('', specialist.name);
+                }}
+                className="w-16 h-16 sm:w-20 sm:h-20 aspect-square rounded-2xl object-cover border-2 border-cyan-400 shadow-md shrink-0 block"
               />
               <div
                 className="absolute -bottom-1 -right-1 bg-emerald-500 text-white p-1 rounded-full border-2 border-slate-900 shadow z-10"
@@ -1885,9 +1895,12 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
             {/* Main Photo update & deletion */}
             <div className="pt-3 flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800">
               <img
-                src={masterPhoto || specialist.photo}
+                src={getSpecialistAvatar(masterPhoto || specialist.photo, specialist.name)}
                 alt={specialist.name}
-                className="w-14 h-14 rounded-2xl object-cover border-2 border-blue-500/40 shrink-0 bg-slate-800"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = getSpecialistAvatar('', specialist.name);
+                }}
+                className="w-14 h-14 rounded-2xl object-cover border-2 border-cyan-500/40 shrink-0 bg-slate-800"
               />
               <div className="flex-1 space-y-1">
                 <span className="text-xs font-bold text-slate-900 dark:text-white block">
@@ -2135,12 +2148,38 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
                         />
                         <label
                           htmlFor="master-work-photos-file-input"
-                          className="mt-3 inline-block px-4 py-2 text-xs font-semibold rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600 cursor-pointer transition-colors"
+                          className="mt-3 inline-block px-4 py-2 text-xs font-semibold rounded-xl bg-blue-600 text-white hover:bg-blue-500 cursor-pointer transition-colors shadow-sm"
                         >
-                          Выбрать фотографии (до 10 шт.)
+                          Выбрать фотографии (до 15 шт.)
                         </label>
                       </>
                     )}
+                  </div>
+
+                  {/* Watermark toggle option */}
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-cyan-500/15 text-cyan-500 flex items-center justify-center shrink-0">
+                        <Sparkles className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-slate-900 dark:text-white block">
+                          Водяной знак «СантехПро • Проверено»
+                        </span>
+                        <span className="text-[11px] text-slate-500 dark:text-slate-400 block">
+                          Наносит фирменный знак приложения для защиты ваших авторских прав
+                        </span>
+                      </div>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={watermarkEnabled}
+                        onChange={(e) => setWatermarkEnabled(e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-cyan-500"></div>
+                    </label>
                   </div>
 
                   {/* Add by URL option */}
@@ -2161,37 +2200,43 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
                     </button>
                   </div>
 
-                  {/* Thumbnails grid (up to 10) */}
+                  {/* Thumbnails grid (up to 15) */}
                   {workPhotos.length > 0 && (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 pt-2">
-                      {workPhotos.map((photoUrl, idx) => (
-                        <div
-                          key={idx}
-                          className="relative group rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 aspect-square bg-slate-900 flex flex-col justify-between"
-                        >
-                          <img
-                            src={photoUrl}
-                            alt=""
-                            className="w-full h-full object-cover"
-                          />
-                          <div className="absolute top-1 left-1 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded font-mono">
-                            #{idx + 1}
-                          </div>
-                          {photoCompressStats[photoUrl] && (
-                            <div className="absolute bottom-1 left-1 right-1 bg-emerald-950/90 text-emerald-300 text-[9px] px-1.5 py-0.5 rounded font-medium truncate border border-emerald-500/30 text-center">
-                              ✓ {photoCompressStats[photoUrl]}
-                            </div>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => handleRemovePhoto(idx)}
-                            className="absolute top-1 right-1 p-1 rounded-full bg-red-600 text-white opacity-90 hover:opacity-100 hover:scale-110 transition-all shadow"
-                            title="Удалить это фото"
+                    <div className="space-y-1.5 pt-1">
+                      <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium">
+                        <span>Загружено {workPhotos.length} из {MAX_WORK_PHOTOS} фото</span>
+                        <span className="text-cyan-500 text-[11px]">Автосжатие без потери резкости</span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
+                        {workPhotos.map((photoUrl, idx) => (
+                          <div
+                            key={idx}
+                            className="relative group rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 aspect-square bg-slate-900 flex flex-col justify-between"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))}
+                            <img
+                              src={photoUrl}
+                              alt=""
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute top-1 left-1 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded font-mono">
+                              #{idx + 1}
+                            </div>
+                            {photoCompressStats[photoUrl] && (
+                              <div className="absolute bottom-1 left-1 right-1 bg-slate-950/90 text-cyan-300 text-[9px] px-1.5 py-0.5 rounded font-medium truncate border border-cyan-500/30 text-center">
+                                ✓ {photoCompressStats[photoUrl]}
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleRemovePhoto(idx)}
+                              className="absolute top-1 right-1 p-1 rounded-full bg-red-600 text-white opacity-90 hover:opacity-100 hover:scale-110 transition-all shadow"
+                              title="Удалить это фото"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -2236,7 +2281,7 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
                 У вас пока нет загруженных работ
               </h4>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-                Загрузите до 10 фотографий своих лучших объектов (монтаж труб, инсталляций, котельных), чтобы заказчики видели ваш профессионализм.
+                Загрузите до 15 фотографий своих лучших объектов (монтаж труб, инсталляций, котельных), чтобы заказчики видели ваш профессионализм.
               </p>
               <button
                 onClick={() => setIsAddingWork(true)}
@@ -2249,7 +2294,7 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {works.map((w) => {
                 const photosCount = w.photos?.length || 0;
-                const firstPhoto = w.photos?.[0] || 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80';
+                const firstPhoto = w.photos?.[0] || DEFAULT_WORK_PHOTO;
 
                 return (
                   <div
@@ -2266,6 +2311,9 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
                       <img
                         src={firstPhoto}
                         alt={w.title}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = DEFAULT_WORK_PHOTO;
+                        }}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
@@ -2290,7 +2338,7 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
                       {/* Photos Count Badge */}
                       <div className="absolute bottom-3 right-3 px-2.5 py-1 rounded-lg bg-black/75 text-white text-xs font-medium flex items-center gap-1.5 border border-white/20">
                         <Camera className="w-3.5 h-3.5 text-blue-400" />
-                        <span>{photosCount} из 10 фото</span>
+                        <span>{photosCount} из 15 фото</span>
                       </div>
                     </div>
 

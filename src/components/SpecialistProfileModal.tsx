@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { PlumbingSpecialist, MasterWork, UserProfile } from '../types';
 import { WorkGalleryModal } from './WorkGalleryModal';
+import { DEFAULT_WORK_PHOTO, getSpecialistAvatar } from '../utils/imageFallbacks';
 
 interface SpecialistProfileModalProps {
   specialist: PlumbingSpecialist;
@@ -83,9 +84,12 @@ export const SpecialistProfileModal: React.FC<SpecialistProfileModalProps> = ({
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5 pr-10">
               <div className="relative shrink-0">
                 <img
-                  src={specialist.photo}
+                  src={getSpecialistAvatar(specialist.photo, specialist.name)}
                   alt={specialist.name}
-                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl sm:rounded-3xl object-cover border-2 border-slate-700 shadow-xl"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = getSpecialistAvatar('', specialist.name);
+                  }}
+                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl sm:rounded-3xl object-cover border-2 border-slate-700 shadow-xl bg-slate-800"
                 />
                 {specialist.verified && (
                   <span
@@ -360,7 +364,7 @@ export const SpecialistProfileModal: React.FC<SpecialistProfileModalProps> = ({
                     <Camera className="w-3.5 h-3.5 text-cyan-400" />
                     <span>Примеры выполненных работ ({works.length})</span>
                   </h3>
-                  <span className="text-[11px] text-slate-500">до 10 фото на работу</span>
+                  <span className="text-[11px] text-slate-500">до 15 фото на работу</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -372,13 +376,20 @@ export const SpecialistProfileModal: React.FC<SpecialistProfileModalProps> = ({
                     >
                       <div className="relative aspect-video bg-slate-900 overflow-hidden">
                         <img
-                          src={work.photos[0]}
+                          src={work.photos[0] || DEFAULT_WORK_PHOTO}
                           alt={work.title}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = DEFAULT_WORK_PHOTO;
+                          }}
                           className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                         />
-                        <div className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-slate-950/80 text-cyan-300 font-bold text-[10px] border border-slate-700 flex items-center gap-1">
+                        <div className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-slate-950/80 text-cyan-300 font-bold text-[10px] border border-slate-700 flex items-center gap-1 backdrop-blur-sm">
                           <Camera className="w-3 h-3" />
                           <span>{work.photos.length} фото</span>
+                        </div>
+                        <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-slate-950/85 text-cyan-300 font-bold text-[9px] border border-cyan-500/30 flex items-center gap-1 backdrop-blur-sm">
+                          <Sparkles className="w-2.5 h-2.5 text-cyan-400" />
+                          <span>СантехПро</span>
                         </div>
                       </div>
                       <div className="p-3.5 space-y-1">

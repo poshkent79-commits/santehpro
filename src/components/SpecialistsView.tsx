@@ -15,6 +15,7 @@ import { SpecialistReviewsModal } from './SpecialistReviewsModal';
 import { WorkGalleryModal } from './WorkGalleryModal';
 import { SpecialistProfileModal } from './SpecialistProfileModal';
 import { useAuth } from '../context/AuthContext';
+import { getSpecialistAvatar } from '../utils/imageFallbacks';
 
 function getReviewsWord(count: number): string {
   const mod10 = count % 10;
@@ -533,9 +534,12 @@ export const SpecialistsView: React.FC<SpecialistsViewProps> = ({
                   >
                     <div className="relative shrink-0">
                       <img
-                        src={spec.photo}
+                        src={getSpecialistAvatar(spec.photo, spec.name)}
                         alt={spec.name}
-                        className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl object-cover border border-slate-700 group-hover/cardhead:border-cyan-500/60 transition shadow-sm"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = getSpecialistAvatar('', spec.name);
+                        }}
+                        className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl object-cover border border-slate-700 group-hover/cardhead:border-cyan-500/60 transition shadow-sm bg-slate-800"
                       />
                       {spec.verified && (
                         <span className="absolute -bottom-1 -right-1 bg-cyan-500 text-slate-950 p-0.5 rounded-full shadow" title="Проверен">

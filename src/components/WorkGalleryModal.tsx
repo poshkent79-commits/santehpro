@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, ChevronLeft, ChevronRight, Calendar, User, CheckCircle, Tag, Phone } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Calendar, User, CheckCircle, Tag, Phone, Sparkles } from 'lucide-react';
 import { MasterWork, PlumbingSpecialist } from '../types';
+import { DEFAULT_WORK_PHOTO } from '../utils/imageFallbacks';
 
 interface WorkGalleryModalProps {
   work: MasterWork | null;
@@ -20,7 +21,7 @@ export const WorkGalleryModal: React.FC<WorkGalleryModalProps> = ({
   if (!work) return null;
 
   const photos = work.photos && work.photos.length > 0 ? work.photos : [];
-  const currentPhoto = photos[activePhotoIdx] || photos[0] || 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80';
+  const currentPhoto = photos[activePhotoIdx] || photos[0] || DEFAULT_WORK_PHOTO;
 
   const handlePrev = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -85,8 +86,18 @@ export const WorkGalleryModal: React.FC<WorkGalleryModalProps> = ({
           <img
             src={currentPhoto}
             alt={work.title}
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = DEFAULT_WORK_PHOTO;
+            }}
             className="max-h-full max-w-full object-contain transition-opacity duration-200"
           />
+
+          {/* Official "СантехПро" Watermark badge */}
+          <div className="absolute bottom-3 right-3 px-3 py-1.5 rounded-xl bg-slate-950/85 backdrop-blur-md border border-cyan-400/40 text-xs font-bold text-white flex items-center gap-1.5 shadow-2xl select-none pointer-events-none z-20">
+            <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]"></div>
+            <span className="tracking-wide">СантехПро</span>
+            <span className="text-sky-300 font-semibold text-[11px]">• Проверенная работа</span>
+          </div>
 
           {photos.length > 1 && (
             <>
@@ -106,7 +117,7 @@ export const WorkGalleryModal: React.FC<WorkGalleryModalProps> = ({
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-slate-900/85 text-xs text-slate-200 border border-slate-700/60 font-medium">
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-slate-900/85 text-xs text-slate-200 border border-slate-700/60 font-medium z-20">
                 {activePhotoIdx + 1} из {photos.length} фото
               </div>
             </>

@@ -36,6 +36,7 @@ import { PlumbingSpecialist, MasterWork, Article, CategoryId } from '../types';
 import { CATEGORIES } from '../data/initialData';
 import { compressImageFile } from '../utils/imageCompressor';
 import { WorkGalleryModal } from './WorkGalleryModal';
+import { getSpecialistAvatar, DEFAULT_WORK_PHOTO } from '../utils/imageFallbacks';
 
 interface SpecialistCabinetViewProps {
   specialist: PlumbingSpecialist;
@@ -175,7 +176,7 @@ export const SpecialistCabinetView: React.FC<SpecialistCabinetViewProps> = ({
     if (!files || files.length === 0) return;
 
     setWorkFormError('');
-    const MAX_PHOTOS = 10;
+    const MAX_PHOTOS = 15;
     const remainingSlots = MAX_PHOTOS - workPhotos.length;
     if (remainingSlots <= 0) {
       setWorkFormError(`Достигнут лимит: разрешено загрузить не более ${MAX_PHOTOS} фотографий для одной работы.`);
@@ -195,11 +196,15 @@ export const SpecialistCabinetView: React.FC<SpecialistCabinetViewProps> = ({
           continue;
         }
 
-        // Compress image using HTML5 Canvas utility with optical sharpness preservation
-        const compressed = await compressImageFile(file, 1600, 0.84);
+        // Compress image using HTML5 Canvas utility with optical sharpness preservation and watermark
+        const compressed = await compressImageFile(file, 1600, 0.86, {
+          watermark: true,
+          watermarkText: 'СантехПро',
+          watermarkSubtitle: 'Проверено',
+        });
         const statLabel = compressed.savedPercent > 0 
-          ? `${compressed.compressedSizeFormatted} (-${compressed.savedPercent}%)`
-          : compressed.compressedSizeFormatted;
+          ? `${compressed.compressedSizeFormatted} (-${compressed.savedPercent}%) • Знак СантехПро`
+          : `${compressed.compressedSizeFormatted} • Знак СантехПро`;
 
         // Try streaming to server upload API for cloud URL, fallback to optimized base64
         try {
@@ -263,7 +268,7 @@ export const SpecialistCabinetView: React.FC<SpecialistCabinetViewProps> = ({
       return;
     }
     if (workPhotos.length === 0) {
-      setWorkFormError('Пожалуйста, прикрепите хотя бы одну фотографию выполненной работы (до 10 файлов).');
+      setWorkFormError('Пожалуйста, прикрепите хотя бы одну фотографию выполненной работы (до 15 файлов).');
       return;
     }
 
@@ -277,7 +282,7 @@ export const SpecialistCabinetView: React.FC<SpecialistCabinetViewProps> = ({
       title: workTitle.trim(),
       description: workDescription.trim(),
       category: workCategory,
-      photos: workPhotos.slice(0, 10), // Up to 10 photos
+      photos: workPhotos.slice(0, 15), // Up to 15 photos
       completedAt: workCompletedAt || new Date().toISOString().split('T')[0],
       createdAt: editingWork?.createdAt || new Date().toISOString(),
       status: 'pending', // Mark as pending moderation
@@ -507,8 +512,11 @@ export const SpecialistCabinetView: React.FC<SpecialistCabinetViewProps> = ({
           <div className="flex items-center space-x-5">
             <div className="relative">
               <img
-                src={specialist.photo || 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=250&q=80'}
+                src={getSpecialistAvatar(specialist.photo, specialist.name)}
                 alt={specialist.name}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = getSpecialistAvatar('', specialist.name);
+                }}
                 className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-2 border-cyan-400 shadow-xl bg-slate-900"
               />
               <div

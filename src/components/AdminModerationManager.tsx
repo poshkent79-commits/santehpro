@@ -30,6 +30,7 @@ import { MasterWork, Article, PlumbingSpecialist, SpecialistVerificationDoc } fr
 import { WorkGalleryModal } from './WorkGalleryModal';
 import { SpecialistRejectionModal } from './admin/SpecialistRejectionModal';
 import { SpecialistApprovalModal } from './admin/SpecialistApprovalModal';
+import { getSpecialistAvatar, DEFAULT_WORK_PHOTO } from '../utils/imageFallbacks';
 
 interface AdminModerationManagerProps {
   specialists?: PlumbingSpecialist[];
@@ -125,6 +126,7 @@ export const AdminModerationManager: React.FC<AdminModerationManagerProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           status,
+          applyWatermark: true,
           moderationComment: status === 'rejected' ? moderationComment : undefined,
         }),
       });
@@ -499,12 +501,15 @@ export const AdminModerationManager: React.FC<AdminModerationManagerProps> = ({
                       <div className="flex items-start space-x-4">
                         <div className="relative group shrink-0">
                           <img
-                            src={spec.photo || 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=250&q=80'}
+                            src={getSpecialistAvatar(spec.photo, spec.name)}
                             alt={spec.name}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = getSpecialistAvatar('', spec.name);
+                            }}
                             className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 shadow-md bg-slate-950 cursor-pointer ${
                               isApproved ? 'border-emerald-500/50' : isRejected ? 'border-rose-500/50' : 'border-amber-500/50'
                             }`}
-                            onClick={() => setInspectingPhoto({ url: spec.photo, name: spec.name })}
+                            onClick={() => setInspectingPhoto({ url: getSpecialistAvatar(spec.photo, spec.name), name: spec.name })}
                             title="Увеличить фото мастера"
                           />
                           <button
@@ -842,22 +847,23 @@ export const AdminModerationManager: React.FC<AdminModerationManagerProps> = ({
                         </div>
 
                         <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
-                          {photos.slice(0, 10).map((p, idx) => (
+                          {photos.slice(0, 15).map((p, idx) => (
                             <div
                               key={idx}
                               onClick={() => setActiveGalleryWork(work)}
-                              className="relative aspect-square rounded-xl overflow-hidden border border-slate-800 cursor-pointer group"
+                              className="relative aspect-square rounded-xl overflow-hidden border border-slate-800 cursor-pointer group bg-slate-950"
                             >
                               <img
-                                src={p}
+                                src={p || DEFAULT_WORK_PHOTO}
                                 alt=""
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = DEFAULT_WORK_PHOTO;
+                                }}
                                 className="w-full h-full object-cover group-hover:scale-105 transition duration-200"
                               />
-                              {idx === 9 && photos.length > 10 && (
-                                <div className="absolute inset-0 bg-black/70 flex items-center justify-center text-xs font-bold text-white">
-                                  +{photos.length - 10}
-                                </div>
-                              )}
+                              <div className="absolute top-1 left-1 bg-black/70 text-white text-[9px] px-1 py-0.5 rounded font-mono">
+                                #{idx + 1}
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -920,10 +926,10 @@ export const AdminModerationManager: React.FC<AdminModerationManagerProps> = ({
                         {work.status !== 'approved' && (
                           <button
                             onClick={() => handleModerateWork(work.id, 'approved')}
-                            className="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md transition flex items-center gap-1.5"
+                            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5"
                           >
-                            <CheckCircle className="w-3.5 h-3.5" />
-                            Одобрить и опубликовать
+                            <Sparkles className="w-3.5 h-3.5 text-cyan-300" />
+                            <span>Одобрить и нанести водяной знак СантехПро</span>
                           </button>
                         )}
                       </div>

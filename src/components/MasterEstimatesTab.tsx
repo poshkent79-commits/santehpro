@@ -485,61 +485,53 @@ export const MasterEstimatesTab: React.FC<MasterEstimatesTabProps> = ({
         </div>
       )}
 
-      {/* Hero / Value Banner for Master */}
-      <div className="bg-gradient-to-r from-blue-950/80 via-slate-900 to-emerald-950/50 border border-blue-500/30 rounded-2xl p-5 sm:p-6 text-white shadow-xl relative overflow-hidden">
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5 relative z-10">
-          <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
-              <Calculator className="w-3.5 h-3.5" />
-              <span>Профессиональный сметный инструмент мастера</span>
+      {/* Concise Master Estimates Header (No visual noise / banners) */}
+      <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center font-bold text-xs">
+              <Calculator className="w-4 h-4" />
             </div>
-            <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-              Сметы и коммерческие предложения для клиентов
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-300">
-              Создавайте прозрачные расчеты по сантехническим работам и материалам за 2 минуты.
-              Отправляйте клиентам в WhatsApp, Telegram или распечатывайте официальный документ с гарантией.
-            </p>
+            <div>
+              <h2 className="text-base sm:text-lg font-bold text-white leading-tight">Сметы мастера</h2>
+              <p className="text-[11px] text-slate-400">
+                Формирование, согласование и отправка смет заказчикам в WhatsApp и Telegram
+              </p>
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-            <button
-              onClick={() => {
-                setEditingEstimate(null);
-                setSelectedRequestForEstimate(null);
-                setIsBuilderOpen(true);
-              }}
-              className="w-full sm:w-auto px-5 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-500 hover:to-emerald-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 transition transform active:scale-95 cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Создать новую смету</span>
-            </button>
+          {/* Compact Metrics Bar */}
+          <div className="flex flex-wrap items-center gap-2 mt-3 text-xs">
+            <div className="bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 text-slate-300 flex items-center gap-1.5">
+              <span className="text-slate-400">Всего:</span>
+              <span className="font-bold text-white">{totalCount}</span>
+            </div>
+            <div className="bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 text-emerald-300 flex items-center gap-1.5">
+              <span className="text-slate-400">Согласовано:</span>
+              <span className="font-bold text-emerald-400">{acceptedCount}</span>
+            </div>
+            <div className="bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 text-amber-300 flex items-center gap-1.5">
+              <span className="text-slate-400">В работе:</span>
+              <span className="font-bold text-amber-400">{estimates.filter((e) => e.status === 'in_progress').length}</span>
+            </div>
+            <div className="bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 text-slate-300 flex items-center gap-1.5">
+              <span className="text-slate-400">Сумма:</span>
+              <span className="font-bold text-amber-400">{totalRevenue.toLocaleString('ru-RU')} ₽</span>
+            </div>
           </div>
         </div>
 
-        {/* Quick Metrics Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-6 pt-6 border-t border-slate-800">
-          <div className="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
-            <div className="text-xs text-slate-400">Всего смет:</div>
-            <div className="text-lg sm:text-xl font-bold text-white mt-0.5">{totalCount}</div>
-          </div>
-          <div className="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
-            <div className="text-xs text-slate-400">Согласовано клиентами:</div>
-            <div className="text-lg sm:text-xl font-bold text-emerald-400 mt-0.5">{acceptedCount}</div>
-          </div>
-          <div className="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
-            <div className="text-xs text-slate-400">Сумма в сметах:</div>
-            <div className="text-lg sm:text-xl font-bold text-amber-400 mt-0.5">
-              {totalRevenue.toLocaleString('ru-RU')} ₽
-            </div>
-          </div>
-          <div className="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
-            <div className="text-xs text-slate-400">Успешно закрыто:</div>
-            <div className="text-lg sm:text-xl font-bold text-blue-400 mt-0.5">
-              {acceptedRevenue.toLocaleString('ru-RU')} ₽
-            </div>
-          </div>
-        </div>
+        <button
+          onClick={() => {
+            setEditingEstimate(null);
+            setSelectedRequestForEstimate(null);
+            setIsBuilderOpen(true);
+          }}
+          className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 transition cursor-pointer shrink-0"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Создать смету</span>
+        </button>
       </div>
 
       {/* Filter and Search Toolbar */}
