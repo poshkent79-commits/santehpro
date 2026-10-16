@@ -1,6 +1,7 @@
-import React from 'react';
-import { BookOpen, Users, Stethoscope, ShieldCheck, Wrench, Lightbulb, Calculator, User, MapPin, Mail, Crown, Sparkles, Film } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { BookOpen, Users, Stethoscope, ShieldCheck, Wrench, Lightbulb, Calculator, User, MapPin, Mail, Crown, Sparkles, Film, Maximize, Minimize } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { PWAInstallHeaderButton } from './PWAInstallHeaderButton';
 
 interface NavbarProps {
   activeTab: 'handbook' | 'specialists' | 'diagnostic' | 'admin' | 'courses' | 'calculator' | 'cabinet';
@@ -34,6 +35,29 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenPromoStudio,
 }) => {
   const { currentUser, openAuthModal } = useAuth();
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+  };
 
   const handleTabClick = (
     tab: 'handbook' | 'courses' | 'calculator' | 'specialists' | 'diagnostic' | 'admin' | 'cabinet'
@@ -65,8 +89,31 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* Upper Right: Promo AI Video + Admin badge */}
-        <div className="flex items-center space-x-2 sm:space-x-3">
+        {/* Upper Right: PWA Install + Fullscreen + Promo AI Video + Admin badge */}
+        <div className="flex items-center space-x-1.5 sm:space-x-2.5">
+          {/* PWA Install Button */}
+          <PWAInstallHeaderButton />
+
+          {/* Fullscreen toggle button to hide address bars and headers */}
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            className="flex items-center space-x-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition shadow-sm cursor-pointer shrink-0"
+            title={isFullscreen ? "Выйти из полноэкранного режима" : "Развернуть на весь экран (скрыть строку браузера)"}
+          >
+            {isFullscreen ? (
+              <>
+                <Minimize className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="hidden sm:inline">Обычный</span>
+              </>
+            ) : (
+              <>
+                <Maximize className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="hidden sm:inline">На весь экран</span>
+              </>
+            )}
+          </button>
+
           {onOpenPromoStudio && (
             <button
               type="button"

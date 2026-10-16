@@ -6051,7 +6051,9 @@ ${publishedArticles
         target: {
           namespace: "android_app",
           package_name: "info.santehpro.twa",
-          sha256_cert_fingerprints: []
+          sha256_cert_fingerprints: [
+            "B2:06:C6:84:CC:B9:2F:1F:47:24:88:64:6B:F9:6D:D6:04:A8:2E:D2:0D:37:66:AA:F1:53:53:11:6E:2B:B0:AD"
+          ]
         }
       }
     ]);
