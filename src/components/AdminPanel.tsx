@@ -27,9 +27,6 @@ import {
   AlertCircle,
   Phone,
   UserCheck,
-  MessageSquare,
-  HelpCircle,
-  Send,
   Copy,
   PlusCircle,
   ThumbsUp,
@@ -132,7 +129,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   onSelectArticle,
   onOpenLoginModal,
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'requests' | 'articles' | 'files' | 'specialists' | 'questions' | 'users' | 'moderation' | 'smtp' | 'yandex' | 'timeweb' | 'backups' | 'robokassa' | 'yookassa'>('requests');
+  const [activeTab, setActiveTab] = useState<'overview' | 'requests' | 'articles' | 'files' | 'specialists' | 'users' | 'moderation' | 'smtp' | 'yandex' | 'timeweb' | 'backups' | 'robokassa' | 'yookassa'>('requests');
   
   // TimeWeb Cloud Live Sync
   const {
@@ -511,68 +508,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [deleteConfirmTarget, isExecutingDelete]);
 
-  // ---------------- COMMUNITY QUESTIONS & ANSWERS STATE ----------------
-  const [questionSearch, setQuestionSearch] = useState('');
-  const [isAnswerModalOpen, setIsAnswerModalOpen] = useState(false);
-  const [selectedQuestionForAnswer, setSelectedQuestionForAnswer] = useState<CommunityQuestion | null>(null);
-  const [answerAuthorName, setAnswerAuthorName] = useState('Главный Эксперт СантехПро');
-  const [answerText, setAnswerText] = useState('');
-
-  const handleOpenAnswerModal = (q: CommunityQuestion) => {
-    setSelectedQuestionForAnswer(q);
-    setAnswerAuthorName('Главный Эксперт СантехПро');
-    setAnswerText('');
-    setIsAnswerModalOpen(true);
-  };
-
-  const handleSaveAnswer = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedQuestionForAnswer || !answerText.trim()) return;
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/questions/${selectedQuestionForAnswer.id}/answers`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          authorName: answerAuthorName || 'Главный Эксперт СантехПро',
-          text: answerText,
-          isMaster: true,
-        }),
-      });
-      if (res.ok) {
-        showToast('Официальный ответ опубликован!');
-        setIsAnswerModalOpen(false);
-        setAnswerText('');
-        onRefreshQuestions?.();
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDeleteQuestion = async (id: string) => {
-    if (!confirm('Вы уверены, что хотите удалить этот вопрос из сообщества?')) return;
-    try {
-      await fetch(`/api/questions/${id}`, { method: 'DELETE' });
-      showToast('Вопрос успешно удалён.');
-      onRefreshQuestions?.();
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleDeleteAnswer = async (questionId: string, answerId: string) => {
-    if (!confirm('Удалить этот ответ?')) return;
-    try {
-      await fetch(`/api/questions/${questionId}/answers/${answerId}`, { method: 'DELETE' });
-      showToast('Ответ удалён.');
-      onRefreshQuestions?.();
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
   // Duplicate / Clone Article for fast template creation
   const handleDuplicateArticle = async (art: Article) => {
@@ -640,16 +575,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     );
   });
 
-  const filteredQuestions = questions.filter((q) => {
-    if (!questionSearch.trim()) return true;
-    const search = questionSearch.toLowerCase();
-    return (
-      q.title.toLowerCase().includes(search) ||
-      q.text.toLowerCase().includes(search) ||
-      q.authorName.toLowerCase().includes(search) ||
-      q.city.toLowerCase().includes(search)
-    );
-  });
 
   const handleModerateRequest = async (id: string, status: 'approved' | 'completed' | 'rejected') => {
     try {
@@ -1358,18 +1283,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </button>
 
               <button
-                onClick={() => setActiveTab('questions')}
-                className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shrink-0 whitespace-nowrap cursor-pointer ${
-                  activeTab === 'questions'
-                    ? 'bg-amber-500 text-slate-950 shadow-md'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span>Форум ({questions.length})</span>
-              </button>
-
-              <button
                 onClick={() => {
                   setActiveTab('users');
                   loadCloudUsers();
@@ -1511,15 +1424,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               <p className="text-[11px] text-emerald-400 font-bold">
                 {verifiedSpecialists.length} проверенных профи
               </p>
-            </div>
-
-            <div className="p-5 rounded-3xl bg-slate-900 border border-slate-800 space-y-2 shadow-xl">
-              <div className="flex items-center justify-between text-slate-400">
-                <span className="text-xs font-bold uppercase tracking-wider">Вопросы Сообщества</span>
-                <MessageSquare className="w-5 h-5 text-purple-400" />
-              </div>
-              <div className="text-3xl font-black text-white">{questions.length}</div>
-              <p className="text-[11px] text-slate-400">Вопросов от клиентов в форуме</p>
             </div>
 
             <div 
@@ -2938,90 +2842,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         </div>
       )}
 
-      {/* TAB 4: COMMUNITY QUESTIONS & FORUM MODERATION */}
-      {activeTab === 'questions' && (
-        <div className="space-y-6">
-          <div className="p-5 rounded-3xl bg-slate-900 border border-slate-800 space-y-4 shadow-xl">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-lg font-bold text-white flex items-center space-x-2">
-                  <MessageSquare className="w-5 h-5 text-purple-400" />
-                  <span>Модерация Вопросов и Форума ({questions.length})</span>
-                </h2>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Отвечайте от имени главного эксперта или удаляйте нерелевантные сообщения
-                </p>
-              </div>
-            </div>
-
-            <div className="relative">
-              <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
-              <input
-                type="text"
-                value={questionSearch}
-                onChange={(e) => setQuestionSearch(e.target.value)}
-                placeholder="Поиск по заголовку или тексту вопроса..."
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {filteredQuestions.map((q) => (
-              <div
-                key={q.id}
-                className="p-5 rounded-3xl bg-slate-900 border border-slate-800 space-y-3 shadow-xl"
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm font-bold text-white">{q.authorName}</span>
-                    <span className="text-xs text-slate-400">(г. {q.city})</span>
-                    <span className="text-[11px] text-slate-500">• {q.createdAt}</span>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => handleOpenAnswerModal(q)}
-                      className="px-3.5 py-1.5 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/40 hover:bg-purple-500/30 text-xs font-bold transition flex items-center space-x-1"
-                    >
-                      <Send className="w-3.5 h-3.5" />
-                      <span>Ответить как Эксперт</span>
-                    </button>
-
-                    <button
-                      onClick={() => handleDeleteQuestion(q.id)}
-                      className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded-xl transition"
-                      title="Удалить вопрос"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <h3 className="text-sm font-bold text-amber-400">{q.title}</h3>
-                  <p className="text-xs text-slate-200 leading-relaxed">{q.text}</p>
-                </div>
-
-                {/* Existing Answers list */}
-                {q.masterAnswer && (
-                  <div className="p-3.5 rounded-2xl bg-slate-950 border border-purple-500/30 space-y-1">
-                    <div className="flex items-center justify-between text-xs text-purple-300 font-bold">
-                      <span className="flex items-center space-x-1">
-                        <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                        <span>Ответ эксперта: {q.masterAnswer.masterName}</span>
-                      </span>
-                      <span className="text-[10px] text-slate-500">{q.masterAnswer.date}</span>
-                    </div>
-                    <p className="text-xs text-slate-300 italic">"{q.masterAnswer.text}"</p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* TAB 7: CLOUD SQL USERS (ADMIN / DEVELOPER ONLY) */}
       {activeTab === 'users' && (
         <div className="space-y-6">
@@ -3253,7 +3073,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             onRefreshArticles();
             onRefreshSpecialists();
             if (onRefreshServiceRequests) onRefreshServiceRequests();
-            if (onRefreshQuestions) onRefreshQuestions();
             loadCloudUsers();
           }}
         />
@@ -3648,74 +3467,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     Сохранить мастера
                   </button>
                 </div>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 3: ANSWER COMMUNITY QUESTION */}
-      {isAnswerModalOpen && selectedQuestionForAnswer && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-base font-bold text-white flex items-center space-x-2">
-                <MessageSquare className="w-5 h-5 text-purple-400" />
-                <span>Официальный ответ от Инженерной Службы</span>
-              </h3>
-              <button
-                onClick={() => setIsAnswerModalOpen(false)}
-                className="p-1 text-slate-400 hover:text-white rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Вопрос клиента:</span>
-              <p className="text-xs text-white font-bold">{selectedQuestionForAnswer.title}</p>
-              <p className="text-[11px] text-slate-300">"{selectedQuestionForAnswer.text}"</p>
-            </div>
-
-            <form onSubmit={handleSaveAnswer} className="space-y-3">
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase">Имя эксперта / Организации</label>
-                <input
-                  type="text"
-                  required
-                  value={answerAuthorName}
-                  onChange={(e) => setAnswerAuthorName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:border-amber-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase">Текст рекомендации / ответа эксперта</label>
-                <textarea
-                  rows={4}
-                  required
-                  value={answerText}
-                  onChange={(e) => setAnswerText(e.target.value)}
-                  placeholder="Дайте технически точную и понятную рекомендацию с учетом стандартов..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:border-amber-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="pt-2 flex justify-end space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setIsAnswerModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold"
-                >
-                  Отмена
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-5 py-2 rounded-xl bg-purple-500 text-white font-bold text-xs hover:bg-purple-400 transition"
-                >
-                  Опубликовать ответ
-                </button>
               </div>
             </form>
           </div>

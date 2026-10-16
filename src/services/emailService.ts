@@ -97,6 +97,24 @@ export function getAdminNotificationEmail(): string {
   return 'support@santehpro.info';
 }
 
+export function getAdminRecipientsList(): string[] {
+  const recipients = new Set<string>();
+  recipients.add('support@santehpro.info');
+  recipients.add('poshkent79@gmail.com');
+
+  const config = getEffectiveSmtpConfig();
+  if (config?.adminAlertEmail?.trim() && config.adminAlertEmail.includes('@')) {
+    recipients.add(config.adminAlertEmail.trim().toLowerCase());
+  }
+  if (process.env.ADMIN_ALERT_EMAIL?.trim() && process.env.ADMIN_ALERT_EMAIL.includes('@')) {
+    recipients.add(process.env.ADMIN_ALERT_EMAIL.trim().toLowerCase());
+  }
+  if (process.env.ADMIN_EMAIL?.trim() && process.env.ADMIN_EMAIL.includes('@')) {
+    recipients.add(process.env.ADMIN_EMAIL.trim().toLowerCase());
+  }
+  return Array.from(recipients);
+}
+
 export function saveSmtpSettings(settings: Partial<SmtpSettings>): { success: boolean; config: SmtpSettings } {
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -1257,10 +1275,11 @@ export async function sendArticleModerationNotification(article: {
   const config = getEffectiveSmtpConfig();
 
   const recipientSet = new Set<string>();
+  recipientSet.add('support@santehpro.info');
+  recipientSet.add('poshkent79@gmail.com');
   if (process.env.ADMIN_EMAIL?.trim()) {
     recipientSet.add(process.env.ADMIN_EMAIL.trim().toLowerCase());
   }
-  recipientSet.add('poshkent79@gmail.com');
   recipientSet.add('santehpro.info@yandex.ru');
   if (config?.user?.trim() && config.user.includes('@')) {
     recipientSet.add(config.user.trim().toLowerCase());
@@ -1576,9 +1595,11 @@ export async function sendSupportTicketEmail(ticket: SupportTicketData): Promise
 </html>
       `;
 
+      const adminRecipients = getAdminRecipientsList();
+
       await transporter.sendMail({
         from: fromAddress,
-        to: targetEmail,
+        to: adminRecipients,
         replyTo: ticket.email,
         subject: `[Поддержка СантехПро] ${ticket.topic || 'Новое обращение'}: от ${ticket.name || ticket.email}`,
         text: `Новое обращение от: ${ticket.name || 'Пользователь'} (${ticket.email})\nТема: ${ticket.topic}\n\n${ticket.message}`,

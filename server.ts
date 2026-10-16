@@ -242,14 +242,14 @@ function getCachedQuestions(): CommunityQuestion[] {
   try {
     if (fs.existsSync(QUESTIONS_STORE_FILE)) {
       const data = JSON.parse(fs.readFileSync(QUESTIONS_STORE_FILE, 'utf-8'));
-      if (Array.isArray(data) && data.length > 0) return data;
+      if (Array.isArray(data)) return data;
     }
     if (fs.existsSync(PERSISTED_QUESTIONS_FILE)) {
       const data = JSON.parse(fs.readFileSync(PERSISTED_QUESTIONS_FILE, 'utf-8'));
-      if (Array.isArray(data) && data.length > 0) return data;
+      if (Array.isArray(data)) return data;
     }
   } catch {}
-  return [...INITIAL_QUESTIONS];
+  return [];
 }
 
 function saveCachedQuestions(list: CommunityQuestion[]): void {
@@ -2272,28 +2272,95 @@ app.post('/api/specialists', async (req, res) => {
   }
 });
 
-// PUT Update specialist profile (with automatic re-moderation for master self-edits)
+// PUT Update specialist profile: if master is approved, keep old data live and put changes to pendingEdits
 app.put('/api/specialists/:id', async (req, res) => {
   const { id } = req.params;
-  const isAdminEdit = Boolean(req.body.isAdminEdit);
+  const isAdminEdit = Boolean(req.body.isAdminEdit) || req.headers['x-admin-role'] === 'admin';
 
   try {
+    const existing = specialistsStore.find(s => s.id === id) || (await getDbSpecialists()).find(s => s.id === id);
+    if (!existing) {
+      return res.status(404).json({ error: 'Специалист не найден' });
+    }
+
     const payload = { ...req.body };
     delete payload.isAdminEdit;
 
-    // If edited by the master (not admin), enforce mandatory re-moderation:
-    // profile status changes to 'pending' and is hidden from public catalog until approved
+    // IF edited by the master (not admin):
     if (!isAdminEdit) {
-      payload.status = 'pending';
-      payload.verified = false;
-      payload.moderationComment = 'Анкета отредактирована мастером и ожидает повторной проверки администратором';
-      payload.appliedAt = new Date().toISOString().split('T')[0];
+      // If the specialist is already approved, KEEP their current public profile approved and visible!
+      // Put proposed changes into `pendingEdits` so clients can still find and call the master with old approved data.
+      if (existing.status === 'approved') {
+        const pendingEdits = {
+          name: payload.name !== undefined ? payload.name : existing.name,
+          photo: payload.photo !== undefined ? payload.photo : existing.photo,
+          city: payload.city !== undefined ? payload.city : existing.city,
+          experienceYears: payload.experienceYears !== undefined ? Number(payload.experienceYears) : existing.experienceYears,
+          phone: payload.phone !== undefined ? payload.phone : existing.phone,
+          telegram: payload.telegram !== undefined ? payload.telegram : existing.telegram,
+          whatsapp: payload.whatsapp !== undefined ? payload.whatsapp : existing.whatsapp,
+          services: Array.isArray(payload.services) ? payload.services : existing.services,
+          minPrice: payload.minPrice !== undefined ? Number(payload.minPrice) : existing.minPrice,
+          emergency247: payload.emergency247 !== undefined ? Boolean(payload.emergency247) : existing.emergency247,
+          bio: payload.bio !== undefined ? payload.bio : existing.bio,
+          badge: payload.badge !== undefined ? payload.badge : existing.badge,
+          submittedAt: new Date().toISOString(),
+        };
+
+        const updated = await updateDbSpecialist(id, {
+          hasPendingEdits: true,
+          pendingEdits,
+          pendingEditsJson: JSON.stringify(pendingEdits),
+        });
+
+        if (updated) {
+          const storeIdx = specialistsStore.findIndex(s => s.id === id);
+          if (storeIdx >= 0) {
+            specialistsStore[storeIdx] = { ...specialistsStore[storeIdx], ...updated };
+          }
+          saveCachedSpecialists(specialistsStore);
+        }
+
+        broadcastRealtimeEvent({
+          type: 'specialist:updated',
+          data: updated || existing,
+        });
+        broadcastRealtimeEvent({
+          type: 'specialists:refresh',
+          data: { id, status: 'approved' },
+        });
+
+        // Notify admin about requested profile edits
+        try {
+          await sendSpecialistProfileUpdateNotification(updated || existing);
+        } catch (emailErr) {
+          console.warn('Failed to send re-moderation email notification:', emailErr);
+        }
+
+        return res.json({
+          ...(updated || existing),
+          requiresModeration: true,
+          message: 'Изменения сохранены и отправлены на проверку администратору. До одобрения ваш прежний профиль остаётся доступен клиентам!',
+        });
+      } else {
+        // Master was pending or rejected — regular re-submission
+        payload.status = 'pending';
+        payload.verified = false;
+        payload.moderationComment = 'Анкета отредактирована кандидатом и ожидает проверки администратором';
+        payload.appliedAt = new Date().toISOString().split('T')[0];
+      }
     }
 
     const updated = await updateDbSpecialist(id, payload);
     if (!updated) {
       return res.status(404).json({ error: 'Специалист не найден' });
     }
+
+    const storeIdx = specialistsStore.findIndex(s => s.id === id);
+    if (storeIdx >= 0) {
+      specialistsStore[storeIdx] = { ...specialistsStore[storeIdx], ...updated };
+    }
+    saveCachedSpecialists(specialistsStore);
 
     // Broadcast real-time events to all connected clients and admin panels
     broadcastRealtimeEvent({
@@ -2307,12 +2374,11 @@ app.put('/api/specialists/:id', async (req, res) => {
 
     syncEntityToTimeWebCloud('specialists', 'update', id, updated).catch(() => {});
 
-    // If master updated profile, notify admin at santehpro.info@yandex.ru
     if (!isAdminEdit) {
       try {
         await sendSpecialistProfileUpdateNotification(updated);
       } catch (emailErr) {
-        console.warn('Failed to send re-moderation email notification to santehpro.info@yandex.ru:', emailErr);
+        console.warn('Failed to send email notification:', emailErr);
       }
     }
 
@@ -2320,12 +2386,110 @@ app.put('/api/specialists/:id', async (req, res) => {
       ...updated,
       requiresModeration: !isAdminEdit,
       message: !isAdminEdit
-        ? 'Изменения сохранены! Согласно правилам сервиса, анкета направлена на повторную модерацию администратору.'
+        ? 'Изменения сохранены! Согласно правилам сервиса, анкета направлена на модерацию администратору.'
         : 'Профиль специалиста успешно обновлен администратором.',
     });
   } catch (error) {
     console.error('Error updating specialist:', error);
     res.status(500).json({ error: 'Ошибка обновления данных специалиста' });
+  }
+});
+
+// PUT Admin approves pending edits of an already approved specialist
+app.put('/api/specialists/:id/approve-edits', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const existing = specialistsStore.find(s => s.id === id) || (await getDbSpecialists()).find(s => s.id === id);
+    if (!existing) {
+      return res.status(404).json({ error: 'Специалист не найден' });
+    }
+
+    const pending = existing.pendingEdits || (existing.pendingEditsJson ? JSON.parse(existing.pendingEditsJson) : null);
+    if (!pending) {
+      return res.status(400).json({ error: 'У мастера нет ожидающих проверки изменений' });
+    }
+
+    const updates: Partial<PlumbingSpecialist> = {
+      ...(pending.name ? { name: pending.name } : {}),
+      ...(pending.photo ? { photo: pending.photo } : {}),
+      ...(pending.city ? { city: pending.city } : {}),
+      ...(pending.experienceYears !== undefined ? { experienceYears: pending.experienceYears } : {}),
+      ...(pending.phone ? { phone: pending.phone } : {}),
+      ...(pending.telegram !== undefined ? { telegram: pending.telegram } : {}),
+      ...(pending.whatsapp !== undefined ? { whatsapp: pending.whatsapp } : {}),
+      ...(pending.services ? { services: pending.services } : {}),
+      ...(pending.minPrice !== undefined ? { minPrice: pending.minPrice } : {}),
+      ...(pending.emergency247 !== undefined ? { emergency247: pending.emergency247 } : {}),
+      ...(pending.bio !== undefined ? { bio: pending.bio } : {}),
+      ...(pending.badge !== undefined ? { badge: pending.badge } : {}),
+      hasPendingEdits: false,
+      pendingEdits: undefined,
+      pendingEditsJson: null as any,
+      moderatedAt: new Date().toISOString(),
+      moderatedBy: 'Администратор',
+      moderationComment: 'Изменения в профиле успешно одобрены администратором',
+    };
+
+    const updated = await updateDbSpecialist(id, updates);
+    if (!updated) {
+      return res.status(500).json({ error: 'Не удалось применить изменения' });
+    }
+
+    const storeIdx = specialistsStore.findIndex(s => s.id === id);
+    if (storeIdx >= 0) {
+      specialistsStore[storeIdx] = { ...specialistsStore[storeIdx], ...updated };
+    }
+    saveCachedSpecialists(specialistsStore);
+
+    broadcastRealtimeEvent({ type: 'specialist:updated', data: updated });
+    broadcastRealtimeEvent({ type: 'specialists:refresh', data: { id: updated.id, status: updated.status } });
+
+    res.json({
+      success: true,
+      message: 'Изменения профиля мастера успешно одобрены и опубликованы!',
+      specialist: updated,
+    });
+  } catch (error) {
+    console.error('Error approving specialist edits:', error);
+    res.status(500).json({ error: 'Ошибка подтверждения изменений профиля' });
+  }
+});
+
+// PUT Admin rejects pending edits
+app.put('/api/specialists/:id/reject-edits', async (req, res) => {
+  const { id } = req.params;
+  const { reason } = req.body;
+  try {
+    const existing = specialistsStore.find(s => s.id === id) || (await getDbSpecialists()).find(s => s.id === id);
+    if (!existing) {
+      return res.status(404).json({ error: 'Специалист не найден' });
+    }
+
+    const updates: Partial<PlumbingSpecialist> = {
+      hasPendingEdits: false,
+      pendingEdits: undefined,
+      pendingEditsJson: null as any,
+      moderationComment: reason || 'Предложенные изменения в профиле отклонены модератором. Прежний профиль сохранён.',
+    };
+
+    const updated = await updateDbSpecialist(id, updates);
+    const storeIdx = specialistsStore.findIndex(s => s.id === id);
+    if (storeIdx >= 0 && updated) {
+      specialistsStore[storeIdx] = { ...specialistsStore[storeIdx], ...updated };
+    }
+    saveCachedSpecialists(specialistsStore);
+
+    broadcastRealtimeEvent({ type: 'specialist:updated', data: updated || existing });
+    broadcastRealtimeEvent({ type: 'specialists:refresh', data: { id, status: 'approved' } });
+
+    res.json({
+      success: true,
+      message: 'Изменения отклонены, текущий одобренный профиль мастера сохранён без изменений.',
+      specialist: updated || existing,
+    });
+  } catch (error) {
+    console.error('Error rejecting specialist edits:', error);
+    res.status(500).json({ error: 'Ошибка отклонения изменений профиля' });
   }
 });
 
@@ -3028,8 +3192,12 @@ app.put('/api/master-works/:id', async (req, res) => {
     if (Array.isArray(photos)) {
       updates.photos = photos.slice(0, 15); // Up to 15 photos max
     }
-    // If status is passed by admin
-    if (status !== undefined) updates.status = status;
+    const isAdmin = req.headers['x-admin-role'] === 'admin' || req.body.isAdminEdit === true;
+    if (isAdmin && status !== undefined) {
+      updates.status = status;
+    } else {
+      updates.status = 'pending';
+    }
 
     const updated = await updateDbMasterWork(id, updates);
     if (!updated) {

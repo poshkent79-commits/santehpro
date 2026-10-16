@@ -218,6 +218,76 @@ function AppContent() {
     }
   }, [currentUser]);
 
+  // Android Native Back Button (Hardware Back / Swipe Gesture) support for RuStore WebView
+  useEffect(() => {
+    // If any modal opens, push a dummy state so Android back button can close it instead of exiting app
+    const anyModalOpen = Boolean(
+      selectedArticle ||
+      isLoginModalOpen ||
+      isFooterLegalModalOpen ||
+      isDonationModalOpen ||
+      isProModalOpen ||
+      isSupportModalOpen ||
+      isAppEditorModalOpen ||
+      isCitySelectModalOpen
+    );
+
+    if (anyModalOpen) {
+      window.history.pushState({ modalOpen: true }, '');
+    }
+
+    const handlePopState = () => {
+      if (selectedArticle) {
+        setSelectedArticle(null);
+        return;
+      }
+      if (isLoginModalOpen) {
+        setIsLoginModalOpen(false);
+        return;
+      }
+      if (isFooterLegalModalOpen) {
+        setIsFooterLegalModalOpen(false);
+        return;
+      }
+      if (isDonationModalOpen) {
+        setIsDonationModalOpen(false);
+        return;
+      }
+      if (isProModalOpen) {
+        setIsProModalOpen(false);
+        return;
+      }
+      if (isSupportModalOpen) {
+        setIsSupportModalOpen(false);
+        return;
+      }
+      if (isAppEditorModalOpen) {
+        setIsAppEditorModalOpen(false);
+        return;
+      }
+      if (isCitySelectModalOpen) {
+        setIsCitySelectModalOpen(false);
+        return;
+      }
+      if (activeTab !== 'specialists' && activeTab !== 'calculator') {
+        setActiveTab('specialists');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [
+    activeTab,
+    selectedArticle,
+    isLoginModalOpen,
+    isFooterLegalModalOpen,
+    isDonationModalOpen,
+    isProModalOpen,
+    isSupportModalOpen,
+    isAppEditorModalOpen,
+    isCitySelectModalOpen,
+  ]);
+
   // Listen to auth success events to immediately activate and open admin panel for super admin
   useEffect(() => {
     const handleAuthSuccess = (e: any) => {
@@ -874,8 +944,7 @@ function AppContent() {
 
   const totalPendingSpecialists = specialists.filter((s) => s.moderationStatus === 'pending').length;
   const totalPendingServiceRequests = serviceRequests.filter((r) => r.status === 'pending').length;
-  const totalPendingQuestions = questions.filter((q) => q.status === 'pending').length;
-  const totalPendingCount = totalPendingSpecialists + totalPendingServiceRequests + totalPendingQuestions;
+  const totalPendingCount = totalPendingSpecialists + totalPendingServiceRequests;
 
   // Find linked specialist if currentUser is a master
   const userMasterSpecialist = useMemo(() => {

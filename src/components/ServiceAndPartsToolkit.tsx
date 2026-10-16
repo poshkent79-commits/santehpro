@@ -171,9 +171,8 @@ export const ServiceAndPartsToolkit: React.FC<ServiceAndPartsToolkitProps> = ({
   };
 
   const handleClearCart = () => {
-    if (window.confirm('Очистить весь сформированный список закупки?')) {
-      saveCart([]);
-    }
+    saveCart([]);
+    showToast('Список деталей очищен');
   };
 
   const showToast = (msg: string) => {

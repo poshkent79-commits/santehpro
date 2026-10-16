@@ -24,7 +24,8 @@ import {
   MapPin,
   Check,
   X,
-  Search
+  Search,
+  Edit3
 } from 'lucide-react';
 import { MasterWork, Article, PlumbingSpecialist, SpecialistVerificationDoc } from '../types';
 import { WorkGalleryModal } from './WorkGalleryModal';
@@ -48,7 +49,7 @@ export const AdminModerationManager: React.FC<AdminModerationManagerProps> = ({
   const [subTab, setSubTab] = useState<'masters' | 'works' | 'articles'>('masters');
 
   // Specialists Pre-moderation State
-  const [specialistsFilter, setSpecialistsFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
+  const [specialistsFilter, setSpecialistsFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'edits'>('pending');
   const [specialistSearch, setSpecialistSearch] = useState('');
   const [rejectingSpecialist, setRejectingSpecialist] = useState<PlumbingSpecialist | null>(null);
   const [approvingSpecialist, setApprovingSpecialist] = useState<PlumbingSpecialist | null>(null);
@@ -246,11 +247,55 @@ export const AdminModerationManager: React.FC<AdminModerationManagerProps> = ({
     }
   };
 
+  const handleApproveEdits = async (id: string) => {
+    try {
+      const res = await fetch(`/api/specialists/${encodeURIComponent(id)}/approve-edits`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Ошибка при одобрении изменений');
+      }
+      showMessage('Изменения профиля мастера успешно одобрены и опубликованы в каталоге!');
+      if (onRefreshSpecialists) onRefreshSpecialists();
+    } catch (e: any) {
+      alert(e.message || 'Ошибка');
+    }
+  };
+
+  const handleRejectEdits = async (id: string) => {
+    const reason = window.prompt('Укажите причину отклонения изменений (необязательно):', 'Требуется уточнение информации по услугам или квалификации');
+    if (reason === null) return;
+    try {
+      const res = await fetch(`/api/specialists/${encodeURIComponent(id)}/reject-edits`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Ошибка при отклонении изменений');
+      }
+      showMessage('Предложенные изменения отклонены. Прежний одобренный профиль мастера сохранён без изменений.');
+      if (onRefreshSpecialists) onRefreshSpecialists();
+    } catch (e: any) {
+      alert(e.message || 'Ошибка');
+    }
+  };
+
   // Filtered lists
-  const pendingSpecialistsCount = specialists.filter((s) => s.status === 'pending').length;
+  const pendingEditsCount = specialists.filter((s) => s.hasPendingEdits).length;
+  const pendingSpecialistsCount = specialists.filter((s) => s.status === 'pending' || s.hasPendingEdits).length;
   const filteredSpecialists = specialists.filter((s) => {
     if (specialistsFilter !== 'all') {
-      if (s.status !== specialistsFilter) return false;
+      if (specialistsFilter === 'pending') {
+        if (s.status !== 'pending' && !s.hasPendingEdits) return false;
+      } else if (specialistsFilter === 'edits') {
+        if (!s.hasPendingEdits) return false;
+      } else {
+        if (s.status !== specialistsFilter) return false;
+      }
     }
     if (specialistSearch.trim()) {
       const q = specialistSearch.toLowerCase();
@@ -355,6 +400,17 @@ export const AdminModerationManager: React.FC<AdminModerationManagerProps> = ({
             >
               На проверке ({pendingSpecialistsCount})
             </button>
+            {pendingEditsCount > 0 && (
+              <button
+                onClick={() => setSpecialistsFilter('edits')}
+                className={`px-3 py-1.5 rounded-lg font-medium transition cursor-pointer flex items-center space-x-1 ${
+                  specialistsFilter === 'edits' ? 'bg-amber-500/30 text-amber-200 font-bold border border-amber-500/50' : 'text-amber-400/80 hover:text-amber-300'
+                }`}
+              >
+                <Edit3 className="w-3 h-3" />
+                <span>Изменения ({pendingEditsCount})</span>
+              </button>
+            )}
             <button
               onClick={() => setSpecialistsFilter('approved')}
               className={`px-3 py-1.5 rounded-lg font-medium transition cursor-pointer ${
@@ -550,6 +606,12 @@ export const AdminModerationManager: React.FC<AdminModerationManagerProps> = ({
                                 24/7 Аварийный
                               </span>
                             )}
+                            {spec.hasPendingEdits && (
+                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center space-x-1 animate-pulse">
+                                <Edit3 className="w-3 h-3 text-amber-400" />
+                                <span>Изменения на проверке</span>
+                              </span>
+                            )}
                           </div>
 
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-300">
@@ -652,6 +714,84 @@ export const AdminModerationManager: React.FC<AdminModerationManagerProps> = ({
                         )}
                       </div>
                     </div>
+
+                    {/* Pending Edits Comparison Box (For approved masters who requested profile changes) */}
+                    {spec.hasPendingEdits && (spec.pendingEdits || spec.pendingEditsJson) && (() => {
+                      const edits = spec.pendingEdits || (() => {
+                        try { return JSON.parse(spec.pendingEditsJson || '{}'); } catch { return null; }
+                      })();
+                      if (!edits) return null;
+
+                      return (
+                        <div className="p-4 rounded-2xl bg-amber-950/30 border border-amber-500/40 text-xs space-y-3 shadow-lg">
+                          <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-amber-500/20">
+                            <span className="font-bold text-amber-300 flex items-center space-x-1.5 text-sm">
+                              <Edit3 className="w-4 h-4 text-amber-400 shrink-0" />
+                              <span>Предложенные изменения в анкете мастера (на модерации)</span>
+                            </span>
+                            {edits.submittedAt && (
+                              <span className="text-[11px] text-amber-400/80 font-mono">
+                                Дата подачи: {new Date(edits.submittedAt).toLocaleString('ru-RU')}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-xs">
+                            <div className="space-y-1">
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                Действующая версия (видна клиентам прямо сейчас):
+                              </p>
+                              <p className="text-white font-semibold">{spec.name} • от {spec.minPrice} ₽</p>
+                              <p className="text-slate-400 text-[11px]">
+                                {Array.isArray(spec.services) ? spec.services.join(', ') : 'Услуги не указаны'}
+                              </p>
+                              {spec.bio && (
+                                <p className="text-slate-400 text-[11px] italic line-clamp-2">
+                                  "{spec.bio}"
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="space-y-1 border-t md:border-t-0 md:border-l border-slate-800 pt-2 md:pt-0 md:pl-3">
+                              <p className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">
+                                Новая предложенная версия:
+                              </p>
+                              <p className="text-amber-200 font-bold">
+                                {edits.name || spec.name} • от {edits.minPrice ?? spec.minPrice} ₽
+                              </p>
+                              <p className="text-amber-100/90 text-[11px]">
+                                {Array.isArray(edits.services) ? edits.services.join(', ') : (Array.isArray(spec.services) ? spec.services.join(', ') : '')}
+                              </p>
+                              {edits.bio && edits.bio !== spec.bio && (
+                                <p className="text-amber-300/80 text-[11px] italic line-clamp-2">
+                                  "{edits.bio}"
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2 pt-1">
+                            <button
+                              type="button"
+                              onClick={() => handleApproveEdits(spec.id)}
+                              className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center space-x-1.5 transition cursor-pointer shadow-md shadow-emerald-500/20"
+                            >
+                              <Check className="w-4 h-4" />
+                              <span>Одобрить и опубликовать изменения</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleRejectEdits(spec.id)}
+                              className="px-4 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 font-semibold text-xs flex items-center space-x-1.5 transition cursor-pointer"
+                            >
+                              <X className="w-4 h-4 text-rose-400" />
+                              <span>Отклонить изменения (оставить прежний профиль)</span>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {/* Rejection Details Box (Displayed if status is rejected) */}
                     {isRejected && (

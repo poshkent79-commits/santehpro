@@ -152,6 +152,8 @@ export const QuickMaterialsCalculator: React.FC<QuickMaterialsCalculatorProps> =
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   // Minimized state for floating cart bar so it never obstructs materials
   const [isBottomBarMinimized, setIsBottomBarMinimized] = useState<boolean>(false);
+  // In-app confirmation modal for clearing the procurement cart (replaces blocked window.confirm)
+  const [isClearConfirmOpen, setIsClearConfirmOpen] = useState<boolean>(false);
   
   // Modal: Create Custom Position Modal
   const [isCustomItemModalOpen, setIsCustomItemModalOpen] = useState<boolean>(false);
@@ -283,12 +285,16 @@ export const QuickMaterialsCalculator: React.FC<QuickMaterialsCalculatorProps> =
     );
   };
 
-  // Clear all
+  // Clear all (opens friendly in-app confirmation modal without blocking browser window.confirm)
   const handleClearAll = () => {
-    if (window.confirm('Очистить весь список закупки?')) {
-      setSelectedItems([]);
-      showToast('Список закупки очищен');
-    }
+    setIsClearConfirmOpen(true);
+  };
+
+  const handleExecuteClearAll = () => {
+    setSelectedItems([]);
+    setIsDrawerOpen(false);
+    setIsClearConfirmOpen(false);
+    showToast('Список закупки полностью очищен');
   };
 
   // Add custom position
@@ -822,14 +828,28 @@ export const QuickMaterialsCalculator: React.FC<QuickMaterialsCalculatorProps> =
                     {totalPositionsCount} поз.
                   </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setIsDrawerOpen(false)}
-                  className="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer"
-                >
-                  <ChevronDown className="w-3.5 h-3.5" />
-                  <span>Свернуть</span>
-                </button>
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleClearAll();
+                    }}
+                    className="px-2 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                    title="Очистить список"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    <span>Очистить всё</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsDrawerOpen(false)}
+                    className="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" />
+                    <span>Свернуть</span>
+                  </button>
+                </div>
               </div>
 
               {/* Items List in Drawer */}
@@ -951,11 +971,15 @@ export const QuickMaterialsCalculator: React.FC<QuickMaterialsCalculatorProps> =
 
                 <button
                   type="button"
-                  onClick={handleClearAll}
-                  className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-rose-400 border border-slate-800 transition cursor-pointer"
-                  title="Очистить выбранное"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleClearAll();
+                  }}
+                  className="p-2 sm:p-2.5 rounded-xl bg-slate-900 hover:bg-rose-950/40 text-slate-400 hover:text-rose-400 border border-slate-800 hover:border-rose-500/40 transition cursor-pointer active:scale-95 touch-manipulation min-w-[36px] min-h-[36px] flex items-center justify-center"
+                  title="Очистить выбранные материалы"
+                  aria-label="Очистить выбранные материалы"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Trash2 className="w-4 h-4 stroke-[2.2]" />
                 </button>
 
                 {/* Кнопка свернуть в мини-бейдж, чтобы вообще не мешала просмотру */}
@@ -1275,6 +1299,47 @@ export const QuickMaterialsCalculator: React.FC<QuickMaterialsCalculatorProps> =
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Confirm Clear All (in-app dialog that works 100% reliably in APKs and mobile browsers) */}
+      {isClearConfirmOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150"
+          onClick={() => setIsClearConfirmOpen(false)}
+        >
+          <div
+            className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 max-w-sm w-full space-y-4 shadow-2xl animate-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mx-auto">
+              <Trash2 className="w-6 h-6 stroke-[2.2]" />
+            </div>
+
+            <div className="text-center space-y-1.5">
+              <h4 className="text-base font-black text-white">Очистить список закупки?</h4>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Вы действительно хотите удалить все выбранные позиции ({totalPositionsCount} поз. на сумму {totalPrice.toLocaleString('ru-RU')} ₽)?
+              </p>
+            </div>
+
+            <div className="flex gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsClearConfirmOpen(false)}
+                className="flex-1 py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition cursor-pointer active:scale-95 touch-manipulation"
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteClearAll}
+                className="flex-1 py-2.5 px-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition shadow-lg shadow-rose-600/25 cursor-pointer active:scale-95 touch-manipulation"
+              >
+                Да, очистить
+              </button>
+            </div>
           </div>
         </div>
       )}

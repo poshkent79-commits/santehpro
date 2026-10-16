@@ -143,6 +143,25 @@ export interface PlumbingSpecialist {
   moderationComment?: string;
   moderatedAt?: string;
   moderatedBy?: string;
+  hasPendingEdits?: boolean;
+  pendingEdits?: SpecialistPendingEdits;
+  pendingEditsJson?: string;
+}
+
+export interface SpecialistPendingEdits {
+  name?: string;
+  photo?: string;
+  city?: string;
+  experienceYears?: number;
+  phone?: string;
+  telegram?: string;
+  whatsapp?: string;
+  services?: string[];
+  minPrice?: number;
+  emergency247?: boolean;
+  badge?: string;
+  bio?: string;
+  submittedAt: string;
 }
 
 export interface MasterWork {

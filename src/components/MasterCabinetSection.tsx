@@ -196,8 +196,13 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
       });
       if (res.ok) {
         const resData = await res.json();
-        setMasterStatus('pending');
-        setServicesSuccessMsg('Изменения успешно сохранены! Согласно правилам сервиса, обновленная анкета направлена на повторную модерацию администратору. До проверки профиль будет на подтверждении.');
+        if (specialist.status === 'approved') {
+          setMasterStatus('approved');
+          setServicesSuccessMsg('Изменения сохранены и отправлены на модерацию администратору! Для клиентов пока отображается действующая версия анкеты, а новые данные будут опубликованы после проверки.');
+        } else {
+          setMasterStatus('pending');
+          setServicesSuccessMsg('Анкета сохранена и направлена на проверку администратору.');
+        }
         setTimeout(() => setServicesSuccessMsg(''), 7000);
         try {
           const updatedObj = {
@@ -1137,7 +1142,17 @@ export const MasterCabinetSection: React.FC<MasterCabinetSectionProps> = ({
           <div className="mt-4 p-4 rounded-2xl bg-sky-500/15 border-2 border-sky-500/40 text-sky-200 text-xs sm:text-sm flex items-center gap-3">
             <Clock className="w-5 h-5 text-sky-400 shrink-0" />
             <div>
-              <strong>Анкета находится на повторной модерации:</strong> Ваши недавние изменения сохранены и переданы администратору на проверку. До момента подтверждения профиль скрыт от обычных посетителей в каталоге.
+              <strong>Анкета находится на модерации:</strong> Ваши данные переданы администратору на проверку. После подтверждения анкета станет доступна всем клиентам сервиса.
+            </div>
+          </div>
+        )}
+
+        {/* Notice for Pending Edits while approved profile remains live */}
+        {specialist.hasPendingEdits && masterStatus === 'approved' && (
+          <div className="mt-4 p-4 rounded-2xl bg-amber-500/15 border-2 border-amber-500/40 text-amber-200 text-xs sm:text-sm flex items-center gap-3 shadow-md">
+            <Clock className="w-5 h-5 text-amber-400 shrink-0" />
+            <div>
+              <strong>Предложенные изменения на проверке у администратора:</strong> Для клиентов сейчас отображается действующая версия вашего профиля. После одобрения администратором обновлённые услуги и данные сразу вступят в силу в каталоге!
             </div>
           </div>
         )}

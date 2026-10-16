@@ -3,6 +3,26 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
+// Route API requests to production server when running embedded in an APK (file:// or standalone)
+if (typeof window !== 'undefined') {
+  const isEmbeddedApk =
+    window.location.protocol === 'file:' ||
+    window.location.origin === 'null' ||
+    (window.location.hostname === 'localhost' && window.location.port !== '3000' && window.location.port !== '5173');
+
+  if (isEmbeddedApk) {
+    const originalFetch = window.fetch;
+    window.fetch = function (input: RequestInfo | URL, init?: RequestInit) {
+      if (typeof input === 'string' && (input.startsWith('/api') || input.startsWith('/auth'))) {
+        input = 'https://santehpro.info' + input;
+      } else if (input instanceof Request && (input.url.startsWith('/api') || input.url.startsWith('/auth'))) {
+        input = new Request('https://santehpro.info' + input.url, input);
+      }
+      return originalFetch.call(this, input, init);
+    };
+  }
+}
+
 // Register PWA Service Worker in production for instant offline loading in RF
 try {
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && navigator.serviceWorker) {

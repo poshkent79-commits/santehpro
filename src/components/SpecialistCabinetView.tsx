@@ -472,8 +472,8 @@ export const SpecialistCabinetView: React.FC<SpecialistCabinetViewProps> = ({
       });
 
       if (res.ok) {
-        setServicesSuccess('✓ Услуги, прайс-лист и контактные данные успешно обновлены в каталоге специалистов!');
-        setTimeout(() => setServicesSuccess(''), 4000);
+        setServicesSuccess('✓ Изменения сохранены и отправлены на модерацию администратору! Для клиентов пока отображается действующая версия анкеты.');
+        setTimeout(() => setServicesSuccess(''), 5000);
         onRefreshSpecialist?.();
       } else {
         const data = await res.json();
